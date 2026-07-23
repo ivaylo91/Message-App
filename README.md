@@ -30,6 +30,9 @@ cd infra
 docker compose up -d
 ```
 
+(If your `docker` CLI doesn't have the `compose` plugin, use the standalone
+`docker-compose` binary instead, e.g. `docker-compose up -d`.)
+
 Bring up Kafka too (only needed once you're wiring fan-out/streaming):
 
 ```
@@ -43,6 +46,7 @@ EMQX dashboard: http://localhost:18083 (default admin/public)
 ```
 cd backend
 npm install
+npx prisma migrate dev   # first time only, applies the schema
 npm run start:dev
 ```
 
