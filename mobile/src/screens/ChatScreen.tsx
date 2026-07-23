@@ -13,17 +13,15 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
-import { useMqtt } from '../mqtt/MqttContext';
-import { conversationMessagesTopic } from '../mqtt/topics';
-import * as conversationsApi from '../api/conversations';
+import { supabase } from '../lib/supabase';
+import * as conversationsData from '../data/conversations';
 import { Message } from '../types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Chat'>;
 
 export function ChatScreen({ route, navigation }: Props) {
   const { conversationId, title } = route.params;
-  const { user } = useAuth();
-  const { subscribe } = useMqtt();
+  const { userId } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState('');
 
@@ -40,25 +38,41 @@ export function ChatScreen({ route, navigation }: Props) {
 
   useFocusEffect(
     useCallback(() => {
-      void conversationsApi
+      void conversationsData
         .fetchMessages(conversationId)
         .then((fetched) => setMessages(fetched));
     }, [conversationId]),
   );
 
   useEffect(() => {
-    const unsubscribe = subscribe(
-      conversationMessagesTopic(conversationId),
-      (_topic, payload) => upsertMessage(payload as Message),
-    );
-    return unsubscribe;
-  }, [conversationId, subscribe, upsertMessage]);
+    const channel = supabase
+      .channel(`messages:${conversationId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => upsertMessage(payload.new as Message),
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [conversationId, upsertMessage]);
 
   const onSend = async () => {
     const body = draft.trim();
-    if (!body) return;
+    if (!body || !userId) return;
     setDraft('');
-    const message = await conversationsApi.sendMessage(conversationId, body);
+    const message = await conversationsData.sendMessage(
+      conversationId,
+      userId,
+      body,
+    );
     upsertMessage(message);
   };
 
@@ -77,7 +91,7 @@ export function ChatScreen({ route, navigation }: Props) {
           <View
             style={[
               styles.bubble,
-              item.senderId === user?.id ? styles.bubbleMine : styles.bubbleTheirs,
+              item.sender_id === userId ? styles.bubbleMine : styles.bubbleTheirs,
             ]}
           >
             <Text>{item.body}</Text>

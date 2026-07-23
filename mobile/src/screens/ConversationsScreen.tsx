@@ -13,13 +13,13 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
-import * as conversationsApi from '../api/conversations';
+import * as conversationsData from '../data/conversations';
 import { Conversation } from '../types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Conversations'>;
 
 export function ConversationsScreen({ navigation }: Props) {
-  const { user, logout } = useAuth();
+  const { userId, logout } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [newParticipantId, setNewParticipantId] = useState('');
@@ -27,7 +27,7 @@ export function ConversationsScreen({ navigation }: Props) {
   const load = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      const data = await conversationsApi.fetchConversations();
+      const data = await conversationsData.fetchConversations();
       setConversations(data);
     } finally {
       setIsRefreshing(false);
@@ -42,7 +42,7 @@ export function ConversationsScreen({ navigation }: Props) {
 
   const startConversation = async () => {
     if (!newParticipantId.trim()) return;
-    const conversation = await conversationsApi.createConversation([
+    const conversation = await conversationsData.createConversation([
       newParticipantId.trim(),
     ]);
     setNewParticipantId('');
@@ -53,11 +53,11 @@ export function ConversationsScreen({ navigation }: Props) {
   };
 
   const conversationTitle = (conversation: Conversation) => {
-    if (conversation.isGroup) return conversation.name ?? 'Group chat';
-    const other = conversation.participants.find(
-      (p) => p.userId !== user?.id,
+    if (conversation.is_group) return conversation.name ?? 'Group chat';
+    const other = conversation.conversation_participants.find(
+      (p) => p.user_id !== userId,
     );
-    return other?.user.displayName ?? other?.user.email ?? 'Direct message';
+    return other?.profiles.display_name ?? other?.profiles.email ?? 'Direct message';
   };
 
   return (

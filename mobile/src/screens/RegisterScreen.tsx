@@ -19,13 +19,24 @@ export function RegisterScreen({ navigation }: Props) {
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const onSubmit = async () => {
     setError(null);
+    setInfoMessage(null);
     setIsSubmitting(true);
     try {
-      await register(email, password, displayName);
+      const { needsEmailConfirmation } = await register(
+        email,
+        password,
+        displayName,
+      );
+      if (needsEmailConfirmation) {
+        setInfoMessage(
+          'Check your email to confirm your account, then sign in.',
+        );
+      }
     } catch {
       setError('Registration failed. Try a different email.');
     } finally {
@@ -58,6 +69,7 @@ export function RegisterScreen({ navigation }: Props) {
         onChangeText={setPassword}
       />
       {error && <Text style={styles.error}>{error}</Text>}
+      {infoMessage && <Text style={styles.info}>{infoMessage}</Text>}
       {isSubmitting ? (
         <ActivityIndicator />
       ) : (
@@ -82,4 +94,5 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   error: { color: 'red', marginBottom: 12 },
+  info: { color: 'green', marginBottom: 12 },
 });

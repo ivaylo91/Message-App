@@ -1,59 +1,40 @@
 # Message App
 
-Enterprise-grade mobile messaging app.
+Mobile messaging app.
 
 ## Stack
 
-- **Mobile:** React Native ([mobile/](mobile/))
-- **Backend:** NestJS + TypeScript ([backend/](backend/))
-- **Real-time transport:** MQTT (EMQX broker)
-- **Data:** PostgreSQL (durable storage), Redis (presence, pub/sub)
-- **Event streaming:** Kafka (delivery guarantees, fan-out, audit logging) — brought up later, not required for the initial chat flow
-- **Push notifications:** FCM (Android) / APNs (iOS)
-- **Auth:** OIDC/OAuth2 (Keycloak or Auth0)
+- **Mobile:** React Native, bare workflow ([mobile/](mobile/))
+- **Backend:** Supabase — managed Postgres, Auth, and Realtime (Postgres Changes). No custom API server; the app talks to Supabase directly via `@supabase/supabase-js`.
+- **Build/distribution:** EAS Build (`mobile/eas.json`)
+- **Push notifications:** FCM (Android) / APNs (iOS) — not yet wired up
 - **E2EE:** Signal Protocol (libsignal), if/when required
 
-## Layout
+## Supabase project
 
-```
-mobile/    React Native app
-backend/   NestJS API + MQTT integration
-infra/     docker-compose for local dependencies
-```
+- Project: `Message-App` (`ejtskxnoyuvmzhpwkvsu`, `eu-west-3`)
+- Schema: `profiles` (mirrors `auth.users`, auto-created via trigger on signup), `conversations`, `conversation_participants`, `messages`
+- Authorization is enforced entirely by **Row Level Security** — there is no backend to also check permissions, so the RLS policies *are* the authorization layer. Conversation creation goes through the `create_conversation` RPC (`SECURITY DEFINER`) since inserting participant rows for other users can't be validated by simple per-row RLS.
+- Realtime is enabled on `messages`; `ChatScreen` subscribes to `postgres_changes` filtered by `conversation_id`.
+- Config (`mobile/src/config/env.ts`) holds the project URL and the **publishable** key — safe to commit, it's the client-side key protected by RLS (not the service_role key).
 
-## Local development
+**Email confirmation is on by default** for this project (Supabase's shared test SMTP has a very low send-rate limit, so bulk test signups will hit `over_email_send_rate_limit`). `RegisterScreen` handles this: if `signUp()` doesn't return a session, it shows a "check your email" message instead of assuming the user is logged in. To skip confirmation during development, disable "Confirm email" under Authentication → Providers → Email in the Supabase dashboard (there's no API/MCP toggle for it).
 
-Start core infra (Postgres, Redis, EMQX):
-
-```
-cd infra
-docker compose up -d
-```
-
-(If your `docker` CLI doesn't have the `compose` plugin, use the standalone
-`docker-compose` binary instead, e.g. `docker-compose up -d`.)
-
-Bring up Kafka too (only needed once you're wiring fan-out/streaming):
-
-```
-docker compose --profile kafka up -d
-```
-
-EMQX dashboard: http://localhost:18083 (default admin/public)
-
-### Backend
-
-```
-cd backend
-npm install
-npx prisma migrate dev   # first time only, applies the schema
-npm run start:dev
-```
-
-### Mobile
+## Mobile app
 
 ```
 cd mobile
 npm install
 npx react-native run-android   # or run-ios
+```
+
+### EAS Build
+
+Bare workflow — `android/` and `ios/` are the source of truth, not an Expo config. `eas.json` defines `development`/`preview`/`production` profiles. One-time setup (needs an Expo account, interactive login — not something that can be scripted here):
+
+```
+npm install -g eas-cli
+eas login
+eas init          # links this repo to a project on expo.dev
+eas build --platform android --profile development
 ```

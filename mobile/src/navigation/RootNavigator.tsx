@@ -3,7 +3,6 @@ import { ActivityIndicator, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../auth/AuthContext';
-import { MqttProvider } from '../mqtt/MqttContext';
 import { LoginScreen } from '../screens/LoginScreen';
 import { RegisterScreen } from '../screens/RegisterScreen';
 import { ConversationsScreen } from '../screens/ConversationsScreen';
@@ -33,21 +32,19 @@ function AuthNavigator() {
 
 function AppNavigator() {
   return (
-    <MqttProvider>
-      <AppStack.Navigator>
-        <AppStack.Screen
-          name="Conversations"
-          component={ConversationsScreen}
-          options={{ title: 'Chats' }}
-        />
-        <AppStack.Screen name="Chat" component={ChatScreen} />
-      </AppStack.Navigator>
-    </MqttProvider>
+    <AppStack.Navigator>
+      <AppStack.Screen
+        name="Conversations"
+        component={ConversationsScreen}
+        options={{ title: 'Chats' }}
+      />
+      <AppStack.Screen name="Chat" component={ChatScreen} />
+    </AppStack.Navigator>
   );
 }
 
 export function RootNavigator() {
-  const { user, isLoading } = useAuth();
+  const { session, isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -59,7 +56,7 @@ export function RootNavigator() {
 
   return (
     <NavigationContainer>
-      {user ? <AppNavigator /> : <AuthNavigator />}
+      {session ? <AppNavigator /> : <AuthNavigator />}
     </NavigationContainer>
   );
 }

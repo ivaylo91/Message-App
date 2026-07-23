@@ -1,37 +1,33 @@
-export interface User {
+export interface Profile {
   id: string;
   email: string;
-  displayName?: string;
+  display_name: string;
 }
 
 export interface ConversationParticipant {
   id: string;
-  userId: string;
+  conversation_id: string;
+  user_id: string;
   role: 'MEMBER' | 'ADMIN';
-  user: User;
+  profiles: Profile;
 }
 
 export interface Conversation {
   id: string;
-  isGroup: boolean;
+  is_group: boolean;
   name: string | null;
-  createdAt: string;
-  updatedAt: string;
-  participants: ConversationParticipant[];
+  created_at: string;
+  updated_at: string;
+  conversation_participants: ConversationParticipant[];
   messages?: Message[];
 }
 
 export interface Message {
   id: string;
-  conversationId: string;
-  senderId: string;
+  conversation_id: string;
+  sender_id: string;
   body: string;
-  createdAt: string;
-  editedAt: string | null;
-  deletedAt: string | null;
-}
-
-export interface AuthResponse {
-  accessToken: string;
-  user: { id: string; email: string };
+  created_at: string;
+  edited_at: string | null;
+  deleted_at: string | null;
 }

@@ -6,90 +6,82 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { setAuthToken } from '../api/client';
-import * as authApi from '../api/auth';
-import { User } from '../types';
-
-const TOKEN_STORAGE_KEY = 'message-app/access-token';
-const USER_STORAGE_KEY = 'message-app/user';
+import type { Session } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabase';
 
 interface AuthContextValue {
-  user: User | null;
+  session: Session | null;
+  userId: string | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (
     email: string,
     password: string,
     displayName: string,
-  ) => Promise<void>;
+  ) => Promise<{ needsEmailConfirmation: boolean }>;
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    void (async () => {
-      const [storedToken, storedUser] = await Promise.all([
-        AsyncStorage.getItem(TOKEN_STORAGE_KEY),
-        AsyncStorage.getItem(USER_STORAGE_KEY),
-      ]);
-      if (storedToken && storedUser) {
-        setAuthToken(storedToken);
-        setUser(JSON.parse(storedUser) as User);
-      }
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
       setIsLoading(false);
-    })();
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const persistSession = useCallback(async (token: string, sessionUser: User) => {
-    setAuthToken(token);
-    setUser(sessionUser);
-    await Promise.all([
-      AsyncStorage.setItem(TOKEN_STORAGE_KEY, token),
-      AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(sessionUser)),
-    ]);
+  const login = useCallback(async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (error) throw error;
   }, []);
-
-  const login = useCallback(
-    async (email: string, password: string) => {
-      const { accessToken, user: sessionUser } = await authApi.login(
-        email,
-        password,
-      );
-      await persistSession(accessToken, sessionUser);
-    },
-    [persistSession],
-  );
 
   const register = useCallback(
     async (email: string, password: string, displayName: string) => {
-      const { accessToken, user: sessionUser } = await authApi.register(
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        displayName,
-      );
-      await persistSession(accessToken, sessionUser);
+        options: { data: { display_name: displayName } },
+      });
+      if (error) throw error;
+      // If email confirmation is required, signUp succeeds but returns no
+      // session - the caller needs to prompt the user to check their inbox
+      // instead of assuming they're now signed in.
+      return { needsEmailConfirmation: data.session === null };
     },
-    [persistSession],
+    [],
   );
 
   const logout = useCallback(async () => {
-    setAuthToken(null);
-    setUser(null);
-    await Promise.all([
-      AsyncStorage.removeItem(TOKEN_STORAGE_KEY),
-      AsyncStorage.removeItem(USER_STORAGE_KEY),
-    ]);
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
   }, []);
 
   const value = useMemo(
-    () => ({ user, isLoading, login, register, logout }),
-    [user, isLoading, login, register, logout],
+    () => ({
+      session,
+      userId: session?.user.id ?? null,
+      isLoading,
+      login,
+      register,
+      logout,
+    }),
+    [session, isLoading, login, register, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
