@@ -1,4 +1,9 @@
 {
   "name": "MobileApp",
-  "displayName": "MobileApp"
+  "displayName": "MobileApp",
+  "extra": {
+    "eas": {
+      "projectId": "6c9ee10e-9e06-4123-8638-4940fa9459eb"
+    }
+  }
 }
