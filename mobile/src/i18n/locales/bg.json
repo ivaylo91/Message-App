@@ -1,0 +1,51 @@
+{
+  "auth": {
+    "login": {
+      "title": "Вход",
+      "emailPlaceholder": "Имейл",
+      "passwordPlaceholder": "Парола",
+      "submit": "Вход",
+      "error": "Неуспешен вход. Проверете имейла и паролата си.",
+      "switchToRegister": "Нямате акаунт? Регистрирайте се"
+    },
+    "register": {
+      "title": "Създаване на акаунт",
+      "displayNamePlaceholder": "Име",
+      "emailPlaceholder": "Имейл",
+      "passwordPlaceholder": "Парола",
+      "submit": "Регистрация",
+      "confirmEmailInfo": "Проверете имейла си, за да потвърдите акаунта, след което влезте.",
+      "error": "Неуспешна регистрация. Опитайте с друг имейл.",
+      "switchToLogin": "Вече имате акаунт? Влезте"
+    }
+  },
+  "conversations": {
+    "newChatPlaceholder": "Ново съобщение: въведете ID на потребител",
+    "go": "Старт",
+    "noMessagesYet": "Все още няма съобщения",
+    "photoPreview": "📷 Снимка",
+    "groupChat": "Групов чат",
+    "directMessage": "Лично съобщение",
+    "noConversationsYet": "Все още няма разговори.",
+    "logout": "Изход"
+  },
+  "chat": {
+    "messagePlaceholder": "Съобщение",
+    "send": "Изпрати",
+    "save": "Запази",
+    "editingMessage": "Редактиране на съобщение",
+    "cancel": "Отказ",
+    "edit": "Редактирай",
+    "delete": "Изтрий",
+    "deleteConfirmTitle": "Изтриване на съобщение?",
+    "deleteConfirmMessage": "Това действие не може да бъде отменено.",
+    "seen": "Видяно",
+    "typing": "Пише...",
+    "edited": "(редактирано)",
+    "uploadFailedTitle": "Неуспешно качване",
+    "uploadFailedMessage": "Снимката не можа да бъде изпратена. Опитайте отново."
+  },
+  "common": {
+    "language": "Език"
+  }
+}

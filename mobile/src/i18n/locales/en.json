@@ -1,0 +1,51 @@
+{
+  "auth": {
+    "login": {
+      "title": "Sign in",
+      "emailPlaceholder": "Email",
+      "passwordPlaceholder": "Password",
+      "submit": "Sign in",
+      "error": "Login failed. Check your email and password.",
+      "switchToRegister": "Need an account? Register"
+    },
+    "register": {
+      "title": "Create account",
+      "displayNamePlaceholder": "Display name",
+      "emailPlaceholder": "Email",
+      "passwordPlaceholder": "Password",
+      "submit": "Register",
+      "confirmEmailInfo": "Check your email to confirm your account, then sign in.",
+      "error": "Registration failed. Try a different email.",
+      "switchToLogin": "Already have an account? Sign in"
+    }
+  },
+  "conversations": {
+    "newChatPlaceholder": "Start chat: enter user id",
+    "go": "Go",
+    "noMessagesYet": "No messages yet",
+    "photoPreview": "📷 Photo",
+    "groupChat": "Group chat",
+    "directMessage": "Direct message",
+    "noConversationsYet": "No conversations yet.",
+    "logout": "Log out"
+  },
+  "chat": {
+    "messagePlaceholder": "Message",
+    "send": "Send",
+    "save": "Save",
+    "editingMessage": "Editing message",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "deleteConfirmTitle": "Delete message?",
+    "deleteConfirmMessage": "This cannot be undone.",
+    "seen": "Seen",
+    "typing": "Typing...",
+    "edited": "(edited)",
+    "uploadFailedTitle": "Upload failed",
+    "uploadFailedMessage": "Could not send the image. Try again."
+  },
+  "common": {
+    "language": "Language"
+  }
+}

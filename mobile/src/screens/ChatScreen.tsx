@@ -20,6 +20,7 @@ import {
 } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { useFocusEffect } from '@react-navigation/native';
+import { useTranslation } from 'react-i18next';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { AppStackParamList } from '../navigation/RootNavigator';
@@ -112,6 +113,7 @@ function MessageBubble({
   onEdit,
   onDelete,
 }: MessageBubbleProps) {
+  const { t } = useTranslation();
   const summary = useMemo(
     () => summarizeReactions(reactions, userId),
     [reactions, userId],
@@ -129,7 +131,7 @@ function MessageBubble({
       >
         {message.media_path && <MediaImage path={message.media_path} />}
         {message.body && <Text>{message.body}</Text>}
-        {message.edited_at && <Text style={styles.editedTag}>(edited)</Text>}
+        {message.edited_at && <Text style={styles.editedTag}>{t('chat.edited')}</Text>}
       </TouchableOpacity>
 
       {summary.length > 0 && (
@@ -161,25 +163,26 @@ function MessageBubble({
           ))}
           {isMine && message.body && (
             <TouchableOpacity onPress={onEdit} style={styles.pickerEmoji}>
-              <Text style={styles.pickerActionText}>Edit</Text>
+              <Text style={styles.pickerActionText}>{t('chat.edit')}</Text>
             </TouchableOpacity>
           )}
           {isMine && (
             <TouchableOpacity onPress={onDelete} style={styles.pickerEmoji}>
               <Text style={[styles.pickerActionText, styles.pickerDeleteText]}>
-                Delete
+                {t('chat.delete')}
               </Text>
             </TouchableOpacity>
           )}
         </View>
       )}
 
-      {showSeen && <Text style={styles.seenText}>Seen</Text>}
+      {showSeen && <Text style={styles.seenText}>{t('chat.seen')}</Text>}
     </View>
   );
 }
 
 export function ChatScreen({ route, navigation }: Props) {
+  const { t } = useTranslation();
   const { conversationId, title } = route.params;
   const { userId } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -401,7 +404,7 @@ export function ChatScreen({ route, navigation }: Props) {
       );
       upsertMessage(message);
     } catch {
-      Alert.alert('Upload failed', 'Could not send the image. Try again.');
+      Alert.alert(t('chat.uploadFailedTitle'), t('chat.uploadFailedMessage'));
     } finally {
       setIsUploadingMedia(false);
     }
@@ -447,23 +450,26 @@ export function ChatScreen({ route, navigation }: Props) {
     setDraft('');
   }, []);
 
-  const onDeleteMessage = useCallback((messageId: string) => {
-    setPickerMessageId(null);
-    Alert.alert('Delete message?', 'This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: () => {
-          void conversationsData.deleteMessage(messageId).then(() => {
-            setMessages((current) =>
-              current.filter((m) => m.id !== messageId),
-            );
-          });
+  const onDeleteMessage = useCallback(
+    (messageId: string) => {
+      setPickerMessageId(null);
+      Alert.alert(t('chat.deleteConfirmTitle'), t('chat.deleteConfirmMessage'), [
+        { text: t('chat.cancel'), style: 'cancel' },
+        {
+          text: t('chat.delete'),
+          style: 'destructive',
+          onPress: () => {
+            void conversationsData.deleteMessage(messageId).then(() => {
+              setMessages((current) =>
+                current.filter((m) => m.id !== messageId),
+              );
+            });
+          },
         },
-      },
-    ]);
-  }, []);
+      ]);
+    },
+    [t],
+  );
 
   const latestMineMessageId = useMemo(
     () => messages.find((m) => m.sender_id === userId)?.id ?? null,
@@ -521,12 +527,12 @@ export function ChatScreen({ route, navigation }: Props) {
           />
         )}
       />
-      {otherTyping && <Text style={styles.typingText}>Typing...</Text>}
+      {otherTyping && <Text style={styles.typingText}>{t('chat.typing')}</Text>}
       {editingMessageId && (
         <View style={styles.editingBar}>
-          <Text style={styles.editingBarText}>Editing message</Text>
+          <Text style={styles.editingBarText}>{t('chat.editingMessage')}</Text>
           <TouchableOpacity onPress={onCancelEdit}>
-            <Text style={styles.editingBarCancel}>Cancel</Text>
+            <Text style={styles.editingBarCancel}>{t('chat.cancel')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -544,14 +550,14 @@ export function ChatScreen({ route, navigation }: Props) {
         </TouchableOpacity>
         <TextInput
           style={styles.input}
-          placeholder="Message"
+          placeholder={t('chat.messagePlaceholder')}
           value={draft}
           onChangeText={onChangeDraft}
           onSubmitEditing={() => void onSend()}
         />
         <TouchableOpacity onPress={() => void onSend()} style={styles.sendButton}>
           <Text style={styles.sendText}>
-            {editingMessageId ? 'Save' : 'Send'}
+            {editingMessageId ? t('chat.save') : t('chat.send')}
           </Text>
         </TouchableOpacity>
       </View>

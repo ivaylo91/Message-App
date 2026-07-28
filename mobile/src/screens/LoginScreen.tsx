@@ -7,6 +7,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
@@ -14,6 +15,7 @@ import { useAuth } from '../auth/AuthContext';
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
 export function LoginScreen({ navigation }: Props) {
+  const { t } = useTranslation();
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -26,7 +28,7 @@ export function LoginScreen({ navigation }: Props) {
     try {
       await login(email, password);
     } catch {
-      setError('Login failed. Check your email and password.');
+      setError(t('auth.login.error'));
     } finally {
       setIsSubmitting(false);
     }
@@ -34,10 +36,10 @@ export function LoginScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Sign in</Text>
+      <Text style={styles.title}>{t('auth.login.title')}</Text>
       <TextInput
         style={styles.input}
-        placeholder="Email"
+        placeholder={t('auth.login.emailPlaceholder')}
         autoCapitalize="none"
         keyboardType="email-address"
         value={email}
@@ -45,7 +47,7 @@ export function LoginScreen({ navigation }: Props) {
       />
       <TextInput
         style={styles.input}
-        placeholder="Password"
+        placeholder={t('auth.login.passwordPlaceholder')}
         secureTextEntry
         value={password}
         onChangeText={setPassword}
@@ -54,10 +56,10 @@ export function LoginScreen({ navigation }: Props) {
       {isSubmitting ? (
         <ActivityIndicator />
       ) : (
-        <Button title="Sign in" onPress={onSubmit} />
+        <Button title={t('auth.login.submit')} onPress={onSubmit} />
       )}
       <Button
-        title="Need an account? Register"
+        title={t('auth.login.switchToRegister')}
         onPress={() => navigation.navigate('Register')}
       />
     </View>

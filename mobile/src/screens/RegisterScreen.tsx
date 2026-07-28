@@ -7,6 +7,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
@@ -14,6 +15,7 @@ import { useAuth } from '../auth/AuthContext';
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
 export function RegisterScreen({ navigation }: Props) {
+  const { t } = useTranslation();
   const { register } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -33,12 +35,10 @@ export function RegisterScreen({ navigation }: Props) {
         displayName,
       );
       if (needsEmailConfirmation) {
-        setInfoMessage(
-          'Check your email to confirm your account, then sign in.',
-        );
+        setInfoMessage(t('auth.register.confirmEmailInfo'));
       }
     } catch {
-      setError('Registration failed. Try a different email.');
+      setError(t('auth.register.error'));
     } finally {
       setIsSubmitting(false);
     }
@@ -46,16 +46,16 @@ export function RegisterScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Create account</Text>
+      <Text style={styles.title}>{t('auth.register.title')}</Text>
       <TextInput
         style={styles.input}
-        placeholder="Display name"
+        placeholder={t('auth.register.displayNamePlaceholder')}
         value={displayName}
         onChangeText={setDisplayName}
       />
       <TextInput
         style={styles.input}
-        placeholder="Email"
+        placeholder={t('auth.register.emailPlaceholder')}
         autoCapitalize="none"
         keyboardType="email-address"
         value={email}
@@ -63,7 +63,7 @@ export function RegisterScreen({ navigation }: Props) {
       />
       <TextInput
         style={styles.input}
-        placeholder="Password"
+        placeholder={t('auth.register.passwordPlaceholder')}
         secureTextEntry
         value={password}
         onChangeText={setPassword}
@@ -73,10 +73,10 @@ export function RegisterScreen({ navigation }: Props) {
       {isSubmitting ? (
         <ActivityIndicator />
       ) : (
-        <Button title="Register" onPress={onSubmit} />
+        <Button title={t('auth.register.submit')} onPress={onSubmit} />
       )}
       <Button
-        title="Already have an account? Sign in"
+        title={t('auth.register.switchToLogin')}
         onPress={() => navigation.navigate('Login')}
       />
     </View>
