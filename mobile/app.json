@@ -1,6 +1,6 @@
 {
   "name": "MobileApp",
-  "displayName": "MobileApp",
+  "displayName": "Heathy",
   "slug": "message-app",
   "android": {
     "package": "com.ivaylopenev.messageapp"
