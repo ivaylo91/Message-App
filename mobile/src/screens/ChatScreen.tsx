@@ -29,6 +29,8 @@ import { supabase } from '../lib/supabase';
 import * as conversationsData from '../data/conversations';
 import * as reactionsData from '../data/reactions';
 import * as mediaData from '../data/media';
+import { Avatar } from '../components/Avatar';
+import { colors, radii, spacing } from '../theme/tokens';
 import { ConversationParticipant, Message, MessageReaction } from '../types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Chat'>;
@@ -130,7 +132,11 @@ function MessageBubble({
         activeOpacity={0.8}
       >
         {message.media_path && <MediaImage path={message.media_path} />}
-        {message.body && <Text>{message.body}</Text>}
+        {message.body && (
+          <Text style={isMine ? styles.bubbleTextMine : styles.bubbleTextTheirs}>
+            {message.body}
+          </Text>
+        )}
         {message.edited_at && <Text style={styles.editedTag}>{t('chat.edited')}</Text>}
       </TouchableOpacity>
 
@@ -201,10 +207,6 @@ export function ChatScreen({ route, navigation }: Props) {
   const channelRef = useRef<RealtimeChannel | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTypingSentAtRef = useRef(0);
-
-  useEffect(() => {
-    navigation.setOptions({ title });
-  }, [navigation, title]);
 
   useEffect(() => {
     void conversationsData
@@ -499,6 +501,17 @@ export function ChatScreen({ route, navigation }: Props) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={80}
     >
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Text style={styles.backButtonText}>‹</Text>
+        </TouchableOpacity>
+        <Avatar name={title} size={36} />
+        <View>
+          <Text style={styles.headerName}>{title}</Text>
+          {otherTyping && <Text style={styles.headerStatus}>{t('chat.typing')}</Text>}
+        </View>
+      </View>
+
       <FlatList
         style={styles.list}
         data={messages}
@@ -527,7 +540,6 @@ export function ChatScreen({ route, navigation }: Props) {
           />
         )}
       />
-      {otherTyping && <Text style={styles.typingText}>{t('chat.typing')}</Text>}
       {editingMessageId && (
         <View style={styles.editingBar}>
           <Text style={styles.editingBarText}>{t('chat.editingMessage')}</Text>
@@ -543,7 +555,7 @@ export function ChatScreen({ route, navigation }: Props) {
           disabled={isUploadingMedia}
         >
           {isUploadingMedia ? (
-            <ActivityIndicator size="small" />
+            <ActivityIndicator size="small" color={colors.smoke} />
           ) : (
             <Text style={styles.attachButtonText}>📷</Text>
           )}
@@ -551,13 +563,14 @@ export function ChatScreen({ route, navigation }: Props) {
         <TextInput
           style={styles.input}
           placeholder={t('chat.messagePlaceholder')}
+          placeholderTextColor={colors.smoke}
           value={draft}
           onChangeText={onChangeDraft}
           onSubmitEditing={() => void onSend()}
         />
         <TouchableOpacity onPress={() => void onSend()} style={styles.sendButton}>
           <Text style={styles.sendText}>
-            {editingMessageId ? t('chat.save') : t('chat.send')}
+            {editingMessageId ? t('chat.save') : '➤'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -566,33 +579,49 @@ export function ChatScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, backgroundColor: colors.paper },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.line,
+  },
+  backButton: { paddingHorizontal: 4, paddingVertical: 4 },
+  backButtonText: { fontSize: 30, color: colors.ink, fontWeight: '300', marginTop: -4 },
+  headerName: { fontWeight: '700', fontSize: 15, color: colors.ink },
+  headerStatus: { fontSize: 11.5, fontWeight: '600', color: colors.sage },
   list: { flex: 1, paddingHorizontal: 12 },
   rowMine: { alignItems: 'flex-end', marginVertical: 4 },
   rowTheirs: { alignItems: 'flex-start', marginVertical: 4 },
   bubble: {
     padding: 10,
-    borderRadius: 12,
+    paddingHorizontal: 14,
+    borderRadius: 19,
     maxWidth: '80%',
   },
   mediaBubble: {
     padding: 4,
-    borderRadius: 12,
+    borderRadius: 16,
     maxWidth: '80%',
   },
   media: {
     width: 220,
     height: 220,
-    borderRadius: 8,
+    borderRadius: 14,
   },
   mediaLoading: {
-    backgroundColor: '#E0E0E0',
+    backgroundColor: colors.line,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  bubbleMine: { backgroundColor: '#DCF8C6' },
-  bubbleTheirs: { backgroundColor: '#F0F0F0' },
-  editedTag: { fontSize: 10, color: '#666', marginTop: 2 },
+  bubbleMine: { backgroundColor: colors.ember, borderBottomRightRadius: 6 },
+  bubbleTheirs: { backgroundColor: colors.paper2, borderBottomLeftRadius: 6 },
+  bubbleTextMine: { color: colors.white, fontSize: 14.5, lineHeight: 20 },
+  bubbleTextTheirs: { color: colors.ink, fontSize: 14.5, lineHeight: 20 },
+  editedTag: { fontSize: 10, color: colors.smoke, marginTop: 2 },
   reactionRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -601,23 +630,23 @@ const styles = StyleSheet.create({
   },
   reactionPill: {
     flexDirection: 'row',
-    backgroundColor: '#EFEFEF',
-    borderRadius: 12,
+    backgroundColor: colors.paper2,
+    borderRadius: radii.lg,
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderWidth: 1,
     borderColor: 'transparent',
   },
-  reactionPillMine: { borderColor: '#007AFF' },
+  reactionPillMine: { borderColor: colors.ember },
   reactionPillText: { fontSize: 13 },
   picker: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderRadius: 20,
+    backgroundColor: colors.paper2,
+    borderRadius: radii.xl,
     paddingHorizontal: 8,
     paddingVertical: 6,
     marginTop: 6,
-    shadowColor: '#000',
+    shadowColor: colors.ink,
     shadowOpacity: 0.15,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
@@ -625,29 +654,23 @@ const styles = StyleSheet.create({
   },
   pickerEmoji: { paddingHorizontal: 6 },
   pickerEmojiText: { fontSize: 22 },
-  pickerActionText: { fontSize: 14, color: '#007AFF', fontWeight: '600' },
-  pickerDeleteText: { color: '#FF3B30' },
-  seenText: { fontSize: 11, color: '#999', marginTop: 2, marginRight: 4 },
-  typingText: {
-    fontSize: 12,
-    color: '#999',
-    paddingHorizontal: 16,
-    paddingBottom: 4,
-  },
+  pickerActionText: { fontSize: 14, color: colors.ember, fontWeight: '600' },
+  pickerDeleteText: { color: colors.danger },
+  seenText: { fontSize: 11, color: colors.smoke, marginTop: 2, marginRight: 4 },
   editingBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    backgroundColor: '#FFF8E1',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.paper2,
   },
-  editingBarText: { fontSize: 12, color: '#666' },
-  editingBarCancel: { fontSize: 12, color: '#007AFF', fontWeight: '600' },
+  editingBarText: { fontSize: 12, color: colors.smoke },
+  editingBarCancel: { fontSize: 12, color: colors.ember, fontWeight: '600' },
   composer: {
     flexDirection: 'row',
-    padding: 12,
+    padding: spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#ccc',
+    borderTopColor: colors.line,
     alignItems: 'center',
   },
   attachButton: {
@@ -658,13 +681,23 @@ const styles = StyleSheet.create({
   attachButtonText: { fontSize: 22 },
   input: {
     flex: 1,
+    backgroundColor: colors.paper2,
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    marginRight: 8,
+    borderColor: colors.line,
+    borderRadius: radii.xl,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 11,
+    marginRight: spacing.sm,
+    color: colors.ink,
+    fontSize: 14.5,
   },
-  sendButton: { paddingHorizontal: 12, paddingVertical: 8 },
-  sendText: { color: '#007AFF', fontWeight: '600' },
+  sendButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: colors.ember,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sendText: { color: colors.white, fontWeight: '700', fontSize: 14 },
 });

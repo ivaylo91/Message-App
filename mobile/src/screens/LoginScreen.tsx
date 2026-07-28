@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
-  Button,
-  StyleSheet,
+  ScrollView,
   Text,
   TextInput,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
+import { authStyles as s } from './authStyles';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
@@ -35,46 +36,46 @@ export function LoginScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{t('auth.login.title')}</Text>
-      <TextInput
-        style={styles.input}
-        placeholder={t('auth.login.emailPlaceholder')}
-        autoCapitalize="none"
-        keyboardType="email-address"
-        value={email}
-        onChangeText={setEmail}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder={t('auth.login.passwordPlaceholder')}
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
-      {error && <Text style={styles.error}>{error}</Text>}
+    <ScrollView contentContainerStyle={s.container} keyboardShouldPersistTaps="handled">
+      <Text style={s.title}>{t('auth.login.title')}</Text>
+      <Text style={s.subtitle}>{t('auth.login.subtitle')}</Text>
+
+      <View style={s.field}>
+        <Text style={s.label}>{t('auth.login.emailLabel')}</Text>
+        <TextInput
+          style={s.input}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
+        />
+      </View>
+      <View style={s.field}>
+        <Text style={s.label}>{t('auth.login.passwordLabel')}</Text>
+        <TextInput
+          style={s.input}
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+        />
+      </View>
+
+      {error && <Text style={s.error}>{error}</Text>}
+
       {isSubmitting ? (
-        <ActivityIndicator />
+        <ActivityIndicator color="#E8622C" style={s.spinner} />
       ) : (
-        <Button title={t('auth.login.submit')} onPress={onSubmit} />
+        <TouchableOpacity style={s.primaryButton} onPress={() => void onSubmit()}>
+          <Text style={s.primaryButtonText}>{t('auth.login.submit')}</Text>
+        </TouchableOpacity>
       )}
-      <Button
-        title={t('auth.login.switchToRegister')}
+
+      <TouchableOpacity
+        style={s.footer}
         onPress={() => navigation.navigate('Register')}
-      />
-    </View>
+      >
+        <Text style={s.footerText}>{t('auth.login.switchToRegister')}</Text>
+      </TouchableOpacity>
+    </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: 24 },
-  title: { fontSize: 24, fontWeight: '600', marginBottom: 24 },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-  },
-  error: { color: 'red', marginBottom: 12 },
-});

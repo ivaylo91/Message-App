@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
-  Button,
-  StyleSheet,
+  ScrollView,
   Text,
   TextInput,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
+import { authStyles as s } from './authStyles';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
@@ -45,54 +46,48 @@ export function RegisterScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{t('auth.register.title')}</Text>
-      <TextInput
-        style={styles.input}
-        placeholder={t('auth.register.displayNamePlaceholder')}
-        value={displayName}
-        onChangeText={setDisplayName}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder={t('auth.register.emailPlaceholder')}
-        autoCapitalize="none"
-        keyboardType="email-address"
-        value={email}
-        onChangeText={setEmail}
-      />
-      <TextInput
-        style={styles.input}
-        placeholder={t('auth.register.passwordPlaceholder')}
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
-      {error && <Text style={styles.error}>{error}</Text>}
-      {infoMessage && <Text style={styles.info}>{infoMessage}</Text>}
+    <ScrollView contentContainerStyle={s.container} keyboardShouldPersistTaps="handled">
+      <Text style={s.title}>{t('auth.register.title')}</Text>
+      <Text style={s.subtitle}>{t('auth.register.subtitle')}</Text>
+
+      <View style={s.field}>
+        <Text style={s.label}>{t('auth.register.nameLabel')}</Text>
+        <TextInput style={s.input} value={displayName} onChangeText={setDisplayName} />
+      </View>
+      <View style={s.field}>
+        <Text style={s.label}>{t('auth.register.emailLabel')}</Text>
+        <TextInput
+          style={s.input}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
+        />
+      </View>
+      <View style={s.field}>
+        <Text style={s.label}>{t('auth.register.passwordLabel')}</Text>
+        <TextInput
+          style={s.input}
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+        />
+      </View>
+
+      {error && <Text style={s.error}>{error}</Text>}
+      {infoMessage && <Text style={s.info}>{infoMessage}</Text>}
+
       {isSubmitting ? (
-        <ActivityIndicator />
+        <ActivityIndicator color="#E8622C" style={s.spinner} />
       ) : (
-        <Button title={t('auth.register.submit')} onPress={onSubmit} />
+        <TouchableOpacity style={s.primaryButton} onPress={() => void onSubmit()}>
+          <Text style={s.primaryButtonText}>{t('auth.register.submit')}</Text>
+        </TouchableOpacity>
       )}
-      <Button
-        title={t('auth.register.switchToLogin')}
-        onPress={() => navigation.navigate('Login')}
-      />
-    </View>
+
+      <TouchableOpacity style={s.footer} onPress={() => navigation.navigate('Login')}>
+        <Text style={s.footerText}>{t('auth.register.switchToLogin')}</Text>
+      </TouchableOpacity>
+    </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: 24 },
-  title: { fontSize: 24, fontWeight: '600', marginBottom: 24 },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-  },
-  error: { color: 'red', marginBottom: 12 },
-  info: { color: 'green', marginBottom: 12 },
-});

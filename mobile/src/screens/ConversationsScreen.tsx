@@ -1,11 +1,9 @@
 import React, { useCallback, useState } from 'react';
 import {
-  Button,
   FlatList,
   RefreshControl,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -16,6 +14,8 @@ import type { AppStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
 import * as conversationsData from '../data/conversations';
 import { setLanguage, SUPPORTED_LANGUAGES, SupportedLanguage } from '../i18n';
+import { Avatar } from '../components/Avatar';
+import { colors, radii, spacing } from '../theme/tokens';
 import { Conversation, Message } from '../types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Conversations'>;
@@ -25,7 +25,6 @@ export function ConversationsScreen({ navigation }: Props) {
   const { userId, logout } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [newParticipantId, setNewParticipantId] = useState('');
 
   function previewText(message: Message | undefined): string {
     if (!message) return t('conversations.noMessagesYet');
@@ -49,18 +48,6 @@ export function ConversationsScreen({ navigation }: Props) {
     }, [load]),
   );
 
-  const startConversation = async () => {
-    if (!newParticipantId.trim()) return;
-    const conversation = await conversationsData.createConversation([
-      newParticipantId.trim(),
-    ]);
-    setNewParticipantId('');
-    navigation.navigate('Chat', {
-      conversationId: conversation.id,
-      title: conversationTitle(conversation),
-    });
-  };
-
   const conversationTitle = (conversation: Conversation) => {
     if (conversation.is_group)
       return conversation.name ?? t('conversations.groupChat');
@@ -76,106 +63,129 @@ export function ConversationsScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      <View style={styles.languageRow}>
-        {SUPPORTED_LANGUAGES.map((lang: SupportedLanguage) => (
-          <TouchableOpacity
-            key={lang}
-            style={[
-              styles.languageChip,
-              i18n.language === lang && styles.languageChipActive,
-            ]}
-            onPress={() => void setLanguage(lang)}
-          >
-            <Text
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>{t('conversations.title')}</Text>
+        <View style={styles.headerActions}>
+          {SUPPORTED_LANGUAGES.map((lang: SupportedLanguage) => (
+            <TouchableOpacity
+              key={lang}
               style={[
-                styles.languageChipText,
-                i18n.language === lang && styles.languageChipTextActive,
+                styles.languageChip,
+                i18n.language === lang && styles.languageChipActive,
               ]}
+              onPress={() => void setLanguage(lang)}
             >
-              {lang.toUpperCase()}
-            </Text>
+              <Text
+                style={[
+                  styles.languageChipText,
+                  i18n.language === lang && styles.languageChipTextActive,
+                ]}
+              >
+                {lang.toUpperCase()}
+              </Text>
+            </TouchableOpacity>
+          ))}
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={() => navigation.navigate('NewChat')}
+          >
+            <Text style={styles.iconButtonText}>+</Text>
           </TouchableOpacity>
-        ))}
+        </View>
       </View>
-      <View style={styles.newConversationRow}>
-        <TextInput
-          style={styles.input}
-          placeholder={t('conversations.newChatPlaceholder')}
-          value={newParticipantId}
-          onChangeText={setNewParticipantId}
-        />
-        <Button title={t('conversations.go')} onPress={() => void startConversation()} />
-      </View>
+
       <FlatList
         data={conversations}
         keyExtractor={(item) => item.id}
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={load} />
         }
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.row}
-            onPress={() =>
-              navigation.navigate('Chat', {
-                conversationId: item.id,
-                title: conversationTitle(item),
-              })
-            }
-          >
-            <Text style={styles.rowTitle}>{conversationTitle(item)}</Text>
-            <Text style={styles.rowPreview} numberOfLines={1}>
-              {previewText(item.messages?.[0])}
-            </Text>
-          </TouchableOpacity>
-        )}
+        renderItem={({ item }) => {
+          const title = conversationTitle(item);
+          return (
+            <TouchableOpacity
+              style={styles.row}
+              onPress={() =>
+                navigation.navigate('Chat', {
+                  conversationId: item.id,
+                  title,
+                })
+              }
+            >
+              <Avatar name={title} />
+              <View style={styles.rowMain}>
+                <Text style={styles.rowTitle}>{title}</Text>
+                <Text style={styles.rowPreview} numberOfLines={1}>
+                  {previewText(item.messages?.[0])}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          );
+        }}
         ListEmptyComponent={
-          <Text style={styles.empty}>{t('conversations.noConversationsYet')}</Text>
+          <View style={styles.empty}>
+            <Text style={styles.emptyTitle}>{t('conversations.noConversationsYet')}</Text>
+            <Text style={styles.emptyHint}>{t('conversations.startConversationHint')}</Text>
+          </View>
         }
       />
-      <Button title={t('conversations.logout')} onPress={() => void logout()} />
+      <TouchableOpacity style={styles.logoutButton} onPress={() => void logout()}>
+        <Text style={styles.logoutText}>{t('conversations.logout')}</Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingTop: 16 },
-  languageRow: {
+  container: { flex: 1, backgroundColor: colors.paper, paddingTop: spacing.lg },
+  header: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.md,
     flexDirection: 'row',
-    justifyContent: 'flex-end',
-    paddingHorizontal: 16,
-    marginBottom: 8,
-    gap: 8,
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
+  headerTitle: { fontSize: 28, fontWeight: '800', letterSpacing: -0.3, color: colors.ink },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   languageChip: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: radii.pill,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: colors.line,
   },
-  languageChipActive: { backgroundColor: '#007AFF', borderColor: '#007AFF' },
-  languageChipText: { fontSize: 12, fontWeight: '600', color: '#666' },
-  languageChipTextActive: { color: '#fff' },
-  newConversationRow: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    marginBottom: 12,
-    gap: 8,
-  },
-  input: {
-    flex: 1,
+  languageChipActive: { backgroundColor: colors.ember, borderColor: colors.ember },
+  languageChipText: { fontSize: 11, fontWeight: '700', color: colors.smoke },
+  languageChipTextActive: { color: colors.white },
+  iconButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: colors.paper2,
+    alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    padding: 10,
+    borderColor: colors.line,
   },
+  iconButtonText: { fontSize: 20, fontWeight: '600', color: colors.ink, marginTop: -2 },
   row: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#ccc',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: 10,
+    paddingHorizontal: spacing.lg,
   },
-  rowTitle: { fontSize: 16, fontWeight: '600' },
-  rowPreview: { color: '#666', marginTop: 4 },
-  empty: { textAlign: 'center', marginTop: 40, color: '#999' },
+  rowMain: { flex: 1, minWidth: 0 },
+  rowTitle: { fontWeight: '700', fontSize: 15.5, color: colors.ink },
+  rowPreview: { color: colors.smoke, marginTop: 2, fontSize: 13.5 },
+  empty: { alignItems: 'center', marginTop: 64, paddingHorizontal: spacing.xxl },
+  emptyTitle: { color: colors.ink, fontWeight: '700', fontSize: 15 },
+  emptyHint: { color: colors.smoke, marginTop: 4, fontSize: 13.5 },
+  logoutButton: {
+    paddingVertical: spacing.md,
+    alignItems: 'center',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.line,
+  },
+  logoutText: { color: colors.smoke, fontWeight: '600', fontSize: 13.5 },
 });

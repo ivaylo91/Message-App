@@ -1,33 +1,48 @@
 {
+  "welcome": {
+    "tagline": "Where your people gather.",
+    "getStarted": "Get started",
+    "haveAccount": "I already have an account"
+  },
   "auth": {
     "login": {
-      "title": "Sign in",
-      "emailPlaceholder": "Email",
-      "passwordPlaceholder": "Password",
+      "title": "Welcome back",
+      "subtitle": "Sign in to pick up where you left off.",
+      "emailLabel": "Email",
+      "passwordLabel": "Password",
       "submit": "Sign in",
       "error": "Login failed. Check your email and password.",
-      "switchToRegister": "Need an account? Register"
+      "switchToRegister": "New to Hearth? Create an account"
     },
     "register": {
-      "title": "Create account",
-      "displayNamePlaceholder": "Display name",
-      "emailPlaceholder": "Email",
-      "passwordPlaceholder": "Password",
-      "submit": "Register",
+      "title": "Create your account",
+      "subtitle": "Takes less than a minute.",
+      "nameLabel": "Name",
+      "emailLabel": "Email",
+      "passwordLabel": "Password",
+      "submit": "Create account",
       "confirmEmailInfo": "Check your email to confirm your account, then sign in.",
       "error": "Registration failed. Try a different email.",
       "switchToLogin": "Already have an account? Sign in"
     }
   },
   "conversations": {
-    "newChatPlaceholder": "Start chat: enter user id",
-    "go": "Go",
+    "title": "Chats",
+    "searchPlaceholder": "Search conversations",
     "noMessagesYet": "No messages yet",
     "photoPreview": "📷 Photo",
     "groupChat": "Group chat",
     "directMessage": "Direct message",
     "noConversationsYet": "No conversations yet.",
+    "startConversationHint": "Tap the + to start one.",
     "logout": "Log out"
+  },
+  "newChat": {
+    "title": "New message",
+    "cancel": "Cancel",
+    "searchPlaceholder": "Search by name or email",
+    "emptyPrompt": "Start typing to find someone",
+    "noResults": "No matches found"
   },
   "chat": {
     "messagePlaceholder": "Message",
