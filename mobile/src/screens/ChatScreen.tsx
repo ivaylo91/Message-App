@@ -6,6 +6,7 @@ import React, {
   useState,
 } from 'react';
 import {
+  Alert,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -67,6 +68,8 @@ interface MessageBubbleProps {
   showSeen: boolean;
   onLongPress: () => void;
   onToggleReaction: (emoji: string) => void;
+  onEdit: () => void;
+  onDelete: () => void;
 }
 
 function MessageBubble({
@@ -78,6 +81,8 @@ function MessageBubble({
   showSeen,
   onLongPress,
   onToggleReaction,
+  onEdit,
+  onDelete,
 }: MessageBubbleProps) {
   const summary = useMemo(
     () => summarizeReactions(reactions, userId),
@@ -92,6 +97,7 @@ function MessageBubble({
         activeOpacity={0.8}
       >
         <Text>{message.body}</Text>
+        {message.edited_at && <Text style={styles.editedTag}>(edited)</Text>}
       </TouchableOpacity>
 
       {summary.length > 0 && (
@@ -121,6 +127,18 @@ function MessageBubble({
               <Text style={styles.pickerEmojiText}>{emoji}</Text>
             </TouchableOpacity>
           ))}
+          {isMine && (
+            <>
+              <TouchableOpacity onPress={onEdit} style={styles.pickerEmoji}>
+                <Text style={styles.pickerActionText}>Edit</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={onDelete} style={styles.pickerEmoji}>
+                <Text style={[styles.pickerActionText, styles.pickerDeleteText]}>
+                  Delete
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       )}
 
@@ -139,6 +157,9 @@ export function ChatScreen({ route, navigation }: Props) {
   );
   const [draft, setDraft] = useState('');
   const [pickerMessageId, setPickerMessageId] = useState<string | null>(null);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(
+    null,
+  );
   const [otherTyping, setOtherTyping] = useState(false);
 
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -199,6 +220,27 @@ export function ChatScreen({ route, navigation }: Props) {
           filter: `conversation_id=eq.${conversationId}`,
         },
         (payload) => upsertMessage(payload.new as Message),
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          const updated = payload.new as Message;
+          if (updated.deleted_at) {
+            setMessages((current) =>
+              current.filter((m) => m.id !== updated.id),
+            );
+          } else {
+            setMessages((current) =>
+              current.map((m) => (m.id === updated.id ? updated : m)),
+            );
+          }
+        },
       )
       .on(
         'postgres_changes',
@@ -284,6 +326,17 @@ export function ChatScreen({ route, navigation }: Props) {
     const body = draft.trim();
     if (!body || !userId) return;
     setDraft('');
+
+    if (editingMessageId) {
+      const messageId = editingMessageId;
+      setEditingMessageId(null);
+      const updated = await conversationsData.editMessage(messageId, body);
+      setMessages((current) =>
+        current.map((m) => (m.id === updated.id ? updated : m)),
+      );
+      return;
+    }
+
     const message = await conversationsData.sendMessage(
       conversationId,
       userId,
@@ -319,6 +372,38 @@ export function ChatScreen({ route, navigation }: Props) {
     },
     [conversationId, reactions, userId],
   );
+
+  const onEditMessage = useCallback(
+    (message: Message) => {
+      setPickerMessageId(null);
+      setEditingMessageId(message.id);
+      setDraft(message.body);
+    },
+    [],
+  );
+
+  const onCancelEdit = useCallback(() => {
+    setEditingMessageId(null);
+    setDraft('');
+  }, []);
+
+  const onDeleteMessage = useCallback((messageId: string) => {
+    setPickerMessageId(null);
+    Alert.alert('Delete message?', 'This cannot be undone.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          void conversationsData.deleteMessage(messageId).then(() => {
+            setMessages((current) =>
+              current.filter((m) => m.id !== messageId),
+            );
+          });
+        },
+      },
+    ]);
+  }, []);
 
   const latestMineMessageId = useMemo(
     () => messages.find((m) => m.sender_id === userId)?.id ?? null,
@@ -371,10 +456,20 @@ export function ChatScreen({ route, navigation }: Props) {
               )
             }
             onToggleReaction={(emoji) => void onToggleReaction(item.id, emoji)}
+            onEdit={() => onEditMessage(item)}
+            onDelete={() => onDeleteMessage(item.id)}
           />
         )}
       />
       {otherTyping && <Text style={styles.typingText}>Typing...</Text>}
+      {editingMessageId && (
+        <View style={styles.editingBar}>
+          <Text style={styles.editingBarText}>Editing message</Text>
+          <TouchableOpacity onPress={onCancelEdit}>
+            <Text style={styles.editingBarCancel}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      )}
       <View style={styles.composer}>
         <TextInput
           style={styles.input}
@@ -384,7 +479,9 @@ export function ChatScreen({ route, navigation }: Props) {
           onSubmitEditing={() => void onSend()}
         />
         <TouchableOpacity onPress={() => void onSend()} style={styles.sendButton}>
-          <Text style={styles.sendText}>Send</Text>
+          <Text style={styles.sendText}>
+            {editingMessageId ? 'Save' : 'Send'}
+          </Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -403,6 +500,7 @@ const styles = StyleSheet.create({
   },
   bubbleMine: { backgroundColor: '#DCF8C6' },
   bubbleTheirs: { backgroundColor: '#F0F0F0' },
+  editedTag: { fontSize: 10, color: '#666', marginTop: 2 },
   reactionRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -435,6 +533,8 @@ const styles = StyleSheet.create({
   },
   pickerEmoji: { paddingHorizontal: 6 },
   pickerEmojiText: { fontSize: 22 },
+  pickerActionText: { fontSize: 14, color: '#007AFF', fontWeight: '600' },
+  pickerDeleteText: { color: '#FF3B30' },
   seenText: { fontSize: 11, color: '#999', marginTop: 2, marginRight: 4 },
   typingText: {
     fontSize: 12,
@@ -442,6 +542,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 4,
   },
+  editingBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    backgroundColor: '#FFF8E1',
+  },
+  editingBarText: { fontSize: 12, color: '#666' },
+  editingBarCancel: { fontSize: 12, color: '#007AFF', fontWeight: '600' },
   composer: {
     flexDirection: 'row',
     padding: 12,

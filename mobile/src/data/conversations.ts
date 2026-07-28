@@ -84,3 +84,27 @@ export async function markConversationRead(
 
   if (error) throw error;
 }
+
+export async function editMessage(
+  messageId: string,
+  body: string,
+): Promise<Message> {
+  const { data, error } = await supabase
+    .from('messages')
+    .update({ body, edited_at: new Date().toISOString() })
+    .eq('id', messageId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as Message;
+}
+
+export async function deleteMessage(messageId: string): Promise<void> {
+  const { error } = await supabase
+    .from('messages')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', messageId);
+
+  if (error) throw error;
+}
