@@ -117,3 +117,7 @@ dependencies {
         implementation jscFlavor
     }
 }
+
+// Requires android/app/google-services.json (from your Firebase project)
+// to be present - see mobile/README or the push notifications setup notes.
+apply plugin: "com.google.gms.google-services"

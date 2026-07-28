@@ -483,6 +483,12 @@ export function ChatScreen({ route, navigation }: Props) {
     [participants, userId],
   );
 
+  const displayTitle =
+    title ||
+    otherParticipant?.profiles.display_name ||
+    otherParticipant?.profiles.email ||
+    '…';
+
   const seenLatestMine = useMemo(() => {
     if (!otherParticipant?.last_read_at || !latestMineMessageId) return false;
     const latestMineMessage = messages.find(
@@ -505,9 +511,9 @@ export function ChatScreen({ route, navigation }: Props) {
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Text style={styles.backButtonText}>‹</Text>
         </TouchableOpacity>
-        <Avatar name={title} size={36} />
+        <Avatar name={displayTitle} size={36} />
         <View>
-          <Text style={styles.headerName}>{title}</Text>
+          <Text style={styles.headerName}>{displayTitle}</Text>
           {otherTyping && <Text style={styles.headerStatus}>{t('chat.typing')}</Text>}
         </View>
       </View>

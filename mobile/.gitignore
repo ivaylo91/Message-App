@@ -35,6 +35,10 @@ local.properties
 !debug.keystore
 .kotlin/
 
+# Firebase (client config, not a build-time secret, but environment-specific)
+google-services.json
+GoogleService-Info.plist
+
 # node.js
 #
 node_modules/
