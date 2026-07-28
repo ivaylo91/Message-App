@@ -39,6 +39,10 @@ const QUICK_REACTIONS = ['❤️', '👍', '😂', '😮', '😢', '🙏'];
 const TYPING_BROADCAST_THROTTLE_MS = 2000;
 const TYPING_INDICATOR_TIMEOUT_MS = 3000;
 
+// Messages we've sent locally but haven't heard back from the server on
+// yet - shown immediately (dimmed) instead of waiting on a round-trip.
+type LocalMessage = Message & { _pending?: boolean };
+
 interface ReactionSummary {
   emoji: string;
   count: number;
@@ -91,7 +95,7 @@ function MediaImage({ path }: { path: string }) {
 }
 
 interface MessageBubbleProps {
-  message: Message;
+  message: LocalMessage;
   isMine: boolean;
   reactions: MessageReaction[];
   userId: string | null;
@@ -127,6 +131,7 @@ function MessageBubble({
         style={[
           message.media_path ? styles.mediaBubble : styles.bubble,
           isMine ? styles.bubbleMine : styles.bubbleTheirs,
+          message._pending && styles.bubblePending,
         ]}
         onLongPress={onLongPress}
         activeOpacity={0.8}
@@ -191,7 +196,7 @@ export function ChatScreen({ route, navigation }: Props) {
   const { t } = useTranslation();
   const { conversationId, title } = route.params;
   const { userId } = useAuth();
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<LocalMessage[]>([]);
   const [reactions, setReactions] = useState<MessageReaction[]>([]);
   const [participants, setParticipants] = useState<ConversationParticipant[]>(
     [],
@@ -375,12 +380,34 @@ export function ChatScreen({ route, navigation }: Props) {
       return;
     }
 
-    const message = await conversationsData.sendMessage(
-      conversationId,
-      userId,
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const optimisticMessage: LocalMessage = {
+      id: tempId,
+      conversation_id: conversationId,
+      sender_id: userId,
       body,
-    );
-    upsertMessage(message);
+      media_path: null,
+      created_at: new Date().toISOString(),
+      edited_at: null,
+      deleted_at: null,
+      _pending: true,
+    };
+    setMessages((current) => [optimisticMessage, ...current]);
+
+    try {
+      const message = await conversationsData.sendMessage(
+        conversationId,
+        userId,
+        body,
+      );
+      setMessages((current) =>
+        current.map((m) => (m.id === tempId ? message : m)),
+      );
+      markRead();
+    } catch {
+      setMessages((current) => current.filter((m) => m.id !== tempId));
+      Alert.alert(t('chat.sendFailedTitle'), t('chat.sendFailedMessage'));
+    }
   };
 
   const onPickImage = async () => {
@@ -625,6 +652,7 @@ const styles = StyleSheet.create({
   },
   bubbleMine: { backgroundColor: colors.ember, borderBottomRightRadius: 6 },
   bubbleTheirs: { backgroundColor: colors.paper2, borderBottomLeftRadius: 6 },
+  bubblePending: { opacity: 0.55 },
   bubbleTextMine: { color: colors.white, fontSize: 14.5, lineHeight: 20 },
   bubbleTextTheirs: { color: colors.ink, fontSize: 14.5, lineHeight: 20 },
   editedTag: { fontSize: 10, color: colors.smoke, marginTop: 2 },

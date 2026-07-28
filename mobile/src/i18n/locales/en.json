@@ -58,7 +58,9 @@
     "typing": "Typing...",
     "edited": "(edited)",
     "uploadFailedTitle": "Upload failed",
-    "uploadFailedMessage": "Could not send the image. Try again."
+    "uploadFailedMessage": "Could not send the image. Try again.",
+    "sendFailedTitle": "Message not sent",
+    "sendFailedMessage": "Could not send your message. Try again."
   },
   "common": {
     "language": "Language"
