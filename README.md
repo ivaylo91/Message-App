@@ -7,7 +7,7 @@ Mobile messaging app.
 - **Mobile:** React Native, bare workflow ([mobile/](mobile/))
 - **Backend:** Supabase — managed Postgres, Auth, and Realtime (Postgres Changes). No custom API server; the app talks to Supabase directly via `@supabase/supabase-js`.
 - **Build/distribution:** EAS Build (`mobile/eas.json`)
-- **Push notifications:** FCM (Android only for now) — see below for the setup this needs
+- **Push notifications:** FCM (Android only for now) — Firebase project `message-app-240f7`, fully set up and verified (see below)
 - **E2EE:** Signal Protocol (libsignal), if/when required
 
 ## Supabase project
@@ -20,29 +20,42 @@ Mobile messaging app.
 
 **Email confirmation is on by default** for this project (Supabase's shared test SMTP has a very low send-rate limit, so bulk test signups will hit `over_email_send_rate_limit`). `RegisterScreen` handles this: if `signUp()` doesn't return a session, it shows a "check your email" message instead of assuming the user is logged in. To skip confirmation during development, disable "Confirm email" under Authentication → Providers → Email in the Supabase dashboard (there's no API/MCP toggle for it).
 
-### Push notifications setup (required before they'll work)
+### Push notifications setup
 
-The code is in place — `push_tokens` table + RLS, an `on_message_created` trigger
-that calls the `send-push-notification` Edge Function via `pg_net`, and the
-mobile side (token registration, foreground/background/killed-state handling,
-tap-to-open-chat). None of this can send a real notification yet without:
+Fully wired and verified: `push_tokens` table + RLS, an `on_message_created`
+trigger that calls the `send-push-notification` Edge Function via `pg_net`,
+and the mobile side (token registration, foreground/background/killed-state
+handling, tap-to-open-chat).
 
-1. **A Firebase project** (console.firebase.google.com) with an Android app
-   registered under package `com.ivaylopenev.messageapp`. Download its
-   `google-services.json` and place it at `mobile/android/app/google-services.json`
-   (gitignored — it's not committed).
-2. **A Firebase service account key**: Project settings → Service accounts →
-   Generate new private key. In the Supabase dashboard, set that whole JSON
-   file's contents as the Edge Function secret `FIREBASE_SERVICE_ACCOUNT`
-   (Project Settings → Edge Functions → `send-push-notification` → Secrets).
-   There's no MCP/API access to set Edge Function secrets, so this has to be
-   done in the dashboard (or via `supabase secrets set`).
-3. Rebuild the Android app (native config changed) so the Firebase SDK is
-   actually linked in.
+Firebase project: `message-app-240f7`, Android app `com.ivaylopenev.messageapp`
+(display name "Hearth"). Two Edge Function secrets are required on
+`send-push-notification` (Supabase dashboard → Project Settings → Edge
+Functions → secrets — no MCP/API access to set these, has to be done there
+or via `supabase secrets set`):
 
-Until step 2 is done, `send-push-notification` logs "secret is not set" and
-returns `{skipped: true}` for every message — confirmed working end-to-end
-in that degraded state (trigger fires, function runs, just doesn't send).
+- `FIREBASE_SERVICE_ACCOUNT` — the **service account key** JSON (Firebase
+  Console → Project settings → **Service accounts** tab → Generate new
+  private key). Don't confuse this with `google-services.json` (the Android
+  client config) — they're both JSON files from the same project but serve
+  different purposes, and pasting the wrong one is a mistake that's easy to
+  make (it happened once already) and easy to miss, since the function still
+  returns 200 either way. If push stops working, check this first.
+- `WEBHOOK_SECRET` — shared secret the Postgres trigger sends so the function
+  can reject unauthorized calls. The value lives in Supabase Vault
+  (`select decrypted_secret from vault.decrypted_secrets where name =
+  'webhook_secret'`) - both sides must have the exact same value.
+
+`mobile/android/app/google-services.json` is in place (gitignored, not
+committed) - pulled directly from the Firebase project via the Firebase MCP
+server.
+
+Verified live: calling the function directly with a real conversation/sender
+and a fake device token returned `{"sent":1}` after ~775ms (vs ~200-500ms for
+early-exit responses), confirming it parsed the real service account key,
+signed a JWT, exchanged it for a Google OAuth2 access token, and called FCM's
+v1 API — the parts that are actually hard to get wrong. A fake token gets
+silently rejected by FCM itself (logged, not surfaced), so the remaining
+unknown is only real-device delivery, not the pipeline.
 
 ## Mobile app
 
