@@ -31,3 +31,12 @@ export interface Message {
   edited_at: string | null;
   deleted_at: string | null;
 }
+
+export interface MessageReaction {
+  id: string;
+  message_id: string;
+  conversation_id: string;
+  user_id: string;
+  emoji: string;
+  created_at: string;
+}
