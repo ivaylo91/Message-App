@@ -6,8 +6,10 @@ import React, {
   useState,
 } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   FlatList,
+  Image,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -16,6 +18,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { launchImageLibrary } from 'react-native-image-picker';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RealtimeChannel } from '@supabase/supabase-js';
@@ -24,6 +27,7 @@ import { useAuth } from '../auth/AuthContext';
 import { supabase } from '../lib/supabase';
 import * as conversationsData from '../data/conversations';
 import * as reactionsData from '../data/reactions';
+import * as mediaData from '../data/media';
 import { ConversationParticipant, Message, MessageReaction } from '../types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Chat'>;
@@ -59,6 +63,30 @@ function summarizeReactions(
   return Array.from(byEmoji.values());
 }
 
+function MediaImage({ path }: { path: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void mediaData.getMediaSignedUrl(path).then((signedUrl) => {
+      if (!cancelled) setUrl(signedUrl);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [path]);
+
+  if (!url) {
+    return (
+      <View style={[styles.media, styles.mediaLoading]}>
+        <ActivityIndicator />
+      </View>
+    );
+  }
+
+  return <Image source={{ uri: url }} style={styles.media} resizeMode="cover" />;
+}
+
 interface MessageBubbleProps {
   message: Message;
   isMine: boolean;
@@ -92,11 +120,15 @@ function MessageBubble({
   return (
     <View style={isMine ? styles.rowMine : styles.rowTheirs}>
       <TouchableOpacity
-        style={[styles.bubble, isMine ? styles.bubbleMine : styles.bubbleTheirs]}
+        style={[
+          message.media_path ? styles.mediaBubble : styles.bubble,
+          isMine ? styles.bubbleMine : styles.bubbleTheirs,
+        ]}
         onLongPress={onLongPress}
         activeOpacity={0.8}
       >
-        <Text>{message.body}</Text>
+        {message.media_path && <MediaImage path={message.media_path} />}
+        {message.body && <Text>{message.body}</Text>}
         {message.edited_at && <Text style={styles.editedTag}>(edited)</Text>}
       </TouchableOpacity>
 
@@ -127,17 +159,17 @@ function MessageBubble({
               <Text style={styles.pickerEmojiText}>{emoji}</Text>
             </TouchableOpacity>
           ))}
+          {isMine && message.body && (
+            <TouchableOpacity onPress={onEdit} style={styles.pickerEmoji}>
+              <Text style={styles.pickerActionText}>Edit</Text>
+            </TouchableOpacity>
+          )}
           {isMine && (
-            <>
-              <TouchableOpacity onPress={onEdit} style={styles.pickerEmoji}>
-                <Text style={styles.pickerActionText}>Edit</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={onDelete} style={styles.pickerEmoji}>
-                <Text style={[styles.pickerActionText, styles.pickerDeleteText]}>
-                  Delete
-                </Text>
-              </TouchableOpacity>
-            </>
+            <TouchableOpacity onPress={onDelete} style={styles.pickerEmoji}>
+              <Text style={[styles.pickerActionText, styles.pickerDeleteText]}>
+                Delete
+              </Text>
+            </TouchableOpacity>
           )}
         </View>
       )}
@@ -161,6 +193,7 @@ export function ChatScreen({ route, navigation }: Props) {
     null,
   );
   const [otherTyping, setOtherTyping] = useState(false);
+  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
 
   const channelRef = useRef<RealtimeChannel | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -345,6 +378,35 @@ export function ChatScreen({ route, navigation }: Props) {
     upsertMessage(message);
   };
 
+  const onPickImage = async () => {
+    if (!userId) return;
+    const result = await launchImageLibrary({
+      mediaType: 'photo',
+      quality: 0.7,
+    });
+    const asset = result.assets?.[0];
+    if (!asset?.uri) return;
+
+    setIsUploadingMedia(true);
+    try {
+      const path = await mediaData.uploadMedia(
+        conversationId,
+        asset.uri,
+        asset.type ?? 'image/jpeg',
+      );
+      const message = await conversationsData.sendMediaMessage(
+        conversationId,
+        userId,
+        path,
+      );
+      upsertMessage(message);
+    } catch {
+      Alert.alert('Upload failed', 'Could not send the image. Try again.');
+    } finally {
+      setIsUploadingMedia(false);
+    }
+  };
+
   const onToggleReaction = useCallback(
     async (messageId: string, emoji: string) => {
       if (!userId) return;
@@ -373,14 +435,12 @@ export function ChatScreen({ route, navigation }: Props) {
     [conversationId, reactions, userId],
   );
 
-  const onEditMessage = useCallback(
-    (message: Message) => {
-      setPickerMessageId(null);
-      setEditingMessageId(message.id);
-      setDraft(message.body);
-    },
-    [],
-  );
+  const onEditMessage = useCallback((message: Message) => {
+    if (!message.body) return;
+    setPickerMessageId(null);
+    setEditingMessageId(message.id);
+    setDraft(message.body);
+  }, []);
 
   const onCancelEdit = useCallback(() => {
     setEditingMessageId(null);
@@ -471,6 +531,17 @@ export function ChatScreen({ route, navigation }: Props) {
         </View>
       )}
       <View style={styles.composer}>
+        <TouchableOpacity
+          onPress={() => void onPickImage()}
+          style={styles.attachButton}
+          disabled={isUploadingMedia}
+        >
+          {isUploadingMedia ? (
+            <ActivityIndicator size="small" />
+          ) : (
+            <Text style={styles.attachButtonText}>📷</Text>
+          )}
+        </TouchableOpacity>
         <TextInput
           style={styles.input}
           placeholder="Message"
@@ -497,6 +568,21 @@ const styles = StyleSheet.create({
     padding: 10,
     borderRadius: 12,
     maxWidth: '80%',
+  },
+  mediaBubble: {
+    padding: 4,
+    borderRadius: 12,
+    maxWidth: '80%',
+  },
+  media: {
+    width: 220,
+    height: 220,
+    borderRadius: 8,
+  },
+  mediaLoading: {
+    backgroundColor: '#E0E0E0',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   bubbleMine: { backgroundColor: '#DCF8C6' },
   bubbleTheirs: { backgroundColor: '#F0F0F0' },
@@ -558,6 +644,12 @@ const styles = StyleSheet.create({
     borderTopColor: '#ccc',
     alignItems: 'center',
   },
+  attachButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    marginRight: 4,
+  },
+  attachButtonText: { fontSize: 22 },
   input: {
     flex: 1,
     borderWidth: 1,

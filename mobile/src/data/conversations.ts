@@ -6,7 +6,9 @@ const CONVERSATION_SELECT = '*, conversation_participants(*, profiles(*))';
 export async function fetchConversations(): Promise<Conversation[]> {
   const { data, error } = await supabase
     .from('conversations')
-    .select(`${CONVERSATION_SELECT}, messages(id, body, created_at, sender_id)`)
+    .select(
+      `${CONVERSATION_SELECT}, messages(id, body, media_path, created_at, sender_id)`,
+    )
     .order('updated_at', { ascending: false })
     .order('created_at', { ascending: false, referencedTable: 'messages' })
     .limit(1, { referencedTable: 'messages' });
@@ -65,6 +67,25 @@ export async function sendMessage(
   const { data, error } = await supabase
     .from('messages')
     .insert({ conversation_id: conversationId, sender_id: senderId, body })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as Message;
+}
+
+export async function sendMediaMessage(
+  conversationId: string,
+  senderId: string,
+  mediaPath: string,
+): Promise<Message> {
+  const { data, error } = await supabase
+    .from('messages')
+    .insert({
+      conversation_id: conversationId,
+      sender_id: senderId,
+      media_path: mediaPath,
+    })
     .select()
     .single();
 

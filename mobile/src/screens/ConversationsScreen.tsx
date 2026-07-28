@@ -14,9 +14,15 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
 import * as conversationsData from '../data/conversations';
-import { Conversation } from '../types';
+import { Conversation, Message } from '../types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Conversations'>;
+
+function previewText(message: Message | undefined): string {
+  if (!message) return 'No messages yet';
+  if (message.media_path) return '📷 Photo';
+  return message.body ?? 'No messages yet';
+}
 
 export function ConversationsScreen({ navigation }: Props) {
   const { userId, logout } = useAuth();
@@ -89,7 +95,7 @@ export function ConversationsScreen({ navigation }: Props) {
           >
             <Text style={styles.rowTitle}>{conversationTitle(item)}</Text>
             <Text style={styles.rowPreview} numberOfLines={1}>
-              {item.messages?.[0]?.body ?? 'No messages yet'}
+              {previewText(item.messages?.[0])}
             </Text>
           </TouchableOpacity>
         )}
