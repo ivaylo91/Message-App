@@ -82,12 +82,28 @@ export function NewChatScreen({ navigation }: Props) {
         />
       </View>
 
+      {!query.trim() && (
+        <TouchableOpacity
+          style={styles.row}
+          onPress={() => navigation.navigate('NewGroup')}
+        >
+          <View style={styles.newGroupIcon}>
+            <Text style={styles.newGroupIconText}>👥</Text>
+          </View>
+          <View style={styles.rowMain}>
+            <Text style={styles.rowName}>{t('newChat.newGroup')}</Text>
+          </View>
+        </TouchableOpacity>
+      )}
+
       {isSearching && <ActivityIndicator color={colors.ember} style={styles.spinner} />}
 
       {!isSearching && query.trim() && results.length === 0 && (
         <Text style={styles.emptyText}>{t('newChat.noResults')}</Text>
       )}
-      {!query.trim() && <Text style={styles.emptyText}>{t('newChat.emptyPrompt')}</Text>}
+      {!query.trim() && results.length === 0 && (
+        <Text style={styles.emptyText}>{t('newChat.emptyPrompt')}</Text>
+      )}
 
       {results.map((profile) => (
         <TouchableOpacity
@@ -143,4 +159,13 @@ const styles = StyleSheet.create({
   rowMain: { flex: 1 },
   rowName: { fontWeight: '700', fontSize: 15.5, color: colors.ink },
   rowSub: { fontSize: 12.5, color: colors.smoke, marginTop: 1 },
+  newGroupIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.ember,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  newGroupIconText: { fontSize: 20 },
 });

@@ -97,6 +97,7 @@ function MediaImage({ path }: { path: string }) {
 interface MessageBubbleProps {
   message: LocalMessage;
   isMine: boolean;
+  senderName: string | null;
   reactions: MessageReaction[];
   userId: string | null;
   isPickerOpen: boolean;
@@ -110,6 +111,7 @@ interface MessageBubbleProps {
 function MessageBubble({
   message,
   isMine,
+  senderName,
   reactions,
   userId,
   isPickerOpen,
@@ -127,6 +129,7 @@ function MessageBubble({
 
   return (
     <View style={isMine ? styles.rowMine : styles.rowTheirs}>
+      {senderName && <Text style={styles.senderLabel}>{senderName}</Text>}
       <TouchableOpacity
         style={[
           message.media_path ? styles.mediaBubble : styles.bubble,
@@ -201,6 +204,7 @@ export function ChatScreen({ route, navigation }: Props) {
   const [participants, setParticipants] = useState<ConversationParticipant[]>(
     [],
   );
+  const [isGroup, setIsGroup] = useState(false);
   const [draft, setDraft] = useState('');
   const [pickerMessageId, setPickerMessageId] = useState<string | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(
@@ -214,11 +218,10 @@ export function ChatScreen({ route, navigation }: Props) {
   const lastTypingSentAtRef = useRef(0);
 
   useEffect(() => {
-    void conversationsData
-      .fetchConversation(conversationId)
-      .then((conversation) =>
-        setParticipants(conversation.conversation_participants),
-      );
+    void conversationsData.fetchConversation(conversationId).then((conversation) => {
+      setParticipants(conversation.conversation_participants);
+      setIsGroup(conversation.is_group);
+    });
   }, [conversationId]);
 
   const markRead = useCallback(() => {
@@ -510,13 +513,25 @@ export function ChatScreen({ route, navigation }: Props) {
     [participants, userId],
   );
 
+  const senderNames = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const p of participants) {
+      map.set(p.user_id, p.profiles.display_name || p.profiles.email);
+    }
+    return map;
+  }, [participants]);
+
   const displayTitle =
     title ||
-    otherParticipant?.profiles.display_name ||
-    otherParticipant?.profiles.email ||
+    (isGroup
+      ? t('conversations.groupChat')
+      : otherParticipant?.profiles.display_name || otherParticipant?.profiles.email) ||
     '…';
 
+  // Read receipts only make sense 1:1 for now - "seen" in a group would
+  // need to say *who* has seen it, not just a single yes/no.
   const seenLatestMine = useMemo(() => {
+    if (isGroup) return false;
     if (!otherParticipant?.last_read_at || !latestMineMessageId) return false;
     const latestMineMessage = messages.find(
       (m) => m.id === latestMineMessageId,
@@ -526,7 +541,7 @@ export function ChatScreen({ route, navigation }: Props) {
       new Date(otherParticipant.last_read_at) >=
       new Date(latestMineMessage.created_at)
     );
-  }, [otherParticipant, latestMineMessageId, messages]);
+  }, [isGroup, otherParticipant, latestMineMessageId, messages]);
 
   return (
     <KeyboardAvoidingView
@@ -554,6 +569,11 @@ export function ChatScreen({ route, navigation }: Props) {
           <MessageBubble
             message={item}
             isMine={item.sender_id === userId}
+            senderName={
+              isGroup && item.sender_id !== userId
+                ? senderNames.get(item.sender_id) ?? null
+                : null
+            }
             reactions={reactions.filter((r) => r.message_id === item.id)}
             userId={userId}
             isPickerOpen={pickerMessageId === item.id}
@@ -653,6 +673,13 @@ const styles = StyleSheet.create({
   bubbleMine: { backgroundColor: colors.ember, borderBottomRightRadius: 6 },
   bubbleTheirs: { backgroundColor: colors.paper2, borderBottomLeftRadius: 6 },
   bubblePending: { opacity: 0.55 },
+  senderLabel: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: colors.smoke,
+    marginBottom: 2,
+    marginLeft: 4,
+  },
   bubbleTextMine: { color: colors.white, fontSize: 14.5, lineHeight: 20 },
   bubbleTextTheirs: { color: colors.ink, fontSize: 14.5, lineHeight: 20 },
   editedTag: { fontSize: 10, color: colors.smoke, marginTop: 2 },

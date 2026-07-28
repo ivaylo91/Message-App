@@ -42,7 +42,14 @@
     "cancel": "Cancel",
     "searchPlaceholder": "Search by name or email",
     "emptyPrompt": "Start typing to find someone",
-    "noResults": "No matches found"
+    "noResults": "No matches found",
+    "newGroup": "New group"
+  },
+  "newGroup": {
+    "title": "New group",
+    "namePlaceholder": "Group name",
+    "create": "Create",
+    "emptyPrompt": "Search for people to add"
   },
   "chat": {
     "messagePlaceholder": "Message",

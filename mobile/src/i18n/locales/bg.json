@@ -42,7 +42,14 @@
     "cancel": "Отказ",
     "searchPlaceholder": "Търсене по име или имейл",
     "emptyPrompt": "Започнете да пишете, за да намерите някого",
-    "noResults": "Няма съвпадения"
+    "noResults": "Няма съвпадения",
+    "newGroup": "Нова група"
+  },
+  "newGroup": {
+    "title": "Нова група",
+    "namePlaceholder": "Име на групата",
+    "create": "Създай",
+    "emptyPrompt": "Търсете хора, които да добавите"
   },
   "chat": {
     "messagePlaceholder": "Съобщение",
