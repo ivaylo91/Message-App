@@ -2,6 +2,12 @@
   "name": "MobileApp",
   "displayName": "MobileApp",
   "slug": "message-app",
+  "android": {
+    "package": "com.ivaylopenev.messageapp"
+  },
+  "ios": {
+    "bundleIdentifier": "com.ivaylopenev.messageapp"
+  },
   "extra": {
     "eas": {
       "projectId": "0911f56a-e6c2-4d29-bc7d-976a3e88cc58"
