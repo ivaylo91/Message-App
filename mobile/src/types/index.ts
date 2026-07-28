@@ -9,6 +9,7 @@ export interface ConversationParticipant {
   conversation_id: string;
   user_id: string;
   role: 'MEMBER' | 'ADMIN';
+  last_read_at: string | null;
   profiles: Profile;
 }
 

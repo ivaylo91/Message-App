@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   FlatList,
   KeyboardAvoidingView,
@@ -11,16 +17,19 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { AppStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
 import { supabase } from '../lib/supabase';
 import * as conversationsData from '../data/conversations';
 import * as reactionsData from '../data/reactions';
-import { Message, MessageReaction } from '../types';
+import { ConversationParticipant, Message, MessageReaction } from '../types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Chat'>;
 
 const QUICK_REACTIONS = ['❤️', '👍', '😂', '😮', '😢', '🙏'];
+const TYPING_BROADCAST_THROTTLE_MS = 2000;
+const TYPING_INDICATOR_TIMEOUT_MS = 3000;
 
 interface ReactionSummary {
   emoji: string;
@@ -55,6 +64,7 @@ interface MessageBubbleProps {
   reactions: MessageReaction[];
   userId: string | null;
   isPickerOpen: boolean;
+  showSeen: boolean;
   onLongPress: () => void;
   onToggleReaction: (emoji: string) => void;
 }
@@ -65,6 +75,7 @@ function MessageBubble({
   reactions,
   userId,
   isPickerOpen,
+  showSeen,
   onLongPress,
   onToggleReaction,
 }: MessageBubbleProps) {
@@ -112,6 +123,8 @@ function MessageBubble({
           ))}
         </View>
       )}
+
+      {showSeen && <Text style={styles.seenText}>Seen</Text>}
     </View>
   );
 }
@@ -121,19 +134,46 @@ export function ChatScreen({ route, navigation }: Props) {
   const { userId } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [reactions, setReactions] = useState<MessageReaction[]>([]);
+  const [participants, setParticipants] = useState<ConversationParticipant[]>(
+    [],
+  );
   const [draft, setDraft] = useState('');
   const [pickerMessageId, setPickerMessageId] = useState<string | null>(null);
+  const [otherTyping, setOtherTyping] = useState(false);
+
+  const channelRef = useRef<RealtimeChannel | null>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastTypingSentAtRef = useRef(0);
 
   useEffect(() => {
     navigation.setOptions({ title });
   }, [navigation, title]);
 
-  const upsertMessage = useCallback((incoming: Message) => {
-    setMessages((current) => {
-      if (current.some((m) => m.id === incoming.id)) return current;
-      return [incoming, ...current];
+  useEffect(() => {
+    void conversationsData
+      .fetchConversation(conversationId)
+      .then((conversation) =>
+        setParticipants(conversation.conversation_participants),
+      );
+  }, [conversationId]);
+
+  const markRead = useCallback(() => {
+    if (!userId) return;
+    conversationsData.markConversationRead(conversationId, userId).catch(() => {
+      // best-effort - a missed read receipt isn't worth surfacing an error for
     });
-  }, []);
+  }, [conversationId, userId]);
+
+  const upsertMessage = useCallback(
+    (incoming: Message) => {
+      setMessages((current) => {
+        if (current.some((m) => m.id === incoming.id)) return current;
+        return [incoming, ...current];
+      });
+      markRead();
+    },
+    [markRead],
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -143,7 +183,8 @@ export function ChatScreen({ route, navigation }: Props) {
       void reactionsData
         .fetchReactions(conversationId)
         .then((fetched) => setReactions(fetched));
-    }, [conversationId]),
+      markRead();
+    }, [conversationId, markRead]),
   );
 
   useEffect(() => {
@@ -189,12 +230,55 @@ export function ChatScreen({ route, navigation }: Props) {
           setReactions((current) => current.filter((r) => r.id !== removed.id));
         },
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'conversation_participants',
+          filter: `conversation_id=eq.${conversationId}`,
+        },
+        (payload) => {
+          const updated = payload.new as ConversationParticipant;
+          setParticipants((current) =>
+            current.map((p) =>
+              p.id === updated.id ? { ...p, ...updated } : p,
+            ),
+          );
+        },
+      )
+      .on('broadcast', { event: 'typing' }, ({ payload }) => {
+        if (payload.userId === userId) return;
+        setOtherTyping(true);
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = setTimeout(
+          () => setOtherTyping(false),
+          TYPING_INDICATOR_TIMEOUT_MS,
+        );
+      })
       .subscribe();
 
+    channelRef.current = channel;
+
     return () => {
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       void supabase.removeChannel(channel);
+      channelRef.current = null;
     };
-  }, [conversationId, upsertMessage]);
+  }, [conversationId, upsertMessage, userId]);
+
+  const onChangeDraft = (text: string) => {
+    setDraft(text);
+    const now = Date.now();
+    if (now - lastTypingSentAtRef.current > TYPING_BROADCAST_THROTTLE_MS) {
+      lastTypingSentAtRef.current = now;
+      void channelRef.current?.send({
+        type: 'broadcast',
+        event: 'typing',
+        payload: { userId },
+      });
+    }
+  };
 
   const onSend = async () => {
     const body = draft.trim();
@@ -236,6 +320,28 @@ export function ChatScreen({ route, navigation }: Props) {
     [conversationId, reactions, userId],
   );
 
+  const latestMineMessageId = useMemo(
+    () => messages.find((m) => m.sender_id === userId)?.id ?? null,
+    [messages, userId],
+  );
+
+  const otherParticipant = useMemo(
+    () => participants.find((p) => p.user_id !== userId),
+    [participants, userId],
+  );
+
+  const seenLatestMine = useMemo(() => {
+    if (!otherParticipant?.last_read_at || !latestMineMessageId) return false;
+    const latestMineMessage = messages.find(
+      (m) => m.id === latestMineMessageId,
+    );
+    if (!latestMineMessage) return false;
+    return (
+      new Date(otherParticipant.last_read_at) >=
+      new Date(latestMineMessage.created_at)
+    );
+  }, [otherParticipant, latestMineMessageId, messages]);
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -254,6 +360,11 @@ export function ChatScreen({ route, navigation }: Props) {
             reactions={reactions.filter((r) => r.message_id === item.id)}
             userId={userId}
             isPickerOpen={pickerMessageId === item.id}
+            showSeen={
+              item.sender_id === userId &&
+              item.id === latestMineMessageId &&
+              seenLatestMine
+            }
             onLongPress={() =>
               setPickerMessageId((current) =>
                 current === item.id ? null : item.id,
@@ -263,12 +374,13 @@ export function ChatScreen({ route, navigation }: Props) {
           />
         )}
       />
+      {otherTyping && <Text style={styles.typingText}>Typing...</Text>}
       <View style={styles.composer}>
         <TextInput
           style={styles.input}
           placeholder="Message"
           value={draft}
-          onChangeText={setDraft}
+          onChangeText={onChangeDraft}
           onSubmitEditing={() => void onSend()}
         />
         <TouchableOpacity onPress={() => void onSend()} style={styles.sendButton}>
@@ -323,6 +435,13 @@ const styles = StyleSheet.create({
   },
   pickerEmoji: { paddingHorizontal: 6 },
   pickerEmojiText: { fontSize: 22 },
+  seenText: { fontSize: 11, color: '#999', marginTop: 2, marginRight: 4 },
+  typingText: {
+    fontSize: 12,
+    color: '#999',
+    paddingHorizontal: 16,
+    paddingBottom: 4,
+  },
   composer: {
     flexDirection: 'row',
     padding: 12,
