@@ -31,7 +31,7 @@ import * as reactionsData from '../data/reactions';
 import * as mediaData from '../data/media';
 import { Avatar } from '../components/Avatar';
 import { colors, radii, spacing } from '../theme/tokens';
-import { ConversationParticipant, Message, MessageReaction } from '../types';
+import { ConversationParticipant, Message, MessageReaction, ReplyPreview } from '../types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Chat'>;
 
@@ -70,6 +70,47 @@ function summarizeReactions(
   return Array.from(byEmoji.values());
 }
 
+function replySenderLabel(
+  reply: ReplyPreview,
+  userId: string | null,
+  t: (key: string) => string,
+): string {
+  if (reply.sender_id === userId) return t('chat.you');
+  return reply.profiles.display_name || reply.profiles.email;
+}
+
+function ReplyQuote({
+  reply,
+  userId,
+  isMine,
+}: {
+  reply: ReplyPreview;
+  userId: string | null;
+  isMine: boolean;
+}) {
+  const { t } = useTranslation();
+  const snippet = reply.deleted_at
+    ? t('chat.deletedMessage')
+    : reply.body || (reply.media_path ? t('conversations.photoPreview') : '');
+
+  return (
+    <View style={[styles.replyQuote, isMine ? styles.replyQuoteMine : styles.replyQuoteTheirs]}>
+      <Text
+        style={isMine ? styles.replyQuoteSenderMine : styles.replyQuoteSenderTheirs}
+        numberOfLines={1}
+      >
+        {replySenderLabel(reply, userId, t)}
+      </Text>
+      <Text
+        style={isMine ? styles.replyQuoteTextMine : styles.replyQuoteTextTheirs}
+        numberOfLines={1}
+      >
+        {snippet}
+      </Text>
+    </View>
+  );
+}
+
 function MediaImage({ path }: { path: string }) {
   const [url, setUrl] = useState<string | null>(null);
 
@@ -106,6 +147,7 @@ interface MessageBubbleProps {
   onToggleReaction: (emoji: string) => void;
   onEdit: () => void;
   onDelete: () => void;
+  onReply: () => void;
 }
 
 function MessageBubble({
@@ -120,6 +162,7 @@ function MessageBubble({
   onToggleReaction,
   onEdit,
   onDelete,
+  onReply,
 }: MessageBubbleProps) {
   const { t } = useTranslation();
   const summary = useMemo(
@@ -139,6 +182,9 @@ function MessageBubble({
         onLongPress={onLongPress}
         activeOpacity={0.8}
       >
+        {message.reply_to && (
+          <ReplyQuote reply={message.reply_to} userId={userId} isMine={isMine} />
+        )}
         {message.media_path && <MediaImage path={message.media_path} />}
         {message.body && (
           <Text style={isMine ? styles.bubbleTextMine : styles.bubbleTextTheirs}>
@@ -175,6 +221,11 @@ function MessageBubble({
               <Text style={styles.pickerEmojiText}>{emoji}</Text>
             </TouchableOpacity>
           ))}
+          {!message._pending && (
+            <TouchableOpacity onPress={onReply} style={styles.pickerEmoji}>
+              <Text style={styles.pickerActionText}>{t('chat.reply')}</Text>
+            </TouchableOpacity>
+          )}
           {isMine && message.body && (
             <TouchableOpacity onPress={onEdit} style={styles.pickerEmoji}>
               <Text style={styles.pickerActionText}>{t('chat.edit')}</Text>
@@ -210,6 +261,7 @@ export function ChatScreen({ route, navigation }: Props) {
   const [editingMessageId, setEditingMessageId] = useState<string | null>(
     null,
   );
+  const [replyingTo, setReplyingTo] = useState<ReplyPreview | null>(null);
   const [otherTyping, setOtherTyping] = useState(false);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
 
@@ -235,11 +287,36 @@ export function ChatScreen({ route, navigation }: Props) {
     (incoming: Message) => {
       setMessages((current) => {
         if (current.some((m) => m.id === incoming.id)) return current;
-        return [incoming, ...current];
+        // Realtime postgres_changes payloads carry raw columns only, so a
+        // reply's quoted preview has to be filled in from what's already
+        // loaded locally (the replied-to message is almost always in view).
+        let enriched = incoming;
+        if (incoming.reply_to_message_id && !incoming.reply_to) {
+          const replied = current.find(
+            (m) => m.id === incoming.reply_to_message_id,
+          );
+          if (replied) {
+            const profile = participants.find(
+              (p) => p.user_id === replied.sender_id,
+            )?.profiles ?? { id: replied.sender_id, email: '', display_name: '' };
+            enriched = {
+              ...incoming,
+              reply_to: {
+                id: replied.id,
+                body: replied.body,
+                media_path: replied.media_path,
+                sender_id: replied.sender_id,
+                deleted_at: replied.deleted_at,
+                profiles: profile,
+              },
+            };
+          }
+        }
+        return [enriched, ...current];
       });
       markRead();
     },
-    [markRead],
+    [markRead, participants],
   );
 
   useFocusEffect(
@@ -383,6 +460,10 @@ export function ChatScreen({ route, navigation }: Props) {
       return;
     }
 
+    const replyToMessageId = replyingTo?.id ?? null;
+    const replyToPreview = replyingTo;
+    setReplyingTo(null);
+
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const optimisticMessage: LocalMessage = {
       id: tempId,
@@ -393,6 +474,8 @@ export function ChatScreen({ route, navigation }: Props) {
       created_at: new Date().toISOString(),
       edited_at: null,
       deleted_at: null,
+      reply_to_message_id: replyToMessageId,
+      reply_to: replyToPreview,
       _pending: true,
     };
     setMessages((current) => [optimisticMessage, ...current]);
@@ -402,6 +485,7 @@ export function ChatScreen({ route, navigation }: Props) {
         conversationId,
         userId,
         body,
+        replyToMessageId,
       );
       setMessages((current) =>
         current.map((m) => (m.id === tempId ? message : m)),
@@ -473,6 +557,7 @@ export function ChatScreen({ route, navigation }: Props) {
   const onEditMessage = useCallback((message: Message) => {
     if (!message.body) return;
     setPickerMessageId(null);
+    setReplyingTo(null);
     setEditingMessageId(message.id);
     setDraft(message.body);
   }, []);
@@ -481,6 +566,27 @@ export function ChatScreen({ route, navigation }: Props) {
     setEditingMessageId(null);
     setDraft('');
   }, []);
+
+  const onReplyToMessage = useCallback(
+    (message: LocalMessage) => {
+      setPickerMessageId(null);
+      setEditingMessageId(null);
+      const profile = participants.find(
+        (p) => p.user_id === message.sender_id,
+      )?.profiles ?? { id: message.sender_id, email: '', display_name: '' };
+      setReplyingTo({
+        id: message.id,
+        body: message.body,
+        media_path: message.media_path,
+        sender_id: message.sender_id,
+        deleted_at: message.deleted_at,
+        profiles: profile,
+      });
+    },
+    [participants],
+  );
+
+  const onCancelReply = useCallback(() => setReplyingTo(null), []);
 
   const onDeleteMessage = useCallback(
     (messageId: string) => {
@@ -590,6 +696,7 @@ export function ChatScreen({ route, navigation }: Props) {
             onToggleReaction={(emoji) => void onToggleReaction(item.id, emoji)}
             onEdit={() => onEditMessage(item)}
             onDelete={() => onDeleteMessage(item.id)}
+            onReply={() => onReplyToMessage(item)}
           />
         )}
       />
@@ -597,6 +704,26 @@ export function ChatScreen({ route, navigation }: Props) {
         <View style={styles.editingBar}>
           <Text style={styles.editingBarText}>{t('chat.editingMessage')}</Text>
           <TouchableOpacity onPress={onCancelEdit}>
+            <Text style={styles.editingBarCancel}>{t('chat.cancel')}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+      {replyingTo && (
+        <View style={styles.replyBar}>
+          <View style={styles.replyBarText}>
+            <Text style={styles.replyBarLabel}>
+              {t('chat.replyingTo', {
+                name: replySenderLabel(replyingTo, userId, t),
+              })}
+            </Text>
+            <Text style={styles.replyBarSnippet} numberOfLines={1}>
+              {replyingTo.deleted_at
+                ? t('chat.deletedMessage')
+                : replyingTo.body ||
+                  (replyingTo.media_path ? t('conversations.photoPreview') : '')}
+            </Text>
+          </View>
+          <TouchableOpacity onPress={onCancelReply}>
             <Text style={styles.editingBarCancel}>{t('chat.cancel')}</Text>
           </TouchableOpacity>
         </View>
@@ -683,6 +810,25 @@ const styles = StyleSheet.create({
   bubbleTextMine: { color: colors.white, fontSize: 14.5, lineHeight: 20 },
   bubbleTextTheirs: { color: colors.ink, fontSize: 14.5, lineHeight: 20 },
   editedTag: { fontSize: 10, color: colors.smoke, marginTop: 2 },
+  replyQuote: {
+    borderLeftWidth: 3,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    marginBottom: 6,
+  },
+  replyQuoteMine: {
+    borderLeftColor: colors.white,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  replyQuoteTheirs: {
+    borderLeftColor: colors.ember,
+    backgroundColor: colors.paper,
+  },
+  replyQuoteSenderMine: { fontSize: 12, fontWeight: '700', color: colors.white },
+  replyQuoteSenderTheirs: { fontSize: 12, fontWeight: '700', color: colors.ember },
+  replyQuoteTextMine: { fontSize: 12.5, color: 'rgba(255, 255, 255, 0.85)' },
+  replyQuoteTextTheirs: { fontSize: 12.5, color: colors.smoke },
   reactionRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -727,6 +873,18 @@ const styles = StyleSheet.create({
   },
   editingBarText: { fontSize: 12, color: colors.smoke },
   editingBarCancel: { fontSize: 12, color: colors.ember, fontWeight: '600' },
+  replyBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.paper2,
+    gap: spacing.md,
+  },
+  replyBarText: { flex: 1 },
+  replyBarLabel: { fontSize: 12, fontWeight: '700', color: colors.ember },
+  replyBarSnippet: { fontSize: 12, color: colors.smoke, marginTop: 1 },
   composer: {
     flexDirection: 'row',
     padding: spacing.md,

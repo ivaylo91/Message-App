@@ -44,34 +44,43 @@ export async function createConversation(
   return data as unknown as Conversation;
 }
 
+const MESSAGE_SELECT =
+  '*, reply_to:reply_to_message_id(id, body, media_path, sender_id, deleted_at, profiles(*))';
+
 export async function fetchMessages(
   conversationId: string,
 ): Promise<Message[]> {
   const { data, error } = await supabase
     .from('messages')
-    .select('*')
+    .select(MESSAGE_SELECT)
     .eq('conversation_id', conversationId)
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .limit(50);
 
   if (error) throw error;
-  return data as Message[];
+  return data as unknown as Message[];
 }
 
 export async function sendMessage(
   conversationId: string,
   senderId: string,
   body: string,
+  replyToMessageId?: string | null,
 ): Promise<Message> {
   const { data, error } = await supabase
     .from('messages')
-    .insert({ conversation_id: conversationId, sender_id: senderId, body })
-    .select()
+    .insert({
+      conversation_id: conversationId,
+      sender_id: senderId,
+      body,
+      reply_to_message_id: replyToMessageId ?? null,
+    })
+    .select(MESSAGE_SELECT)
     .single();
 
   if (error) throw error;
-  return data as Message;
+  return data as unknown as Message;
 }
 
 export async function sendMediaMessage(

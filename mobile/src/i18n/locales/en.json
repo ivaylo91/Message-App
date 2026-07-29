@@ -67,7 +67,11 @@
     "uploadFailedTitle": "Upload failed",
     "uploadFailedMessage": "Could not send the image. Try again.",
     "sendFailedTitle": "Message not sent",
-    "sendFailedMessage": "Could not send your message. Try again."
+    "sendFailedMessage": "Could not send your message. Try again.",
+    "reply": "Reply",
+    "replyingTo": "Replying to {{name}}",
+    "you": "You",
+    "deletedMessage": "This message was deleted"
   },
   "common": {
     "language": "Language"

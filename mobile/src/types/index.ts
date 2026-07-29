@@ -23,6 +23,15 @@ export interface Conversation {
   messages?: Message[];
 }
 
+export interface ReplyPreview {
+  id: string;
+  body: string | null;
+  media_path: string | null;
+  sender_id: string;
+  deleted_at: string | null;
+  profiles: Profile;
+}
+
 export interface Message {
   id: string;
   conversation_id: string;
@@ -32,6 +41,8 @@ export interface Message {
   created_at: string;
   edited_at: string | null;
   deleted_at: string | null;
+  reply_to_message_id: string | null;
+  reply_to?: ReplyPreview | null;
 }
 
 export interface MessageReaction {
