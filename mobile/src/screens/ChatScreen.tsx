@@ -10,6 +10,7 @@ import {
   Alert,
   FlatList,
   Image,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -273,6 +274,7 @@ export function ChatScreen({ route, navigation }: Props) {
   const [replyingTo, setReplyingTo] = useState<ReplyPreview | null>(null);
   const [otherTyping, setOtherTyping] = useState(false);
   const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   const channelRef = useRef<RealtimeChannel | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -284,6 +286,23 @@ export function ChatScreen({ route, navigation }: Props) {
       setIsGroup(conversation.is_group);
     });
   }, [conversationId]);
+
+  // The composer's bottom safe-area padding (for the home indicator/
+  // gesture bar) should only apply when that area is actually visible -
+  // once the keyboard is up it occupies that space instead, and the
+  // composer should sit flush on top of it, not float above with a gap.
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', () =>
+      setIsKeyboardVisible(true),
+    );
+    const hideSub = Keyboard.addListener('keyboardDidHide', () =>
+      setIsKeyboardVisible(false),
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   const markRead = useCallback(() => {
     if (!userId) return;
@@ -661,8 +680,8 @@ export function ChatScreen({ route, navigation }: Props) {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={80}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={0}
     >
       <View style={[styles.content, { maxWidth: contentWidth }]}>
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
@@ -743,7 +762,14 @@ export function ChatScreen({ route, navigation }: Props) {
           </TouchableOpacity>
         </View>
       )}
-      <View style={[styles.composer, { paddingBottom: insets.bottom + spacing.md }]}>
+      <View
+        style={[
+          styles.composer,
+          {
+            paddingBottom: isKeyboardVisible ? spacing.md : insets.bottom + spacing.md,
+          },
+        ]}
+      >
         <TouchableOpacity
           onPress={() => void onPickImage()}
           style={styles.attachButton}
