@@ -8,6 +8,7 @@ import React, {
 } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { unregisterCurrentDeviceToken } from '../notifications';
 
 interface AuthContextValue {
   session: Session | null;
@@ -68,6 +69,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const logout = useCallback(async () => {
+    // Best-effort, and must happen before signOut() - once the session
+    // is gone, this device is no longer authenticated as this user and
+    // can't touch its own push_tokens row anymore.
+    await unregisterCurrentDeviceToken().catch(() => {});
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   }, []);

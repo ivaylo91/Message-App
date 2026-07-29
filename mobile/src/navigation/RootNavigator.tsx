@@ -81,7 +81,7 @@ export function RootNavigator() {
 
   useEffect(() => {
     if (!userId) return;
-    requestPermissionAndRegisterToken(userId).catch(() => {
+    requestPermissionAndRegisterToken().catch(() => {
       // best-effort - a missed push registration isn't worth surfacing an error for
     });
   }, [userId]);

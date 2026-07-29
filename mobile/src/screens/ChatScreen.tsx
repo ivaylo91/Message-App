@@ -361,7 +361,7 @@ export function ChatScreen({ route, navigation }: Props) {
 
   useEffect(() => {
     const channel = supabase
-      .channel(`messages:${conversationId}`)
+      .channel(`messages:${conversationId}`, { config: { private: true } })
       .on(
         'postgres_changes',
         {

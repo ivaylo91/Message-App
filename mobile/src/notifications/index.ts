@@ -38,9 +38,7 @@ async function displayForegroundNotification(
   });
 }
 
-export async function requestPermissionAndRegisterToken(
-  userId: string,
-): Promise<void> {
+export async function requestPermissionAndRegisterToken(): Promise<void> {
   const settings = await messaging().requestPermission();
   const granted =
     settings === messaging.AuthorizationStatus.AUTHORIZED ||
@@ -50,11 +48,20 @@ export async function requestPermissionAndRegisterToken(
   await ensureAndroidChannel();
 
   const token = await messaging().getToken();
-  await pushTokensData.registerPushToken(userId, token);
+  await pushTokensData.registerPushToken(token);
 
   messaging().onTokenRefresh((refreshedToken) => {
-    void pushTokensData.registerPushToken(userId, refreshedToken);
+    void pushTokensData.registerPushToken(refreshedToken);
   });
+}
+
+// Call before signing out - otherwise this device keeps receiving
+// pushes for an account that's no longer signed in on it, and if a
+// different account signs in on the same device afterwards, both
+// would get notified for each other's messages.
+export async function unregisterCurrentDeviceToken(): Promise<void> {
+  const token = await messaging().getToken();
+  await pushTokensData.unregisterPushToken(token);
 }
 
 export function attachNotificationListeners(): () => void {
