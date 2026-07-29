@@ -51,6 +51,17 @@ export const spacing = {
   xxl: 32,
 } as const;
 
+// Caps how wide a screen's content is allowed to stretch. Phones are
+// narrower than this and are unaffected; on tablets it keeps text lines,
+// forms, and chat bubbles at a readable width instead of spanning the
+// full display.
+export const MAX_CONTENT_WIDTH = 480;
+
+// Caps chat bubble width in absolute pixels rather than a percentage of
+// the screen, so bubbles stay readable on tablets instead of stretching
+// to 80% of a much wider display.
+export const MAX_BUBBLE_WIDTH = 340;
+
 export const typography = {
   display: {
     fontWeight: '800' as const,

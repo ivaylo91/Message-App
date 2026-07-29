@@ -1,33 +1,44 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '../navigation/RootNavigator';
+import { useContentWidth } from '../hooks/useContentWidth';
 import { colors, radii, spacing } from '../theme/tokens';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Welcome'>;
 
 export function WelcomeScreen({ navigation }: Props) {
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
+  const { contentWidth } = useContentWidth();
 
   return (
-    <View style={styles.container}>
-      <View style={styles.mark} />
-      <Text style={styles.wordmark}>Hearth</Text>
-      <Text style={styles.tagline}>{t('welcome.tagline')}</Text>
-      <View style={styles.actions}>
-        <TouchableOpacity
-          style={styles.primaryButton}
-          onPress={() => navigation.navigate('Register')}
-        >
-          <Text style={styles.primaryButtonText}>{t('welcome.getStarted')}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.secondaryButton}
-          onPress={() => navigation.navigate('Login')}
-        >
-          <Text style={styles.secondaryButtonText}>{t('welcome.haveAccount')}</Text>
-        </TouchableOpacity>
+    <View
+      style={[
+        styles.container,
+        { paddingTop: insets.top + spacing.xxl, paddingBottom: insets.bottom + spacing.xxl },
+      ]}
+    >
+      <View style={[styles.content, { maxWidth: contentWidth }]}>
+        <View style={styles.mark} />
+        <Text style={styles.wordmark}>Hearth</Text>
+        <Text style={styles.tagline}>{t('welcome.tagline')}</Text>
+        <View style={styles.actions}>
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={() => navigation.navigate('Register')}
+          >
+            <Text style={styles.primaryButtonText}>{t('welcome.getStarted')}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.secondaryButton}
+            onPress={() => navigation.navigate('Login')}
+          >
+            <Text style={styles.secondaryButtonText}>{t('welcome.haveAccount')}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -40,6 +51,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.xxl,
+  },
+  content: {
+    width: '100%',
+    alignItems: 'center',
     gap: spacing.lg,
   },
   mark: {

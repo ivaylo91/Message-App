@@ -7,10 +7,13 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
+import { useContentWidth } from '../hooks/useContentWidth';
+import { spacing } from '../theme/tokens';
 import { authStyles as s } from './authStyles';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
@@ -18,6 +21,8 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 export function LoginScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const { login } = useAuth();
+  const insets = useSafeAreaInsets();
+  const { contentWidth } = useContentWidth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +41,19 @@ export function LoginScreen({ navigation }: Props) {
   };
 
   return (
-    <ScrollView contentContainerStyle={s.container} keyboardShouldPersistTaps="handled">
+    <ScrollView
+      contentContainerStyle={[
+        s.container,
+        {
+          paddingTop: insets.top + spacing.xxl,
+          paddingBottom: insets.bottom + spacing.xxl,
+          width: '100%',
+          maxWidth: contentWidth,
+          alignSelf: 'center',
+        },
+      ]}
+      keyboardShouldPersistTaps="handled"
+    >
       <Text style={s.title}>{t('auth.login.title')}</Text>
       <Text style={s.subtitle}>{t('auth.login.subtitle')}</Text>
 

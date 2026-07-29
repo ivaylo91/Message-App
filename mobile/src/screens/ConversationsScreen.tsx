@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -15,6 +16,7 @@ import { useAuth } from '../auth/AuthContext';
 import * as conversationsData from '../data/conversations';
 import { setLanguage, SUPPORTED_LANGUAGES, SupportedLanguage } from '../i18n';
 import { Avatar } from '../components/Avatar';
+import { useContentWidth } from '../hooks/useContentWidth';
 import { colors, radii, spacing } from '../theme/tokens';
 import { Conversation, Message } from '../types';
 
@@ -23,6 +25,8 @@ type Props = NativeStackScreenProps<AppStackParamList, 'Conversations'>;
 export function ConversationsScreen({ navigation }: Props) {
   const { t, i18n } = useTranslation();
   const { userId, logout } = useAuth();
+  const insets = useSafeAreaInsets();
+  const { contentWidth } = useContentWidth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -62,7 +66,8 @@ export function ConversationsScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top + spacing.lg }]}>
+      <View style={[styles.content, { maxWidth: contentWidth }]}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>{t('conversations.title')}</Text>
         <View style={styles.headerActions}>
@@ -129,15 +134,20 @@ export function ConversationsScreen({ navigation }: Props) {
           </View>
         }
       />
-      <TouchableOpacity style={styles.logoutButton} onPress={() => void logout()}>
+      <TouchableOpacity
+        style={[styles.logoutButton, { paddingBottom: insets.bottom + spacing.md }]}
+        onPress={() => void logout()}
+      >
         <Text style={styles.logoutText}>{t('conversations.logout')}</Text>
       </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.paper, paddingTop: spacing.lg },
+  content: { flex: 1, width: '100%', alignSelf: 'center' },
   header: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,

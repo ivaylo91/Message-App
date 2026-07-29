@@ -20,6 +20,7 @@ import {
 } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RealtimeChannel } from '@supabase/supabase-js';
@@ -30,7 +31,8 @@ import * as conversationsData from '../data/conversations';
 import * as reactionsData from '../data/reactions';
 import * as mediaData from '../data/media';
 import { Avatar } from '../components/Avatar';
-import { colors, radii, spacing } from '../theme/tokens';
+import { useContentWidth } from '../hooks/useContentWidth';
+import { colors, radii, spacing, MAX_BUBBLE_WIDTH } from '../theme/tokens';
 import { ConversationParticipant, Message, MessageReaction, ReplyPreview } from '../types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Chat'>;
@@ -143,6 +145,7 @@ interface MessageBubbleProps {
   userId: string | null;
   isPickerOpen: boolean;
   showSeen: boolean;
+  bubbleMaxWidth: number;
   onLongPress: () => void;
   onToggleReaction: (emoji: string) => void;
   onEdit: () => void;
@@ -158,6 +161,7 @@ function MessageBubble({
   userId,
   isPickerOpen,
   showSeen,
+  bubbleMaxWidth,
   onLongPress,
   onToggleReaction,
   onEdit,
@@ -176,6 +180,7 @@ function MessageBubble({
       <TouchableOpacity
         style={[
           message.media_path ? styles.mediaBubble : styles.bubble,
+          { maxWidth: bubbleMaxWidth },
           isMine ? styles.bubbleMine : styles.bubbleTheirs,
           message._pending && styles.bubblePending,
         ]}
@@ -250,6 +255,9 @@ export function ChatScreen({ route, navigation }: Props) {
   const { t } = useTranslation();
   const { conversationId, title } = route.params;
   const { userId } = useAuth();
+  const insets = useSafeAreaInsets();
+  const { windowWidth, contentWidth } = useContentWidth();
+  const bubbleMaxWidth = Math.min(windowWidth * 0.8, MAX_BUBBLE_WIDTH);
   const [messages, setMessages] = useState<LocalMessage[]>([]);
   const [reactions, setReactions] = useState<MessageReaction[]>([]);
   const [participants, setParticipants] = useState<ConversationParticipant[]>(
@@ -655,7 +663,8 @@ export function ChatScreen({ route, navigation }: Props) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={80}
     >
-      <View style={styles.header}>
+      <View style={[styles.content, { maxWidth: contentWidth }]}>
+      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Text style={styles.backButtonText}>‹</Text>
         </TouchableOpacity>
@@ -683,6 +692,7 @@ export function ChatScreen({ route, navigation }: Props) {
             reactions={reactions.filter((r) => r.message_id === item.id)}
             userId={userId}
             isPickerOpen={pickerMessageId === item.id}
+            bubbleMaxWidth={bubbleMaxWidth}
             showSeen={
               item.sender_id === userId &&
               item.id === latestMineMessageId &&
@@ -728,7 +738,7 @@ export function ChatScreen({ route, navigation }: Props) {
           </TouchableOpacity>
         </View>
       )}
-      <View style={styles.composer}>
+      <View style={[styles.composer, { paddingBottom: insets.bottom + spacing.md }]}>
         <TouchableOpacity
           onPress={() => void onPickImage()}
           style={styles.attachButton}
@@ -754,12 +764,14 @@ export function ChatScreen({ route, navigation }: Props) {
           </Text>
         </TouchableOpacity>
       </View>
+      </View>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.paper },
+  content: { flex: 1, width: '100%', alignSelf: 'center' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -780,12 +792,10 @@ const styles = StyleSheet.create({
     padding: 10,
     paddingHorizontal: 14,
     borderRadius: 19,
-    maxWidth: '80%',
   },
   mediaBubble: {
     padding: 4,
     borderRadius: 16,
-    maxWidth: '80%',
   },
   media: {
     width: 220,

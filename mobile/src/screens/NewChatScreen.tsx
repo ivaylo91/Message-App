@@ -1,12 +1,14 @@
 import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../navigation/RootNavigator';
@@ -14,6 +16,7 @@ import { useAuth } from '../auth/AuthContext';
 import * as conversationsData from '../data/conversations';
 import * as profilesData from '../data/profiles';
 import { Avatar } from '../components/Avatar';
+import { useContentWidth } from '../hooks/useContentWidth';
 import { colors, radii, spacing } from '../theme/tokens';
 import { Profile } from '../types';
 
@@ -24,6 +27,8 @@ const SEARCH_DEBOUNCE_MS = 300;
 export function NewChatScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const { userId } = useAuth();
+  const insets = useSafeAreaInsets();
+  const { contentWidth } = useContentWidth();
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Profile[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -62,68 +67,76 @@ export function NewChatScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.goBack()}>
-          <Text style={styles.cancelText}>{t('newChat.cancel')}</Text>
-        </TouchableOpacity>
-        <Text style={styles.title}>{t('newChat.title')}</Text>
-      </View>
+    <View style={[styles.container, { paddingTop: insets.top + spacing.lg }]}>
+      <View style={[styles.content, { maxWidth: contentWidth }]}>
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.goBack()}>
+            <Text style={styles.cancelText}>{t('newChat.cancel')}</Text>
+          </TouchableOpacity>
+          <Text style={styles.title}>{t('newChat.title')}</Text>
+        </View>
 
-      <View style={styles.searchBar}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder={t('newChat.searchPlaceholder')}
-          placeholderTextColor={colors.smoke}
-          autoCapitalize="none"
-          value={query}
-          onChangeText={onChangeQuery}
-          autoFocus
-        />
-      </View>
+        <View style={styles.searchBar}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder={t('newChat.searchPlaceholder')}
+            placeholderTextColor={colors.smoke}
+            autoCapitalize="none"
+            value={query}
+            onChangeText={onChangeQuery}
+            autoFocus
+          />
+        </View>
 
-      {!query.trim() && (
-        <TouchableOpacity
-          style={styles.row}
-          onPress={() => navigation.navigate('NewGroup')}
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={{ paddingBottom: insets.bottom + spacing.lg }}
         >
-          <View style={styles.newGroupIcon}>
-            <Text style={styles.newGroupIconText}>👥</Text>
-          </View>
-          <View style={styles.rowMain}>
-            <Text style={styles.rowName}>{t('newChat.newGroup')}</Text>
-          </View>
-        </TouchableOpacity>
-      )}
+          {!query.trim() && (
+            <TouchableOpacity
+              style={styles.row}
+              onPress={() => navigation.navigate('NewGroup')}
+            >
+              <View style={styles.newGroupIcon}>
+                <Text style={styles.newGroupIconText}>👥</Text>
+              </View>
+              <View style={styles.rowMain}>
+                <Text style={styles.rowName}>{t('newChat.newGroup')}</Text>
+              </View>
+            </TouchableOpacity>
+          )}
 
-      {isSearching && <ActivityIndicator color={colors.ember} style={styles.spinner} />}
+          {isSearching && <ActivityIndicator color={colors.ember} style={styles.spinner} />}
 
-      {!isSearching && query.trim() && results.length === 0 && (
-        <Text style={styles.emptyText}>{t('newChat.noResults')}</Text>
-      )}
-      {!query.trim() && results.length === 0 && (
-        <Text style={styles.emptyText}>{t('newChat.emptyPrompt')}</Text>
-      )}
+          {!isSearching && query.trim() && results.length === 0 && (
+            <Text style={styles.emptyText}>{t('newChat.noResults')}</Text>
+          )}
+          {!query.trim() && results.length === 0 && (
+            <Text style={styles.emptyText}>{t('newChat.emptyPrompt')}</Text>
+          )}
 
-      {results.map((profile) => (
-        <TouchableOpacity
-          key={profile.id}
-          style={styles.row}
-          onPress={() => void onSelectProfile(profile)}
-        >
-          <Avatar name={profile.display_name || profile.email} />
-          <View style={styles.rowMain}>
-            <Text style={styles.rowName}>{profile.display_name}</Text>
-            <Text style={styles.rowSub}>{profile.email}</Text>
-          </View>
-        </TouchableOpacity>
-      ))}
+          {results.map((profile) => (
+            <TouchableOpacity
+              key={profile.id}
+              style={styles.row}
+              onPress={() => void onSelectProfile(profile)}
+            >
+              <Avatar name={profile.display_name || profile.email} />
+              <View style={styles.rowMain}>
+                <Text style={styles.rowName}>{profile.display_name}</Text>
+                <Text style={styles.rowSub}>{profile.email}</Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.paper, paddingTop: spacing.lg },
+  content: { flex: 1, width: '100%', alignSelf: 'center' },
   header: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
