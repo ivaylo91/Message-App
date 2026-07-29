@@ -306,7 +306,7 @@ export function ChatScreen({ route, navigation }: Props) {
           if (replied) {
             const profile = participants.find(
               (p) => p.user_id === replied.sender_id,
-            )?.profiles ?? { id: replied.sender_id, email: '', display_name: '' };
+            )?.profiles ?? { id: replied.sender_id, email: '', display_name: '', avatar_path: null };
             enriched = {
               ...incoming,
               reply_to: {
@@ -581,7 +581,7 @@ export function ChatScreen({ route, navigation }: Props) {
       setEditingMessageId(null);
       const profile = participants.find(
         (p) => p.user_id === message.sender_id,
-      )?.profiles ?? { id: message.sender_id, email: '', display_name: '' };
+      )?.profiles ?? { id: message.sender_id, email: '', display_name: '', avatar_path: null };
       setReplyingTo({
         id: message.id,
         body: message.body,
@@ -668,7 +668,11 @@ export function ChatScreen({ route, navigation }: Props) {
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Text style={styles.backButtonText}>‹</Text>
         </TouchableOpacity>
-        <Avatar name={displayTitle} size={36} />
+        <Avatar
+          name={displayTitle}
+          avatarPath={isGroup ? null : otherParticipant?.profiles.avatar_path}
+          size={36}
+        />
         <View>
           <Text style={styles.headerName}>{displayTitle}</Text>
           {otherTyping && <Text style={styles.headerStatus}>{t('chat.typing')}</Text>}

@@ -14,11 +14,12 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
 import * as conversationsData from '../data/conversations';
+import * as profilesData from '../data/profiles';
 import { setLanguage, SUPPORTED_LANGUAGES, SupportedLanguage } from '../i18n';
 import { Avatar } from '../components/Avatar';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { colors, radii, spacing } from '../theme/tokens';
-import { Conversation, Message } from '../types';
+import { Conversation, Message, Profile } from '../types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Conversations'>;
 
@@ -29,6 +30,7 @@ export function ConversationsScreen({ navigation }: Props) {
   const { contentWidth } = useContentWidth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [ownProfile, setOwnProfile] = useState<Profile | null>(null);
 
   function previewText(message: Message | undefined): string {
     if (!message) return t('conversations.noMessagesYet');
@@ -52,12 +54,20 @@ export function ConversationsScreen({ navigation }: Props) {
     }, [load]),
   );
 
+  useFocusEffect(
+    useCallback(() => {
+      if (!userId) return;
+      void profilesData.fetchProfile(userId).then(setOwnProfile);
+    }, [userId]),
+  );
+
+  const otherParticipantOf = (conversation: Conversation) =>
+    conversation.conversation_participants.find((p) => p.user_id !== userId);
+
   const conversationTitle = (conversation: Conversation) => {
     if (conversation.is_group)
       return conversation.name ?? t('conversations.groupChat');
-    const other = conversation.conversation_participants.find(
-      (p) => p.user_id !== userId,
-    );
+    const other = otherParticipantOf(conversation);
     return (
       other?.profiles.display_name ??
       other?.profiles.email ??
@@ -69,7 +79,17 @@ export function ConversationsScreen({ navigation }: Props) {
     <View style={[styles.container, { paddingTop: insets.top + spacing.lg }]}>
       <View style={[styles.content, { maxWidth: contentWidth }]}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>{t('conversations.title')}</Text>
+        <View style={styles.headerLeft}>
+          <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+            <Avatar
+              name={ownProfile?.display_name || ownProfile?.email || '?'}
+              avatarPath={ownProfile?.avatar_path}
+              size={40}
+              showStatusDot
+            />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>{t('conversations.title')}</Text>
+        </View>
         <View style={styles.headerActions}>
           {SUPPORTED_LANGUAGES.map((lang: SupportedLanguage) => (
             <TouchableOpacity
@@ -117,7 +137,12 @@ export function ConversationsScreen({ navigation }: Props) {
                 })
               }
             >
-              <Avatar name={title} />
+              <Avatar
+                name={title}
+                avatarPath={
+                  item.is_group ? null : otherParticipantOf(item)?.profiles.avatar_path
+                }
+              />
               <View style={styles.rowMain}>
                 <Text style={styles.rowTitle}>{title}</Text>
                 <Text style={styles.rowPreview} numberOfLines={1}>
@@ -155,6 +180,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   headerTitle: { fontSize: 28, fontWeight: '800', letterSpacing: -0.3, color: colors.ink },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   languageChip: {

@@ -16,6 +16,7 @@ import { ConversationsScreen } from '../screens/ConversationsScreen';
 import { NewChatScreen } from '../screens/NewChatScreen';
 import { NewGroupScreen } from '../screens/NewGroupScreen';
 import { ChatScreen } from '../screens/ChatScreen';
+import { ProfileScreen } from '../screens/ProfileScreen';
 
 export type AuthStackParamList = {
   Welcome: undefined;
@@ -27,6 +28,7 @@ export type AppStackParamList = {
   Conversations: undefined;
   NewChat: undefined;
   NewGroup: undefined;
+  Profile: undefined;
   Chat: { conversationId: string; title: string };
 };
 
@@ -55,6 +57,11 @@ function AppNavigator() {
       <AppStack.Screen
         name="NewGroup"
         component={NewGroupScreen}
+        options={{ presentation: 'modal' }}
+      />
+      <AppStack.Screen
+        name="Profile"
+        component={ProfileScreen}
         options={{ presentation: 'modal' }}
       />
       <AppStack.Screen name="Chat" component={ChatScreen} />

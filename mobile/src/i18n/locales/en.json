@@ -73,6 +73,14 @@
     "you": "You",
     "deletedMessage": "This message was deleted"
   },
+  "profile": {
+    "title": "Profile",
+    "cancel": "Cancel",
+    "save": "Save",
+    "changePhoto": "Tap to change photo",
+    "usernameLabel": "Username",
+    "usernamePlaceholder": "Your name"
+  },
   "common": {
     "language": "Language"
   }

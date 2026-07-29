@@ -2,6 +2,7 @@ export interface Profile {
   id: string;
   email: string;
   display_name: string;
+  avatar_path: string | null;
 }
 
 export interface ConversationParticipant {

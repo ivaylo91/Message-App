@@ -121,7 +121,10 @@ export function NewChatScreen({ navigation }: Props) {
               style={styles.row}
               onPress={() => void onSelectProfile(profile)}
             >
-              <Avatar name={profile.display_name || profile.email} />
+              <Avatar
+                name={profile.display_name || profile.email}
+                avatarPath={profile.avatar_path}
+              />
               <View style={styles.rowMain}>
                 <Text style={styles.rowName}>{profile.display_name}</Text>
                 <Text style={styles.rowSub}>{profile.email}</Text>

@@ -1,6 +1,8 @@
 import { supabase } from '../lib/supabase';
 import { Profile } from '../types';
 
+const AVATAR_BUCKET = 'avatars';
+
 export async function searchProfiles(
   query: string,
   excludeUserId: string,
@@ -17,4 +19,53 @@ export async function searchProfiles(
 
   if (error) throw error;
   return data as Profile[];
+}
+
+export async function fetchProfile(userId: string): Promise<Profile> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .single();
+
+  if (error) throw error;
+  return data as Profile;
+}
+
+export async function updateProfile(
+  userId: string,
+  updates: Partial<Pick<Profile, 'display_name' | 'avatar_path'>>,
+): Promise<Profile> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update(updates)
+    .eq('id', userId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as Profile;
+}
+
+export async function uploadAvatar(
+  userId: string,
+  localUri: string,
+  mimeType: string,
+): Promise<string> {
+  const ext = mimeType.split('/')[1] ?? 'jpg';
+  const path = `${userId}/avatar.${ext}`;
+
+  const response = await fetch(localUri);
+  const blob = await response.blob();
+
+  const { error } = await supabase.storage
+    .from(AVATAR_BUCKET)
+    .upload(path, blob, { contentType: mimeType, upsert: true });
+
+  if (error) throw error;
+  return path;
+}
+
+export function getAvatarUrl(path: string): string {
+  return supabase.storage.from(AVATAR_BUCKET).getPublicUrl(path).data.publicUrl;
 }

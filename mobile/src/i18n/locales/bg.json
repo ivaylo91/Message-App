@@ -73,6 +73,14 @@
     "you": "Вие",
     "deletedMessage": "Това съобщение беше изтрито"
   },
+  "profile": {
+    "title": "Профил",
+    "cancel": "Отказ",
+    "save": "Запази",
+    "changePhoto": "Докоснете, за да смените снимката",
+    "usernameLabel": "Потребителско име",
+    "usernamePlaceholder": "Вашето име"
+  },
   "common": {
     "language": "Език"
   }
