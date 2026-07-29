@@ -15,6 +15,7 @@ export const colors = {
   dusk: '#6E7B94',
   white: '#FFF8F2',
   danger: '#FF3B30',
+  sand: '#F3E3D0',
 } as const;
 
 export const avatarPalette = [colors.clay, colors.sage, colors.dusk] as const;

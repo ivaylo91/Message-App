@@ -15,6 +15,7 @@ import {
   Linking,
   PermissionsAndroid,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -341,7 +342,12 @@ function MessageBubble({
       )}
 
       {isPickerOpen && (
-        <View style={styles.picker}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={[styles.picker, { maxWidth: bubbleMaxWidth }]}
+          contentContainerStyle={styles.pickerContent}
+        >
           {QUICK_REACTIONS.map((emoji) => (
             <TouchableOpacity
               key={emoji}
@@ -368,7 +374,7 @@ function MessageBubble({
               </Text>
             </TouchableOpacity>
           )}
-        </View>
+        </ScrollView>
       )}
 
       {showSeen && <Text style={styles.seenText}>{t('chat.seen')}</Text>}
@@ -1072,7 +1078,7 @@ export function ChatScreen({ route, navigation }: Props) {
             {draft.trim() || editingMessageId ? (
               <TouchableOpacity onPress={() => void onSend()} style={styles.sendButton}>
                 {editingMessageId ? (
-                  <Text style={styles.sendText}>{t('chat.save')}</Text>
+                  <FontAwesome6 name="check" iconStyle="solid" size={16} color={colors.white} />
                 ) : (
                   <FontAwesome6
                     name="paper-plane"
@@ -1118,13 +1124,13 @@ const styles = StyleSheet.create({
   rowMine: { alignItems: 'flex-end', marginVertical: 4 },
   rowTheirs: { alignItems: 'flex-start', marginVertical: 4 },
   bubble: {
-    padding: 10,
-    paddingHorizontal: 14,
-    borderRadius: 19,
+    padding: 11,
+    paddingHorizontal: 15,
+    borderRadius: 22,
   },
   mediaBubble: {
     padding: 4,
-    borderRadius: 16,
+    borderRadius: 18,
   },
   media: {
     width: 220,
@@ -1158,8 +1164,8 @@ const styles = StyleSheet.create({
   },
   iconCircleMine: { backgroundColor: colors.white },
   iconCircleTheirs: { backgroundColor: colors.ember },
-  bubbleMine: { backgroundColor: colors.ember, borderBottomRightRadius: 6 },
-  bubbleTheirs: { backgroundColor: colors.paper2, borderBottomLeftRadius: 6 },
+  bubbleMine: { backgroundColor: colors.ember },
+  bubbleTheirs: { backgroundColor: colors.sand },
   bubblePending: { opacity: 0.55 },
   senderLabel: {
     fontSize: 11.5,
@@ -1208,17 +1214,20 @@ const styles = StyleSheet.create({
   reactionPillMine: { borderColor: colors.ember },
   reactionPillText: { fontSize: 13 },
   picker: {
-    flexDirection: 'row',
     backgroundColor: colors.paper2,
     borderRadius: radii.xl,
-    paddingHorizontal: 8,
-    paddingVertical: 6,
     marginTop: 6,
     shadowColor: colors.ink,
     shadowOpacity: 0.15,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
     elevation: 3,
+  },
+  pickerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
   },
   pickerEmoji: { paddingHorizontal: 6 },
   pickerEmojiText: { fontSize: 22 },
@@ -1292,5 +1301,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sendText: { color: colors.white, fontWeight: '700', fontSize: 14 },
 });
