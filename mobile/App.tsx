@@ -9,7 +9,6 @@ import { ActivityIndicator, StatusBar, useColorScheme, View } from 'react-native
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/auth/AuthContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
-import { AppBackground } from './src/components/AppBackground';
 import { initI18n } from './src/i18n';
 import { colors } from './src/theme/tokens';
 
@@ -23,19 +22,23 @@ function App() {
 
   return (
     <SafeAreaProvider>
-      <View style={{ flex: 1, backgroundColor: colors.paper }}>
-        <AppBackground />
-        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-        {isI18nReady ? (
-          <AuthProvider>
-            <RootNavigator />
-          </AuthProvider>
-        ) : (
-          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <ActivityIndicator />
-          </View>
-        )}
-      </View>
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+      {isI18nReady ? (
+        <AuthProvider>
+          <RootNavigator />
+        </AuthProvider>
+      ) : (
+        <View
+          style={{
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+            backgroundColor: colors.paper,
+          }}
+        >
+          <ActivityIndicator />
+        </View>
+      )}
     </SafeAreaProvider>
   );
 }

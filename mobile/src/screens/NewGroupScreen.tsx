@@ -17,6 +17,7 @@ import { useAuth } from '../auth/AuthContext';
 import * as conversationsData from '../data/conversations';
 import * as profilesData from '../data/profiles';
 import { Avatar } from '../components/Avatar';
+import { AppBackground } from '../components/AppBackground';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { colors, radii, spacing } from '../theme/tokens';
 import { Profile } from '../types';
@@ -91,6 +92,7 @@ export function NewGroupScreen({ navigation }: Props) {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + spacing.lg }]}>
+      <AppBackground />
       <View style={[styles.content, { maxWidth: contentWidth }]}>
         <View style={styles.header}>
           <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.goBack()}>
@@ -214,7 +216,7 @@ export function NewGroupScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'transparent', paddingTop: spacing.lg },
+  container: { flex: 1, backgroundColor: colors.paper, paddingTop: spacing.lg },
   content: { flex: 1, width: '100%', alignSelf: 'center' },
   header: {
     paddingHorizontal: spacing.lg,

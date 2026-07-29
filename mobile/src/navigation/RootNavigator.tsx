@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
-import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../auth/AuthContext';
 import { colors } from '../theme/tokens';
@@ -35,14 +35,18 @@ export type AppStackParamList = {
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const AppStack = createNativeStackNavigator<AppStackParamList>();
 
-const transparentScreenOptions = {
+// Each screen paints its own opaque background (with its own local
+// AppBackground layer) - previous screens stay mounted underneath in
+// the stack, so a transparent contentStyle here would let them show
+// through beneath whichever screen is on top.
+const screenOptions = {
   headerShown: false,
-  contentStyle: { backgroundColor: 'transparent' },
+  contentStyle: { backgroundColor: colors.paper },
 } as const;
 
 function AuthNavigator() {
   return (
-    <AuthStack.Navigator screenOptions={transparentScreenOptions}>
+    <AuthStack.Navigator screenOptions={screenOptions}>
       <AuthStack.Screen name="Welcome" component={WelcomeScreen} />
       <AuthStack.Screen name="Login" component={LoginScreen} />
       <AuthStack.Screen name="Register" component={RegisterScreen} />
@@ -52,7 +56,7 @@ function AuthNavigator() {
 
 function AppNavigator() {
   return (
-    <AppStack.Navigator screenOptions={transparentScreenOptions}>
+    <AppStack.Navigator screenOptions={screenOptions}>
       <AppStack.Screen name="Conversations" component={ConversationsScreen} />
       <AppStack.Screen
         name="NewChat"
@@ -93,6 +97,7 @@ export function RootNavigator() {
           flex: 1,
           justifyContent: 'center',
           alignItems: 'center',
+          backgroundColor: colors.paper,
         }}
       >
         <ActivityIndicator color={colors.ember} />
@@ -101,10 +106,7 @@ export function RootNavigator() {
   }
 
   return (
-    <NavigationContainer
-      ref={navigationRef}
-      theme={{ ...DefaultTheme, colors: { ...DefaultTheme.colors, background: 'transparent' } }}
-    >
+    <NavigationContainer ref={navigationRef}>
       {session ? <AppNavigator /> : <AuthNavigator />}
     </NavigationContainer>
   );

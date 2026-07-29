@@ -12,9 +12,10 @@ import { useTranslation } from 'react-i18next';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
+import { AppBackground } from '../components/AppBackground';
 import { PasswordField } from '../components/PasswordField';
 import { useContentWidth } from '../hooks/useContentWidth';
-import { spacing } from '../theme/tokens';
+import { colors, spacing } from '../theme/tokens';
 import { authStyles as s } from './authStyles';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
@@ -57,19 +58,21 @@ export function RegisterScreen({ navigation }: Props) {
   };
 
   return (
-    <ScrollView
-      contentContainerStyle={[
-        s.container,
-        {
-          paddingTop: insets.top + spacing.xxl,
-          paddingBottom: insets.bottom + spacing.xxl,
-          width: '100%',
-          maxWidth: contentWidth,
-          alignSelf: 'center',
-        },
-      ]}
-      keyboardShouldPersistTaps="handled"
-    >
+    <View style={{ flex: 1, backgroundColor: colors.paper }}>
+      <AppBackground />
+      <ScrollView
+        contentContainerStyle={[
+          s.container,
+          {
+            paddingTop: insets.top + spacing.xxl,
+            paddingBottom: insets.bottom + spacing.xxl,
+            width: '100%',
+            maxWidth: contentWidth,
+            alignSelf: 'center',
+          },
+        ]}
+        keyboardShouldPersistTaps="handled"
+      >
       <Text style={s.title}>{t('auth.register.title')}</Text>
       <Text style={s.subtitle}>{t('auth.register.subtitle')}</Text>
 
@@ -112,6 +115,7 @@ export function RegisterScreen({ navigation }: Props) {
       <TouchableOpacity style={s.footer} onPress={() => navigation.navigate('Login')}>
         <Text style={s.footerText}>{t('auth.register.switchToLogin')}</Text>
       </TouchableOpacity>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }

@@ -33,6 +33,7 @@ import * as conversationsData from '../data/conversations';
 import * as reactionsData from '../data/reactions';
 import * as mediaData from '../data/media';
 import { Avatar } from '../components/Avatar';
+import { AppBackground } from '../components/AppBackground';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { colors, radii, spacing, MAX_BUBBLE_WIDTH } from '../theme/tokens';
 import { ConversationParticipant, Message, MessageReaction, ReplyPreview } from '../types';
@@ -683,6 +684,7 @@ export function ChatScreen({ route, navigation }: Props) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={0}
     >
+      <AppBackground />
       <View style={[styles.content, { maxWidth: contentWidth }]}>
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
@@ -803,7 +805,7 @@ export function ChatScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'transparent' },
+  container: { flex: 1, backgroundColor: colors.paper },
   content: { flex: 1, width: '100%', alignSelf: 'center' },
   header: {
     flexDirection: 'row',
