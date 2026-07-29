@@ -12,6 +12,8 @@ import {
   Image,
   Keyboard,
   KeyboardAvoidingView,
+  Linking,
+  PermissionsAndroid,
   Platform,
   StyleSheet,
   Text,
@@ -20,6 +22,12 @@ import {
   View,
 } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
+import {
+  errorCodes,
+  isErrorWithCode,
+  pick,
+} from '@react-native-documents/picker';
+import Sound, { type RecordBackType } from 'react-native-nitro-sound';
 import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -35,6 +43,7 @@ import * as mediaData from '../data/media';
 import { Avatar } from '../components/Avatar';
 import { AppBackground } from '../components/AppBackground';
 import { useContentWidth } from '../hooks/useContentWidth';
+import { attachmentPreviewText } from '../utils/messagePreview';
 import { colors, radii, spacing, MAX_BUBBLE_WIDTH } from '../theme/tokens';
 import { ConversationParticipant, Message, MessageReaction, ReplyPreview } from '../types';
 
@@ -43,6 +52,7 @@ type Props = NativeStackScreenProps<AppStackParamList, 'Chat'>;
 const QUICK_REACTIONS = ['❤️', '👍', '😂', '😮', '😢', '🙏'];
 const TYPING_BROADCAST_THROTTLE_MS = 2000;
 const TYPING_INDICATOR_TIMEOUT_MS = 3000;
+const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
 
 // Messages we've sent locally but haven't heard back from the server on
 // yet - shown immediately (dimmed) instead of waiting on a round-trip.
@@ -75,6 +85,34 @@ function summarizeReactions(
   return Array.from(byEmoji.values());
 }
 
+function formatDuration(totalSeconds: number): string {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
+type FileIconName =
+  | 'file'
+  | 'file-pdf'
+  | 'file-word'
+  | 'file-zipper'
+  | 'file-image'
+  | 'file-audio'
+  | 'file-video'
+  | 'file-lines';
+
+function fileIconName(mimeType: string | null): FileIconName {
+  if (!mimeType) return 'file';
+  if (mimeType === 'application/pdf') return 'file-pdf';
+  if (mimeType.includes('word')) return 'file-word';
+  if (mimeType.includes('zip') || mimeType.includes('compressed')) return 'file-zipper';
+  if (mimeType.startsWith('image/')) return 'file-image';
+  if (mimeType.startsWith('audio/')) return 'file-audio';
+  if (mimeType.startsWith('video/')) return 'file-video';
+  if (mimeType.startsWith('text/')) return 'file-lines';
+  return 'file';
+}
+
 function replySenderLabel(
   reply: ReplyPreview,
   userId: string | null,
@@ -96,7 +134,7 @@ function ReplyQuote({
   const { t } = useTranslation();
   const snippet = reply.deleted_at
     ? t('chat.deletedMessage')
-    : reply.body || (reply.media_path ? t('conversations.photoPreview') : '');
+    : reply.body || attachmentPreviewText(reply.attachment_type, reply.attachment_name, t) || '';
 
   return (
     <View style={[styles.replyQuote, isMine ? styles.replyQuoteMine : styles.replyQuoteTheirs]}>
@@ -140,6 +178,73 @@ function MediaImage({ path }: { path: string }) {
   return <Image source={{ uri: url }} style={styles.media} resizeMode="cover" />;
 }
 
+function AudioMessageBubble({
+  message,
+  isMine,
+  isPlaying,
+  onTogglePlay,
+}: {
+  message: LocalMessage;
+  isMine: boolean;
+  isPlaying: boolean;
+  onTogglePlay: () => void;
+}) {
+  const totalSeconds = Math.round((message.attachment_duration_ms ?? 0) / 1000);
+
+  return (
+    <TouchableOpacity
+      style={styles.audioRow}
+      onPress={onTogglePlay}
+      disabled={message._pending}
+    >
+      <View style={[styles.iconCircle, isMine ? styles.iconCircleMine : styles.iconCircleTheirs]}>
+        <FontAwesome6
+          name={isPlaying ? 'pause' : 'play'}
+          iconStyle="solid"
+          size={13}
+          color={isMine ? colors.ember : colors.white}
+        />
+      </View>
+      <Text style={isMine ? styles.bubbleTextMine : styles.bubbleTextTheirs}>
+        {formatDuration(totalSeconds)}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
+function FileMessageBubble({ message, isMine }: { message: LocalMessage; isMine: boolean }) {
+  const { t } = useTranslation();
+
+  const onOpen = async () => {
+    if (!message.media_path || message._pending) return;
+    const url = await mediaData.getMediaSignedUrl(message.media_path);
+    void Linking.openURL(url);
+  };
+
+  return (
+    <TouchableOpacity
+      style={styles.fileRow}
+      onPress={() => void onOpen()}
+      disabled={message._pending}
+    >
+      <View style={[styles.iconCircle, isMine ? styles.iconCircleMine : styles.iconCircleTheirs]}>
+        <FontAwesome6
+          name={fileIconName(message.attachment_mime_type)}
+          iconStyle="solid"
+          size={16}
+          color={isMine ? colors.ember : colors.white}
+        />
+      </View>
+      <Text
+        style={[styles.fileName, isMine ? styles.bubbleTextMine : styles.bubbleTextTheirs]}
+        numberOfLines={1}
+      >
+        {message.attachment_name || t('chat.file')}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
 interface MessageBubbleProps {
   message: LocalMessage;
   isMine: boolean;
@@ -149,11 +254,13 @@ interface MessageBubbleProps {
   isPickerOpen: boolean;
   showSeen: boolean;
   bubbleMaxWidth: number;
+  isPlaying: boolean;
   onLongPress: () => void;
   onToggleReaction: (emoji: string) => void;
   onEdit: () => void;
   onDelete: () => void;
   onReply: () => void;
+  onTogglePlay: () => void;
 }
 
 function MessageBubble({
@@ -165,11 +272,13 @@ function MessageBubble({
   isPickerOpen,
   showSeen,
   bubbleMaxWidth,
+  isPlaying,
   onLongPress,
   onToggleReaction,
   onEdit,
   onDelete,
   onReply,
+  onTogglePlay,
 }: MessageBubbleProps) {
   const { t } = useTranslation();
   const summary = useMemo(
@@ -182,7 +291,7 @@ function MessageBubble({
       {senderName && <Text style={styles.senderLabel}>{senderName}</Text>}
       <TouchableOpacity
         style={[
-          message.media_path ? styles.mediaBubble : styles.bubble,
+          message.attachment_type === 'image' ? styles.mediaBubble : styles.bubble,
           { maxWidth: bubbleMaxWidth },
           isMine ? styles.bubbleMine : styles.bubbleTheirs,
           message._pending && styles.bubblePending,
@@ -193,7 +302,20 @@ function MessageBubble({
         {message.reply_to && (
           <ReplyQuote reply={message.reply_to} userId={userId} isMine={isMine} />
         )}
-        {message.media_path && <MediaImage path={message.media_path} />}
+        {message.attachment_type === 'image' && message.media_path && (
+          <MediaImage path={message.media_path} />
+        )}
+        {message.attachment_type === 'audio' && (
+          <AudioMessageBubble
+            message={message}
+            isMine={isMine}
+            isPlaying={isPlaying}
+            onTogglePlay={onTogglePlay}
+          />
+        )}
+        {message.attachment_type === 'file' && (
+          <FileMessageBubble message={message} isMine={isMine} />
+        )}
         {message.body && (
           <Text style={isMine ? styles.bubbleTextMine : styles.bubbleTextTheirs}>
             {message.body}
@@ -274,7 +396,10 @@ export function ChatScreen({ route, navigation }: Props) {
   );
   const [replyingTo, setReplyingTo] = useState<ReplyPreview | null>(null);
   const [otherTyping, setOtherTyping] = useState(false);
-  const [isUploadingMedia, setIsUploadingMedia] = useState(false);
+  const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [playingMessageId, setPlayingMessageId] = useState<string | null>(null);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   const channelRef = useRef<RealtimeChannel | null>(null);
@@ -302,6 +427,17 @@ export function ChatScreen({ route, navigation }: Props) {
     return () => {
       showSub.remove();
       hideSub.remove();
+    };
+  }, []);
+
+  // Leaving the chat mid-recording or mid-playback shouldn't leave the
+  // recorder running or audio playing in the background.
+  useEffect(() => {
+    return () => {
+      Sound.stopRecorder().catch(() => {});
+      Sound.removeRecordBackListener();
+      Sound.stopPlayer().catch(() => {});
+      Sound.removePlaybackEndListener();
     };
   }, []);
 
@@ -334,6 +470,8 @@ export function ChatScreen({ route, navigation }: Props) {
                 id: replied.id,
                 body: replied.body,
                 media_path: replied.media_path,
+                attachment_type: replied.attachment_type,
+                attachment_name: replied.attachment_name,
                 sender_id: replied.sender_id,
                 deleted_at: replied.deleted_at,
                 profiles: profile,
@@ -500,6 +638,10 @@ export function ChatScreen({ route, navigation }: Props) {
       sender_id: userId,
       body,
       media_path: null,
+      attachment_type: null,
+      attachment_name: null,
+      attachment_mime_type: null,
+      attachment_duration_ms: null,
       created_at: new Date().toISOString(),
       edited_at: null,
       deleted_at: null,
@@ -535,23 +677,126 @@ export function ChatScreen({ route, navigation }: Props) {
     const asset = result.assets?.[0];
     if (!asset?.uri) return;
 
-    setIsUploadingMedia(true);
+    setIsUploadingAttachment(true);
     try {
-      const path = await mediaData.uploadMedia(
-        conversationId,
-        asset.uri,
-        asset.type ?? 'image/jpeg',
-      );
-      const message = await conversationsData.sendMediaMessage(
-        conversationId,
-        userId,
+      const mimeType = asset.type ?? 'image/jpeg';
+      const path = await mediaData.uploadMedia(conversationId, asset.uri, mimeType);
+      const message = await conversationsData.sendAttachmentMessage(conversationId, userId, {
         path,
-      );
+        type: 'image',
+        mimeType,
+      });
       upsertMessage(message);
     } catch {
       Alert.alert(t('chat.uploadFailedTitle'), t('chat.uploadFailedMessage'));
     } finally {
-      setIsUploadingMedia(false);
+      setIsUploadingAttachment(false);
+    }
+  };
+
+  const onPickFile = async () => {
+    if (!userId) return;
+    let picked;
+    try {
+      [picked] = await pick({ mode: 'import' });
+    } catch (err) {
+      if (isErrorWithCode(err) && err.code === errorCodes.OPERATION_CANCELED) return;
+      Alert.alert(t('chat.uploadFailedTitle'), t('chat.uploadFailedMessage'));
+      return;
+    }
+    if (!picked) return;
+    if (picked.size && picked.size > MAX_FILE_SIZE_BYTES) {
+      Alert.alert(t('chat.fileTooLargeTitle'), t('chat.fileTooLargeMessage'));
+      return;
+    }
+
+    setIsUploadingAttachment(true);
+    try {
+      const mimeType = picked.type ?? 'application/octet-stream';
+      const path = await mediaData.uploadMedia(conversationId, picked.uri, mimeType, picked.name);
+      const message = await conversationsData.sendAttachmentMessage(conversationId, userId, {
+        path,
+        type: 'file',
+        name: picked.name,
+        mimeType,
+      });
+      upsertMessage(message);
+    } catch {
+      Alert.alert(t('chat.uploadFailedTitle'), t('chat.uploadFailedMessage'));
+    } finally {
+      setIsUploadingAttachment(false);
+    }
+  };
+
+  const onStartRecording = async () => {
+    if (Platform.OS === 'android') {
+      const granted = await PermissionsAndroid.request(
+        PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+      );
+      if (granted !== PermissionsAndroid.RESULTS.GRANTED) return;
+    }
+    try {
+      await Sound.startRecorder();
+      setRecordingSeconds(0);
+      Sound.addRecordBackListener((e: RecordBackType) => {
+        setRecordingSeconds(Math.floor(e.currentPosition / 1000));
+      });
+      setIsRecording(true);
+    } catch {
+      Alert.alert(t('chat.recordFailedTitle'), t('chat.recordFailedMessage'));
+    }
+  };
+
+  const onStopRecording = async (shouldSend: boolean) => {
+    let uri: string;
+    try {
+      uri = await Sound.stopRecorder();
+    } finally {
+      Sound.removeRecordBackListener();
+      setIsRecording(false);
+    }
+    if (!shouldSend || !userId) return;
+
+    setIsUploadingAttachment(true);
+    try {
+      const durationMs = recordingSeconds * 1000;
+      const mimeType = Platform.OS === 'ios' ? 'audio/m4a' : 'audio/mp4';
+      const fileUri = uri.startsWith('file://') ? uri : `file://${uri}`;
+      const path = await mediaData.uploadMedia(conversationId, fileUri, mimeType);
+      const message = await conversationsData.sendAttachmentMessage(conversationId, userId, {
+        path,
+        type: 'audio',
+        mimeType,
+        durationMs,
+      });
+      upsertMessage(message);
+    } catch {
+      Alert.alert(t('chat.uploadFailedTitle'), t('chat.uploadFailedMessage'));
+    } finally {
+      setIsUploadingAttachment(false);
+    }
+  };
+
+  const onTogglePlayback = async (message: LocalMessage) => {
+    if (!message.media_path) return;
+
+    if (playingMessageId) {
+      await Sound.stopPlayer();
+      Sound.removePlaybackEndListener();
+      setPlayingMessageId(null);
+      if (playingMessageId === message.id) return;
+    }
+
+    try {
+      const url = await mediaData.getMediaSignedUrl(message.media_path);
+      await Sound.startPlayer(url);
+      Sound.addPlaybackEndListener(() => {
+        Sound.removePlaybackEndListener();
+        setPlayingMessageId(null);
+      });
+      setPlayingMessageId(message.id);
+    } catch {
+      setPlayingMessageId(null);
     }
   };
 
@@ -607,6 +852,8 @@ export function ChatScreen({ route, navigation }: Props) {
         id: message.id,
         body: message.body,
         media_path: message.media_path,
+        attachment_type: message.attachment_type,
+        attachment_name: message.attachment_name,
         sender_id: message.sender_id,
         deleted_at: message.deleted_at,
         profiles: profile,
@@ -719,6 +966,7 @@ export function ChatScreen({ route, navigation }: Props) {
             userId={userId}
             isPickerOpen={pickerMessageId === item.id}
             bubbleMaxWidth={bubbleMaxWidth}
+            isPlaying={playingMessageId === item.id}
             showSeen={
               item.sender_id === userId &&
               item.id === latestMineMessageId &&
@@ -733,6 +981,7 @@ export function ChatScreen({ route, navigation }: Props) {
             onEdit={() => onEditMessage(item)}
             onDelete={() => onDeleteMessage(item.id)}
             onReply={() => onReplyToMessage(item)}
+            onTogglePlay={() => void onTogglePlayback(item)}
           />
         )}
       />
@@ -756,7 +1005,8 @@ export function ChatScreen({ route, navigation }: Props) {
               {replyingTo.deleted_at
                 ? t('chat.deletedMessage')
                 : replyingTo.body ||
-                  (replyingTo.media_path ? t('conversations.photoPreview') : '')}
+                  attachmentPreviewText(replyingTo.attachment_type, replyingTo.attachment_name, t) ||
+                  ''}
             </Text>
           </View>
           <TouchableOpacity onPress={onCancelReply}>
@@ -772,32 +1022,77 @@ export function ChatScreen({ route, navigation }: Props) {
           },
         ]}
       >
-        <TouchableOpacity
-          onPress={() => void onPickImage()}
-          style={styles.attachButton}
-          disabled={isUploadingMedia}
-        >
-          {isUploadingMedia ? (
-            <ActivityIndicator size="small" color={colors.smoke} />
-          ) : (
-            <FontAwesome6 name="camera" iconStyle="solid" size={20} color={colors.smoke} />
-          )}
-        </TouchableOpacity>
-        <TextInput
-          style={styles.input}
-          placeholder={t('chat.messagePlaceholder')}
-          placeholderTextColor={colors.smoke}
-          value={draft}
-          onChangeText={onChangeDraft}
-          onSubmitEditing={() => void onSend()}
-        />
-        <TouchableOpacity onPress={() => void onSend()} style={styles.sendButton}>
-          {editingMessageId ? (
-            <Text style={styles.sendText}>{t('chat.save')}</Text>
-          ) : (
-            <FontAwesome6 name="paper-plane" iconStyle="solid" size={15} color={colors.white} />
-          )}
-        </TouchableOpacity>
+        {isRecording ? (
+          <>
+            <TouchableOpacity
+              onPress={() => void onStopRecording(false)}
+              style={styles.attachButton}
+            >
+              <FontAwesome6 name="trash" iconStyle="solid" size={18} color={colors.danger} />
+            </TouchableOpacity>
+            <View style={styles.recordingIndicator}>
+              <View style={styles.recordingDot} />
+              <Text style={styles.recordingTime}>{formatDuration(recordingSeconds)}</Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => void onStopRecording(true)}
+              style={styles.sendButton}
+            >
+              <FontAwesome6 name="paper-plane" iconStyle="solid" size={15} color={colors.white} />
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <TouchableOpacity
+              onPress={() => void onPickFile()}
+              style={styles.attachButton}
+              disabled={isUploadingAttachment}
+            >
+              <FontAwesome6 name="paperclip" iconStyle="solid" size={18} color={colors.smoke} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => void onPickImage()}
+              style={styles.attachButton}
+              disabled={isUploadingAttachment}
+            >
+              {isUploadingAttachment ? (
+                <ActivityIndicator size="small" color={colors.smoke} />
+              ) : (
+                <FontAwesome6 name="camera" iconStyle="solid" size={20} color={colors.smoke} />
+              )}
+            </TouchableOpacity>
+            <TextInput
+              style={styles.input}
+              placeholder={t('chat.messagePlaceholder')}
+              placeholderTextColor={colors.smoke}
+              value={draft}
+              onChangeText={onChangeDraft}
+              onSubmitEditing={() => void onSend()}
+            />
+            {draft.trim() || editingMessageId ? (
+              <TouchableOpacity onPress={() => void onSend()} style={styles.sendButton}>
+                {editingMessageId ? (
+                  <Text style={styles.sendText}>{t('chat.save')}</Text>
+                ) : (
+                  <FontAwesome6
+                    name="paper-plane"
+                    iconStyle="solid"
+                    size={15}
+                    color={colors.white}
+                  />
+                )}
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity
+                onPress={() => void onStartRecording()}
+                style={styles.sendButton}
+                disabled={isUploadingAttachment}
+              >
+                <FontAwesome6 name="microphone" iconStyle="solid" size={16} color={colors.white} />
+              </TouchableOpacity>
+            )}
+          </>
+        )}
       </View>
       </View>
     </KeyboardAvoidingView>
@@ -841,6 +1136,28 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  audioRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    minWidth: 140,
+  },
+  fileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    maxWidth: 220,
+  },
+  fileName: { flex: 1, fontWeight: '600' },
+  iconCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  iconCircleMine: { backgroundColor: colors.white },
+  iconCircleTheirs: { backgroundColor: colors.ember },
   bubbleMine: { backgroundColor: colors.ember, borderBottomRightRadius: 6 },
   bubbleTheirs: { backgroundColor: colors.paper2, borderBottomLeftRadius: 6 },
   bubblePending: { opacity: 0.55 },
@@ -941,6 +1258,20 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     marginRight: 4,
   },
+  recordingIndicator: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  recordingDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.danger,
+  },
+  recordingTime: { fontSize: 14.5, color: colors.ink, fontWeight: '600' },
   input: {
     flex: 1,
     backgroundColor: colors.paper2,

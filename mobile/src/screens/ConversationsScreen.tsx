@@ -20,6 +20,7 @@ import { setLanguage, SUPPORTED_LANGUAGES, SupportedLanguage } from '../i18n';
 import { Avatar } from '../components/Avatar';
 import { AppBackground } from '../components/AppBackground';
 import { useContentWidth } from '../hooks/useContentWidth';
+import { attachmentPreviewText } from '../utils/messagePreview';
 import { colors, radii, spacing } from '../theme/tokens';
 import { Conversation, Message, Profile } from '../types';
 
@@ -36,8 +37,11 @@ export function ConversationsScreen({ navigation }: Props) {
 
   function previewText(message: Message | undefined): string {
     if (!message) return t('conversations.noMessagesYet');
-    if (message.media_path) return t('conversations.photoPreview');
-    return message.body ?? t('conversations.noMessagesYet');
+    return (
+      attachmentPreviewText(message.attachment_type, message.attachment_name, t) ||
+      message.body ||
+      t('conversations.noMessagesYet')
+    );
   }
 
   const load = useCallback(async () => {

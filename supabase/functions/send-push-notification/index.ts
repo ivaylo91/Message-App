@@ -103,6 +103,22 @@ async function sendFcmMessage(
   }
 }
 
+function attachmentPreview(message: {
+  attachment_type?: string | null;
+  attachment_name?: string | null;
+}): string | null {
+  switch (message.attachment_type) {
+    case "image":
+      return "📷 Photo";
+    case "audio":
+      return "🎤 Voice message";
+    case "file":
+      return `📎 ${message.attachment_name ?? "File"}`;
+    default:
+      return null;
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (WEBHOOK_SECRET && req.headers.get("x-webhook-secret") !== WEBHOOK_SECRET) {
     return new Response("Unauthorized", { status: 401 });
@@ -150,7 +166,7 @@ Deno.serve(async (req: Request) => {
       .single();
 
     const title = sender?.display_name ?? "New message";
-    const body = message.media_path ? "📷 Photo" : message.body ?? "New message";
+    const body = attachmentPreview(message) ?? message.body ?? "New message";
 
     const serviceAccount: ServiceAccount = JSON.parse(FIREBASE_SERVICE_ACCOUNT);
     const accessToken = await getAccessToken(serviceAccount);

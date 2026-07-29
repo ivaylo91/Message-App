@@ -7,8 +7,13 @@ export async function uploadMedia(
   conversationId: string,
   localUri: string,
   mimeType: string,
+  fileNameHint?: string | null,
 ): Promise<string> {
-  const ext = mimeType.split('/')[1] ?? 'jpg';
+  // For files, trust the real filename's extension over one guessed
+  // from the mime type - many document mime types (e.g. .docx, .pptx)
+  // don't map cleanly to a short extension the way image/* does.
+  const hintExt = fileNameHint?.includes('.') ? fileNameHint.split('.').pop() : null;
+  const ext = hintExt || mimeType.split('/')[1] || 'bin';
   const path = `${conversationId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
   const response = await fetch(localUri);

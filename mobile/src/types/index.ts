@@ -24,10 +24,14 @@ export interface Conversation {
   messages?: Message[];
 }
 
+export type AttachmentType = 'image' | 'audio' | 'file';
+
 export interface ReplyPreview {
   id: string;
   body: string | null;
   media_path: string | null;
+  attachment_type: AttachmentType | null;
+  attachment_name: string | null;
   sender_id: string;
   deleted_at: string | null;
   profiles: Profile;
@@ -39,6 +43,10 @@ export interface Message {
   sender_id: string;
   body: string | null;
   media_path: string | null;
+  attachment_type: AttachmentType | null;
+  attachment_name: string | null;
+  attachment_mime_type: string | null;
+  attachment_duration_ms: number | null;
   created_at: string;
   edited_at: string | null;
   deleted_at: string | null;

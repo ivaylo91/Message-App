@@ -82,3 +82,11 @@ All app icons are FontAwesome 6 Free, via `@react-native-vector-icons/fontawesom
 
 - **Android**: the three `FontAwesome6_*.ttf` files are copied into `android/app/src/main/assets/fonts/`. Nothing else to do; Gradle picks them up automatically.
 - **iOS**: the fonts are copied into `ios/MobileApp/Fonts/` and declared in `Info.plist` (`UIAppFonts`), but **still need to be added to the Xcode target's "Copy Bundle Resources" build phase** - that's an Xcode-only step (editing `project.pbxproj` by hand is too risky to do blind) and hasn't been done, since this project doesn't currently build for iOS. Do this in Xcode before an iOS build if that ever changes.
+
+### Files and voice messages
+
+Generic file attachments use `@react-native-documents/picker` (any file type, no native mime restriction on the `message-media` bucket anymore - just a 25 MB cap). Voice messages use `react-native-nitro-sound` (the actively maintained successor to the now-deprecated `react-native-audio-recorder-player`, built on Nitro Modules - this app already runs the New Architecture, so no extra setup needed there) for in-app recording and playback.
+
+- **Android**: needs `RECORD_AUDIO` (declared in `AndroidManifest.xml`) plus the runtime permission prompt, both already wired into `ChatScreen`'s recording flow.
+- **iOS**: needs `NSMicrophoneUsageDescription` (declared in `Info.plist`) and, per the library's install steps, `pod install` - not run here since this project doesn't currently build for iOS (see the Icons section above); EAS Build's cloud iOS builds run `pod install` automatically, so this only matters for a local Xcode build.
+- Both attachment kinds reuse the same `message-media` storage bucket and RLS policies as photos (conversation-scoped folder, no changes needed there) - only the bucket's mime-type restriction and size cap changed.

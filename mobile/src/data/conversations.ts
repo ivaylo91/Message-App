@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import { Conversation, Message } from '../types';
+import { AttachmentType, Conversation, Message } from '../types';
 
 const CONVERSATION_SELECT = '*, conversation_participants(*, profiles(*))';
 
@@ -7,7 +7,7 @@ export async function fetchConversations(): Promise<Conversation[]> {
   const { data, error } = await supabase
     .from('conversations')
     .select(
-      `${CONVERSATION_SELECT}, messages(id, body, media_path, created_at, sender_id)`,
+      `${CONVERSATION_SELECT}, messages(id, body, media_path, attachment_type, attachment_name, created_at, sender_id)`,
     )
     .order('updated_at', { ascending: false })
     .order('created_at', { ascending: false, referencedTable: 'messages' })
@@ -45,7 +45,7 @@ export async function createConversation(
 }
 
 const MESSAGE_SELECT =
-  '*, reply_to:reply_to_message_id(id, body, media_path, sender_id, deleted_at, profiles(*))';
+  '*, reply_to:reply_to_message_id(id, body, media_path, attachment_type, attachment_name, sender_id, deleted_at, profiles(*))';
 
 export async function fetchMessages(
   conversationId: string,
@@ -83,23 +83,37 @@ export async function sendMessage(
   return data as unknown as Message;
 }
 
-export async function sendMediaMessage(
+interface AttachmentInput {
+  path: string;
+  type: AttachmentType;
+  name?: string | null;
+  mimeType?: string | null;
+  durationMs?: number | null;
+  replyToMessageId?: string | null;
+}
+
+export async function sendAttachmentMessage(
   conversationId: string,
   senderId: string,
-  mediaPath: string,
+  attachment: AttachmentInput,
 ): Promise<Message> {
   const { data, error } = await supabase
     .from('messages')
     .insert({
       conversation_id: conversationId,
       sender_id: senderId,
-      media_path: mediaPath,
+      media_path: attachment.path,
+      attachment_type: attachment.type,
+      attachment_name: attachment.name ?? null,
+      attachment_mime_type: attachment.mimeType ?? null,
+      attachment_duration_ms: attachment.durationMs ?? null,
+      reply_to_message_id: attachment.replyToMessageId ?? null,
     })
-    .select()
+    .select(MESSAGE_SELECT)
     .single();
 
   if (error) throw error;
-  return data as Message;
+  return data as unknown as Message;
 }
 
 export async function markConversationRead(

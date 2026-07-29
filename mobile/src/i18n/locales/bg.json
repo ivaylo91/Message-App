@@ -33,6 +33,8 @@
     "searchPlaceholder": "Търсене на разговори",
     "noMessagesYet": "Все още няма съобщения",
     "photoPreview": "📷 Снимка",
+    "audioPreview": "🎤 Гласово съобщение",
+    "filePreview": "📎 {{name}}",
     "groupChat": "Групов чат",
     "directMessage": "Лично съобщение",
     "noConversationsYet": "Все още няма разговори.",
@@ -73,7 +75,12 @@
     "reply": "Отговори",
     "replyingTo": "Отговор на {{name}}",
     "you": "Вие",
-    "deletedMessage": "Това съобщение беше изтрито"
+    "deletedMessage": "Това съобщение беше изтрито",
+    "file": "Файл",
+    "fileTooLargeTitle": "Файлът е твърде голям",
+    "fileTooLargeMessage": "Файловете могат да бъдат до 25 MB.",
+    "recordFailedTitle": "Записът е неуспешен",
+    "recordFailedMessage": "Записът не можа да започне. Проверете разрешението за микрофон и опитайте отново."
   },
   "profile": {
     "title": "Профил",

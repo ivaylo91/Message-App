@@ -33,6 +33,8 @@
     "searchPlaceholder": "Search conversations",
     "noMessagesYet": "No messages yet",
     "photoPreview": "📷 Photo",
+    "audioPreview": "🎤 Voice message",
+    "filePreview": "📎 {{name}}",
     "groupChat": "Group chat",
     "directMessage": "Direct message",
     "noConversationsYet": "No conversations yet.",
@@ -73,7 +75,12 @@
     "reply": "Reply",
     "replyingTo": "Replying to {{name}}",
     "you": "You",
-    "deletedMessage": "This message was deleted"
+    "deletedMessage": "This message was deleted",
+    "file": "File",
+    "fileTooLargeTitle": "File too large",
+    "fileTooLargeMessage": "Files can be up to 25 MB.",
+    "recordFailedTitle": "Recording failed",
+    "recordFailedMessage": "Could not start recording. Check microphone permission and try again."
   },
   "profile": {
     "title": "Profile",
