@@ -20,6 +20,8 @@
       "nameLabel": "Име",
       "emailLabel": "Имейл",
       "passwordLabel": "Парола",
+      "confirmPasswordLabel": "Потвърдете паролата",
+      "passwordMismatchError": "Паролите не съвпадат.",
       "submit": "Създаване на акаунт",
       "confirmEmailInfo": "Проверете имейла си, за да потвърдите акаунта, след което влезте.",
       "error": "Неуспешна регистрация. Опитайте с друг имейл.",

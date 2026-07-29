@@ -20,6 +20,8 @@
       "nameLabel": "Name",
       "emailLabel": "Email",
       "passwordLabel": "Password",
+      "confirmPasswordLabel": "Confirm password",
+      "passwordMismatchError": "Passwords don't match.",
       "submit": "Create account",
       "confirmEmailInfo": "Check your email to confirm your account, then sign in.",
       "error": "Registration failed. Try a different email.",

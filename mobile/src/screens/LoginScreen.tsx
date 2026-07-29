@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
+import { PasswordField } from '../components/PasswordField';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { spacing } from '../theme/tokens';
 import { authStyles as s } from './authStyles';
@@ -67,15 +68,11 @@ export function LoginScreen({ navigation }: Props) {
           onChangeText={setEmail}
         />
       </View>
-      <View style={s.field}>
-        <Text style={s.label}>{t('auth.login.passwordLabel')}</Text>
-        <TextInput
-          style={s.input}
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
-      </View>
+      <PasswordField
+        label={t('auth.login.passwordLabel')}
+        value={password}
+        onChangeText={setPassword}
+      />
 
       {error && <Text style={s.error}>{error}</Text>}
 

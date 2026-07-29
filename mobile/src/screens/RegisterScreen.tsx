@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
+import { PasswordField } from '../components/PasswordField';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { spacing } from '../theme/tokens';
 import { authStyles as s } from './authStyles';
@@ -25,6 +26,7 @@ export function RegisterScreen({ navigation }: Props) {
   const { contentWidth } = useContentWidth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
@@ -33,6 +35,10 @@ export function RegisterScreen({ navigation }: Props) {
   const onSubmit = async () => {
     setError(null);
     setInfoMessage(null);
+    if (password !== confirmPassword) {
+      setError(t('auth.register.passwordMismatchError'));
+      return;
+    }
     setIsSubmitting(true);
     try {
       const { needsEmailConfirmation } = await register(
@@ -81,15 +87,16 @@ export function RegisterScreen({ navigation }: Props) {
           onChangeText={setEmail}
         />
       </View>
-      <View style={s.field}>
-        <Text style={s.label}>{t('auth.register.passwordLabel')}</Text>
-        <TextInput
-          style={s.input}
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
-      </View>
+      <PasswordField
+        label={t('auth.register.passwordLabel')}
+        value={password}
+        onChangeText={setPassword}
+      />
+      <PasswordField
+        label={t('auth.register.confirmPasswordLabel')}
+        value={confirmPassword}
+        onChangeText={setConfirmPassword}
+      />
 
       {error && <Text style={s.error}>{error}</Text>}
       {infoMessage && <Text style={s.info}>{infoMessage}</Text>}
