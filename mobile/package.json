@@ -7,7 +7,8 @@
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "start": "react-native start",
-    "test": "jest"
+    "test": "jest",
+    "eas-build-pre-install": "if [ \"$EAS_BUILD_PLATFORM\" = \"android\" ] && [ -n \"$GOOGLE_SERVICES_JSON\" ]; then cp \"$GOOGLE_SERVICES_JSON\" android/app/google-services.json; fi"
   },
   "dependencies": {
     "@notifee/react-native": "^9.1.8",
