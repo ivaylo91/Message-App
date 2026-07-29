@@ -4,7 +4,7 @@ import { colors, radii, spacing } from '../theme/tokens';
 export const authStyles = StyleSheet.create({
   container: {
     flexGrow: 1,
-    backgroundColor: colors.paper,
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     padding: spacing.xxl,
   },

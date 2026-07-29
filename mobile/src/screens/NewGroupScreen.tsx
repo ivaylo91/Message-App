@@ -200,7 +200,7 @@ export function NewGroupScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.paper, paddingTop: spacing.lg },
+  container: { flex: 1, backgroundColor: 'transparent', paddingTop: spacing.lg },
   content: { flex: 1, width: '100%', alignSelf: 'center' },
   header: {
     paddingHorizontal: spacing.lg,

@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../auth/AuthContext';
 import { colors } from '../theme/tokens';
@@ -35,9 +35,14 @@ export type AppStackParamList = {
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const AppStack = createNativeStackNavigator<AppStackParamList>();
 
+const transparentScreenOptions = {
+  headerShown: false,
+  contentStyle: { backgroundColor: 'transparent' },
+} as const;
+
 function AuthNavigator() {
   return (
-    <AuthStack.Navigator screenOptions={{ headerShown: false }}>
+    <AuthStack.Navigator screenOptions={transparentScreenOptions}>
       <AuthStack.Screen name="Welcome" component={WelcomeScreen} />
       <AuthStack.Screen name="Login" component={LoginScreen} />
       <AuthStack.Screen name="Register" component={RegisterScreen} />
@@ -47,7 +52,7 @@ function AuthNavigator() {
 
 function AppNavigator() {
   return (
-    <AppStack.Navigator screenOptions={{ headerShown: false }}>
+    <AppStack.Navigator screenOptions={transparentScreenOptions}>
       <AppStack.Screen name="Conversations" component={ConversationsScreen} />
       <AppStack.Screen
         name="NewChat"
@@ -88,7 +93,6 @@ export function RootNavigator() {
           flex: 1,
           justifyContent: 'center',
           alignItems: 'center',
-          backgroundColor: colors.paper,
         }}
       >
         <ActivityIndicator color={colors.ember} />
@@ -97,7 +101,10 @@ export function RootNavigator() {
   }
 
   return (
-    <NavigationContainer ref={navigationRef}>
+    <NavigationContainer
+      ref={navigationRef}
+      theme={{ ...DefaultTheme, colors: { ...DefaultTheme.colors, background: 'transparent' } }}
+    >
       {session ? <AppNavigator /> : <AuthNavigator />}
     </NavigationContainer>
   );

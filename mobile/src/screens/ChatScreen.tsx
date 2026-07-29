@@ -774,7 +774,7 @@ export function ChatScreen({ route, navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.paper },
+  container: { flex: 1, backgroundColor: 'transparent' },
   content: { flex: 1, width: '100%', alignSelf: 'center' },
   header: {
     flexDirection: 'row',

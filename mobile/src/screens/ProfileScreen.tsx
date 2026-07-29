@@ -129,7 +129,7 @@ export function ProfileScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.paper },
+  container: { flex: 1, backgroundColor: 'transparent' },
   content: { width: '100%', alignSelf: 'center' },
   header: {
     paddingHorizontal: spacing.lg,
