@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -142,7 +143,13 @@ export function NewGroupScreen({ navigation }: Props) {
                 <Text style={styles.chipName} numberOfLines={1}>
                   {profile.display_name}
                 </Text>
-                <Text style={styles.chipRemove}>✕</Text>
+                <FontAwesome6
+                  name="xmark"
+                  iconStyle="solid"
+                  size={9}
+                  color={colors.white}
+                  style={styles.chipRemove}
+                />
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -188,7 +195,14 @@ export function NewGroupScreen({ navigation }: Props) {
                   <Text style={styles.rowSub}>{profile.email}</Text>
                 </View>
                 <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
-                  {isSelected && <Text style={styles.checkboxMark}>✓</Text>}
+                  {isSelected && (
+                    <FontAwesome6
+                      name="check"
+                      iconStyle="solid"
+                      size={12}
+                      color={colors.white}
+                    />
+                  )}
                 </View>
               </TouchableOpacity>
             );
@@ -284,5 +298,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   checkboxSelected: { backgroundColor: colors.ember, borderColor: colors.ember },
-  checkboxMark: { color: colors.white, fontSize: 13, fontWeight: '700' },
 });

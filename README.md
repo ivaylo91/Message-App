@@ -75,3 +75,10 @@ eas login
 eas init          # links this repo to a project on expo.dev
 eas build --platform android --profile development
 ```
+
+### Icons
+
+All app icons are FontAwesome 6 Free, via `@react-native-vector-icons/fontawesome6` (the current per-family package - the old monolithic `react-native-vector-icons` is deprecated). Icons are imported from the `/static` subpath (`import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static'`), which needs no native module linking - just the font files themselves.
+
+- **Android**: the three `FontAwesome6_*.ttf` files are copied into `android/app/src/main/assets/fonts/`. Nothing else to do; Gradle picks them up automatically.
+- **iOS**: the fonts are copied into `ios/MobileApp/Fonts/` and declared in `Info.plist` (`UIAppFonts`), but **still need to be added to the Xcode target's "Copy Bundle Resources" build phase** - that's an Xcode-only step (editing `project.pbxproj` by hand is too risky to do blind) and hasn't been done, since this project doesn't currently build for iOS. Do this in Xcode before an iOS build if that ever changes.

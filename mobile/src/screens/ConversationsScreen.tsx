@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
@@ -114,7 +115,7 @@ export function ConversationsScreen({ navigation }: Props) {
             style={styles.iconButton}
             onPress={() => navigation.navigate('NewChat')}
           >
-            <Text style={styles.iconButtonText}>+</Text>
+            <FontAwesome6 name="plus" iconStyle="solid" size={15} color={colors.ink} />
           </TouchableOpacity>
         </View>
       </View>
@@ -203,7 +204,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.line,
   },
-  iconButtonText: { fontSize: 20, fontWeight: '600', color: colors.ink, marginTop: -2 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

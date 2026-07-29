@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
+import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -106,7 +107,7 @@ export function ProfileScreen({ navigation }: Props) {
               {isUploadingPhoto ? (
                 <ActivityIndicator size="small" color={colors.white} />
               ) : (
-                <Text style={styles.avatarEditBadgeText}>📷</Text>
+                <FontAwesome6 name="camera" iconStyle="solid" size={13} color={colors.white} />
               )}
             </View>
           </TouchableOpacity>
@@ -162,7 +163,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarEditBadgeText: { fontSize: 13 },
   changePhotoHint: { fontSize: 12.5, color: colors.smoke, marginTop: spacing.sm },
   field: { paddingHorizontal: spacing.lg },
   label: {

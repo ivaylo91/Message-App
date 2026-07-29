@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
 import { colors, radii, spacing } from '../theme/tokens';
 
 interface PasswordFieldProps {
@@ -26,7 +27,12 @@ export function PasswordField({ label, value, onChangeText }: PasswordFieldProps
           style={styles.toggle}
           onPress={() => setVisible((current) => !current)}
         >
-          <Text style={styles.toggleText}>{visible ? '🙈' : '👁️'}</Text>
+          <FontAwesome6
+            name={visible ? 'eye-slash' : 'eye'}
+            iconStyle="solid"
+            size={18}
+            color={colors.smoke}
+          />
         </TouchableOpacity>
       </View>
     </View>
@@ -58,5 +64,4 @@ const styles = StyleSheet.create({
     color: colors.ink,
   },
   toggle: { paddingHorizontal: 13 },
-  toggleText: { fontSize: 18 },
 });

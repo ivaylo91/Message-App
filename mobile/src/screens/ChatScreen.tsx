@@ -19,6 +19,7 @@ import {
   View,
 } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
+import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -666,7 +667,7 @@ export function ChatScreen({ route, navigation }: Props) {
       <View style={[styles.content, { maxWidth: contentWidth }]}>
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Text style={styles.backButtonText}>‹</Text>
+          <FontAwesome6 name="chevron-left" iconStyle="solid" size={18} color={colors.ink} />
         </TouchableOpacity>
         <Avatar
           name={displayTitle}
@@ -751,7 +752,7 @@ export function ChatScreen({ route, navigation }: Props) {
           {isUploadingMedia ? (
             <ActivityIndicator size="small" color={colors.smoke} />
           ) : (
-            <Text style={styles.attachButtonText}>📷</Text>
+            <FontAwesome6 name="camera" iconStyle="solid" size={20} color={colors.smoke} />
           )}
         </TouchableOpacity>
         <TextInput
@@ -763,9 +764,11 @@ export function ChatScreen({ route, navigation }: Props) {
           onSubmitEditing={() => void onSend()}
         />
         <TouchableOpacity onPress={() => void onSend()} style={styles.sendButton}>
-          <Text style={styles.sendText}>
-            {editingMessageId ? t('chat.save') : '➤'}
-          </Text>
+          {editingMessageId ? (
+            <Text style={styles.sendText}>{t('chat.save')}</Text>
+          ) : (
+            <FontAwesome6 name="paper-plane" iconStyle="solid" size={15} color={colors.white} />
+          )}
         </TouchableOpacity>
       </View>
       </View>
@@ -786,7 +789,6 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.line,
   },
   backButton: { paddingHorizontal: 4, paddingVertical: 4 },
-  backButtonText: { fontSize: 30, color: colors.ink, fontWeight: '300', marginTop: -4 },
   headerName: { fontWeight: '700', fontSize: 15, color: colors.ink },
   headerStatus: { fontSize: 11.5, fontWeight: '600', color: colors.sage },
   list: { flex: 1, paddingHorizontal: 12 },
@@ -911,7 +913,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     marginRight: 4,
   },
-  attachButtonText: { fontSize: 22 },
   input: {
     flex: 1,
     backgroundColor: colors.paper2,
