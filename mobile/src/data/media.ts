@@ -17,11 +17,16 @@ export async function uploadMedia(
   const path = `${conversationId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
   const response = await fetch(localUri);
-  const blob = await response.blob();
+  // React Native's Blob/FormData bridge drops local audio uploads on
+  // Android - Storage rejects them with a 400 (confirmed in the project's
+  // storage logs) even though the identical path works for photos/files.
+  // Reading the response as an ArrayBuffer instead sends the raw bytes
+  // directly and is reliable on both platforms.
+  const arrayBuffer = await response.arrayBuffer();
 
   const { error } = await supabase.storage
     .from(BUCKET)
-    .upload(path, blob, { contentType: mimeType });
+    .upload(path, arrayBuffer, { contentType: mimeType });
 
   if (error) throw error;
   return path;

@@ -42,6 +42,7 @@ export function ConversationsScreen({ navigation }: Props) {
   const [typingConversationIds, setTypingConversationIds] = useState<Set<string>>(
     new Set(),
   );
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
 
   function previewText(message: Message | undefined): string {
     if (!message) return t('conversations.noMessagesYet');
@@ -55,8 +56,12 @@ export function ConversationsScreen({ navigation }: Props) {
   const load = useCallback(async () => {
     setIsRefreshing(true);
     try {
-      const data = await conversationsData.fetchConversations();
+      const [data, counts] = await Promise.all([
+        conversationsData.fetchConversations(),
+        conversationsData.fetchUnreadCounts(),
+      ]);
       setConversations(data);
+      setUnreadCounts(counts);
     } finally {
       setIsRefreshing(false);
     }
@@ -110,6 +115,34 @@ export function ConversationsScreen({ navigation }: Props) {
       for (const channel of channels) void supabase.removeChannel(channel);
     };
   }, [conversations, userId]);
+
+  // Bumps the unread badge live for any conversation the user is in (RLS
+  // scopes delivery to those, same as the messages table's select policy),
+  // so a new message shows up without waiting for a pull-to-refresh. The
+  // read side resets naturally: opening a chat calls markConversationRead,
+  // and coming back re-fetches counts via the useFocusEffect above.
+  useEffect(() => {
+    if (!userId) return;
+    const channel = supabase
+      .channel('unread-messages')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages' },
+        (payload) => {
+          const incoming = payload.new as Message;
+          if (incoming.sender_id === userId) return;
+          setUnreadCounts((current) => ({
+            ...current,
+            [incoming.conversation_id]: (current[incoming.conversation_id] ?? 0) + 1,
+          }));
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [userId]);
 
   const otherParticipantOf = (conversation: Conversation) =>
     conversation.conversation_participants.find((p) => p.user_id !== userId);
@@ -165,7 +198,7 @@ export function ConversationsScreen({ navigation }: Props) {
             style={styles.iconButton}
             onPress={() => navigation.navigate('NewChat')}
           >
-            <FontAwesome6 name="plus" iconStyle="solid" size={15} color={colors.ink} />
+            <FontAwesome6 name="pen-to-square" iconStyle="solid" size={15} color={colors.ink} />
           </TouchableOpacity>
         </View>
       </View>
@@ -180,6 +213,7 @@ export function ConversationsScreen({ navigation }: Props) {
           const title = conversationTitle(item);
           const other = otherParticipantOf(item);
           const isTyping = typingConversationIds.has(item.id);
+          const unreadCount = unreadCounts[item.id] ?? 0;
           return (
             <TouchableOpacity
               style={styles.row}
@@ -198,12 +232,23 @@ export function ConversationsScreen({ navigation }: Props) {
               <View style={styles.rowMain}>
                 <Text style={styles.rowTitle}>{title}</Text>
                 <Text
-                  style={[styles.rowPreview, isTyping && styles.rowPreviewTyping]}
+                  style={[
+                    styles.rowPreview,
+                    isTyping && styles.rowPreviewTyping,
+                    !isTyping && unreadCount > 0 && styles.rowPreviewUnread,
+                  ]}
                   numberOfLines={1}
                 >
                   {isTyping ? t('chat.typing') : previewText(item.messages?.[0])}
                 </Text>
               </View>
+              {unreadCount > 0 && (
+                <View style={styles.unreadBadge}>
+                  <Text style={styles.unreadBadgeText}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </Text>
+                </View>
+              )}
             </TouchableOpacity>
           );
         }}
@@ -269,6 +314,17 @@ const styles = StyleSheet.create({
   rowTitle: { fontWeight: '700', fontSize: 15.5, color: colors.ink },
   rowPreview: { color: colors.smoke, marginTop: 2, fontSize: 13.5 },
   rowPreviewTyping: { color: colors.sage, fontWeight: '600' },
+  rowPreviewUnread: { color: colors.ink, fontWeight: '600' },
+  unreadBadge: {
+    minWidth: 22,
+    height: 22,
+    borderRadius: 11,
+    paddingHorizontal: 6,
+    backgroundColor: colors.ember,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  unreadBadgeText: { color: colors.white, fontSize: 12, fontWeight: '700' },
   empty: { alignItems: 'center', marginTop: 64, paddingHorizontal: spacing.xxl },
   emptyTitle: { color: colors.ink, fontWeight: '700', fontSize: 15 },
   emptyHint: { color: colors.smoke, marginTop: 4, fontSize: 13.5 },

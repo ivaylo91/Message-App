@@ -11,6 +11,7 @@
       "emailLabel": "Email",
       "passwordLabel": "Password",
       "submit": "Sign in",
+      "successToast": "Welcome back!",
       "error": "Login failed. Check your email and password.",
       "switchToRegister": "New to Hearth? Create an account"
     },
@@ -26,6 +27,7 @@
       "passwordWeakError": "Password must include both letters and numbers.",
       "passwordMismatchError": "Passwords don't match.",
       "submit": "Create account",
+      "successToast": "Account created!",
       "confirmEmailInfo": "Check your email to confirm your account, then sign in.",
       "error": "Registration failed. Try a different email.",
       "switchToLogin": "Already have an account? Sign in"

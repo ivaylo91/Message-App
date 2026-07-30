@@ -9,11 +9,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
 import { AppBackground } from '../components/AppBackground';
 import { PasswordField } from '../components/PasswordField';
+import { useToast } from '../components/Toast';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { colors, spacing } from '../theme/tokens';
 import { authStyles as s } from './authStyles';
@@ -23,6 +25,7 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 export function LoginScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const { login } = useAuth();
+  const { showToast } = useToast();
   const insets = useSafeAreaInsets();
   const { contentWidth } = useContentWidth();
   const [email, setEmail] = useState('');
@@ -35,6 +38,10 @@ export function LoginScreen({ navigation }: Props) {
     setIsSubmitting(true);
     try {
       await login(email, password);
+      // The auth-state change this triggers swaps LoginScreen out for the
+      // app's main stack almost immediately - showToast still lands fine
+      // since it targets ToastProvider's own state, not this screen's.
+      showToast(t('auth.login.successToast'));
     } catch {
       setError(t('auth.login.error'));
     } finally {
@@ -79,13 +86,23 @@ export function LoginScreen({ navigation }: Props) {
 
       {error && <Text style={s.error}>{error}</Text>}
 
-      {isSubmitting ? (
-        <ActivityIndicator color="#E8622C" style={s.spinner} />
-      ) : (
-        <TouchableOpacity style={s.primaryButton} onPress={() => void onSubmit()}>
-          <Text style={s.primaryButtonText}>{t('auth.login.submit')}</Text>
-        </TouchableOpacity>
-      )}
+      <TouchableOpacity
+        style={[s.primaryButton, isSubmitting && s.primaryButtonDisabled]}
+        onPress={() => void onSubmit()}
+        disabled={isSubmitting}
+      >
+        {isSubmitting ? (
+          <ActivityIndicator color={colors.white} size="small" />
+        ) : (
+          <FontAwesome6
+            name="right-to-bracket"
+            iconStyle="solid"
+            size={16}
+            color={colors.white}
+          />
+        )}
+        <Text style={s.primaryButtonText}>{t('auth.login.submit')}</Text>
+      </TouchableOpacity>
 
       <TouchableOpacity
         style={s.footer}

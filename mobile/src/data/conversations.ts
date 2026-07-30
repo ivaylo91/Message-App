@@ -17,6 +17,17 @@ export async function fetchConversations(): Promise<Conversation[]> {
   return data as unknown as Conversation[];
 }
 
+export async function fetchUnreadCounts(): Promise<Record<string, number>> {
+  const { data, error } = await supabase.rpc('unread_message_counts');
+  if (error) throw error;
+
+  const counts: Record<string, number> = {};
+  for (const row of data as { conversation_id: string; unread_count: number }[]) {
+    counts[row.conversation_id] = row.unread_count;
+  }
+  return counts;
+}
+
 export async function fetchConversation(
   conversationId: string,
 ): Promise<Conversation> {

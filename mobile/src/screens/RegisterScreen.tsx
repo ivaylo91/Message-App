@@ -9,11 +9,13 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
 import { AppBackground } from '../components/AppBackground';
 import { PasswordField } from '../components/PasswordField';
+import { useToast } from '../components/Toast';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { colors, spacing } from '../theme/tokens';
 import { authStyles as s } from './authStyles';
@@ -23,6 +25,7 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 export function RegisterScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const { register } = useAuth();
+  const { showToast } = useToast();
   const insets = useSafeAreaInsets();
   const { contentWidth } = useContentWidth();
   const [email, setEmail] = useState('');
@@ -30,12 +33,10 @@ export function RegisterScreen({ navigation }: Props) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [infoMessage, setInfoMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const onSubmit = async () => {
     setError(null);
-    setInfoMessage(null);
     if (password.length < 8) {
       setError(t('auth.register.passwordTooShortError'));
       return;
@@ -55,9 +56,15 @@ export function RegisterScreen({ navigation }: Props) {
         password,
         displayName,
       );
-      if (needsEmailConfirmation) {
-        setInfoMessage(t('auth.register.confirmEmailInfo'));
-      }
+      // Registering doesn't sign the user in here (email confirmation is
+      // required first) - show the toast and send them to Login, same
+      // as a successful login itself does further down the line.
+      showToast(
+        needsEmailConfirmation
+          ? t('auth.register.confirmEmailInfo')
+          : t('auth.register.successToast'),
+      );
+      navigation.navigate('Login');
     } catch {
       setError(t('auth.register.error'));
     } finally {
@@ -111,15 +118,19 @@ export function RegisterScreen({ navigation }: Props) {
       />
 
       {error && <Text style={s.error}>{error}</Text>}
-      {infoMessage && <Text style={s.info}>{infoMessage}</Text>}
 
-      {isSubmitting ? (
-        <ActivityIndicator color="#E8622C" style={s.spinner} />
-      ) : (
-        <TouchableOpacity style={s.primaryButton} onPress={() => void onSubmit()}>
-          <Text style={s.primaryButtonText}>{t('auth.register.submit')}</Text>
-        </TouchableOpacity>
-      )}
+      <TouchableOpacity
+        style={[s.primaryButton, isSubmitting && s.primaryButtonDisabled]}
+        onPress={() => void onSubmit()}
+        disabled={isSubmitting}
+      >
+        {isSubmitting ? (
+          <ActivityIndicator color={colors.white} size="small" />
+        ) : (
+          <FontAwesome6 name="user-plus" iconStyle="solid" size={16} color={colors.white} />
+        )}
+        <Text style={s.primaryButtonText}>{t('auth.register.submit')}</Text>
+      </TouchableOpacity>
 
       <TouchableOpacity style={s.footer} onPress={() => navigation.navigate('Login')}>
         <Text style={s.footerText}>{t('auth.register.switchToLogin')}</Text>

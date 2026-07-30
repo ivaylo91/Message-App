@@ -56,7 +56,13 @@ export const authStyles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     borderRadius: radii.lg,
     backgroundColor: colors.ember,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  primaryButtonDisabled: {
+    opacity: 0.7,
   },
   primaryButtonText: {
     color: colors.white,
