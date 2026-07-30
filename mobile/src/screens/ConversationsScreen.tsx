@@ -263,6 +263,12 @@ export function ConversationsScreen({ navigation }: Props) {
         style={[styles.logoutButton, { paddingBottom: insets.bottom + spacing.md }]}
         onPress={() => void logout()}
       >
+        <FontAwesome6
+          name="right-from-bracket"
+          iconStyle="solid"
+          size={13}
+          color={colors.smoke}
+        />
         <Text style={styles.logoutText}>{t('conversations.logout')}</Text>
       </TouchableOpacity>
       </View>
@@ -329,8 +335,11 @@ const styles = StyleSheet.create({
   emptyTitle: { color: colors.ink, fontWeight: '700', fontSize: 15 },
   emptyHint: { color: colors.smoke, marginTop: 4, fontSize: 13.5 },
   logoutButton: {
-    paddingVertical: spacing.md,
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.line,
   },

@@ -52,13 +52,17 @@
     "searchPlaceholder": "Search by name, @username, email, or phone",
     "emptyPrompt": "Start typing to find someone",
     "noResults": "No matches found",
-    "newGroup": "New group"
+    "newGroup": "New group",
+    "startFailedTitle": "Couldn't start chat",
+    "startFailedMessage": "Something went wrong starting this conversation. Try again."
   },
   "newGroup": {
     "title": "New group",
     "namePlaceholder": "Group name",
     "create": "Create",
-    "emptyPrompt": "Search for people to add"
+    "emptyPrompt": "Search for people to add",
+    "createFailedTitle": "Couldn't create group",
+    "createFailedMessage": "Something went wrong creating this group. Try again."
   },
   "chat": {
     "messagePlaceholder": "Message",

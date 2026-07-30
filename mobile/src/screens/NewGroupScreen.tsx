@@ -1,6 +1,7 @@
 import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -81,10 +82,16 @@ export function NewGroupScreen({ navigation }: Props) {
         selected.map((p) => p.id),
         groupName.trim(),
       );
-      navigation.replace('Chat', {
+      // This screen is presented as a modal - replacing it outright while
+      // still modally presented is unreliable on Android, so dismiss it
+      // first and then navigate to Chat on the stack underneath.
+      navigation.goBack();
+      navigation.navigate('Chat', {
         conversationId: conversation.id,
         title: groupName.trim(),
       });
+    } catch {
+      Alert.alert(t('newGroup.createFailedTitle'), t('newGroup.createFailedMessage'));
     } finally {
       setIsCreating(false);
     }

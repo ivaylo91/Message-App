@@ -439,13 +439,34 @@ export function ChatScreen({ route, navigation }: Props) {
   }, []);
 
   // Leaving the chat mid-recording or mid-playback shouldn't leave the
-  // recorder running or audio playing in the background.
+  // recorder running or audio playing in the background. Nothing here
+  // was necessarily ever started (the common case - opening a chat and
+  // leaving without touching the mic/playback), and nitro-sound throws
+  // synchronously (not just a rejected promise) when told to stop a
+  // recorder/player that was never running, so each call needs its own
+  // try/catch - a bare .catch() only guards against rejection.
   useEffect(() => {
     return () => {
-      Sound.stopRecorder().catch(() => {});
-      Sound.removeRecordBackListener();
-      Sound.stopPlayer().catch(() => {});
-      Sound.removePlaybackEndListener();
+      try {
+        Sound.stopRecorder().catch(() => {});
+      } catch {
+        // no active recorder session - nothing to stop
+      }
+      try {
+        Sound.removeRecordBackListener();
+      } catch {
+        // no listener was ever attached
+      }
+      try {
+        Sound.stopPlayer().catch(() => {});
+      } catch {
+        // no active player session - nothing to stop
+      }
+      try {
+        Sound.removePlaybackEndListener();
+      } catch {
+        // no listener was ever attached
+      }
     };
   }, []);
 

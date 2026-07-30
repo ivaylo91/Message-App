@@ -1,6 +1,7 @@
 import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -61,11 +62,19 @@ export function NewChatScreen({ navigation }: Props) {
 
   const onSelectProfile = async (profile: Profile) => {
     if (!userId) return;
-    const conversation = await conversationsData.createConversation([profile.id]);
-    navigation.replace('Chat', {
-      conversationId: conversation.id,
-      title: profile.display_name || profile.email,
-    });
+    try {
+      const conversation = await conversationsData.createConversation([profile.id]);
+      // This screen is presented as a modal - replacing it outright while
+      // still modally presented is unreliable on Android, so dismiss it
+      // first and then navigate to Chat on the stack underneath.
+      navigation.goBack();
+      navigation.navigate('Chat', {
+        conversationId: conversation.id,
+        title: profile.display_name || profile.email,
+      });
+    } catch {
+      Alert.alert(t('newChat.startFailedTitle'), t('newChat.startFailedMessage'));
+    }
   };
 
   return (
