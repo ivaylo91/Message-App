@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   FlatList,
   RefreshControl,
@@ -14,26 +14,34 @@ import { useTranslation } from 'react-i18next';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
+import { supabase } from '../lib/supabase';
 import * as conversationsData from '../data/conversations';
 import * as profilesData from '../data/profiles';
 import { setLanguage, SUPPORTED_LANGUAGES, SupportedLanguage } from '../i18n';
 import { Avatar } from '../components/Avatar';
 import { AppBackground } from '../components/AppBackground';
 import { useContentWidth } from '../hooks/useContentWidth';
+import { usePresence } from '../presence/PresenceContext';
 import { attachmentPreviewText } from '../utils/messagePreview';
 import { colors, radii, spacing } from '../theme/tokens';
 import { Conversation, Message, Profile } from '../types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Conversations'>;
 
+const TYPING_INDICATOR_TIMEOUT_MS = 3000;
+
 export function ConversationsScreen({ navigation }: Props) {
   const { t, i18n } = useTranslation();
   const { userId, logout } = useAuth();
+  const { isOnline } = usePresence();
   const insets = useSafeAreaInsets();
   const { contentWidth } = useContentWidth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [ownProfile, setOwnProfile] = useState<Profile | null>(null);
+  const [typingConversationIds, setTypingConversationIds] = useState<Set<string>>(
+    new Set(),
+  );
 
   function previewText(message: Message | undefined): string {
     if (!message) return t('conversations.noMessagesYet');
@@ -67,6 +75,42 @@ export function ConversationsScreen({ navigation }: Props) {
     }, [userId]),
   );
 
+  // Listen for the same per-conversation typing broadcast ChatScreen sends
+  // (see ChatScreen.tsx), so "typing..." can show in the list before a
+  // chat is even opened - one lightweight channel per visible conversation,
+  // broadcast-only (no postgres_changes).
+  useEffect(() => {
+    if (!userId || conversations.length === 0) return;
+    const timeouts = new Map<string, ReturnType<typeof setTimeout>>();
+
+    const channels = conversations.map((conversation) =>
+      supabase
+        .channel(`messages:${conversation.id}`, { config: { private: true } })
+        .on('broadcast', { event: 'typing' }, ({ payload }) => {
+          if (payload.userId === userId) return;
+          setTypingConversationIds((current) => new Set(current).add(conversation.id));
+          const existing = timeouts.get(conversation.id);
+          if (existing) clearTimeout(existing);
+          timeouts.set(
+            conversation.id,
+            setTimeout(() => {
+              setTypingConversationIds((current) => {
+                const next = new Set(current);
+                next.delete(conversation.id);
+                return next;
+              });
+            }, TYPING_INDICATOR_TIMEOUT_MS),
+          );
+        })
+        .subscribe(),
+    );
+
+    return () => {
+      for (const timeout of timeouts.values()) clearTimeout(timeout);
+      for (const channel of channels) void supabase.removeChannel(channel);
+    };
+  }, [conversations, userId]);
+
   const otherParticipantOf = (conversation: Conversation) =>
     conversation.conversation_participants.find((p) => p.user_id !== userId);
 
@@ -92,7 +136,7 @@ export function ConversationsScreen({ navigation }: Props) {
               name={ownProfile?.display_name || ownProfile?.email || '?'}
               avatarPath={ownProfile?.avatar_path}
               size={40}
-              showStatusDot
+              online={userId ? isOnline(userId) : undefined}
             />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{t('conversations.title')}</Text>
@@ -134,6 +178,8 @@ export function ConversationsScreen({ navigation }: Props) {
         }
         renderItem={({ item }) => {
           const title = conversationTitle(item);
+          const other = otherParticipantOf(item);
+          const isTyping = typingConversationIds.has(item.id);
           return (
             <TouchableOpacity
               style={styles.row}
@@ -146,14 +192,16 @@ export function ConversationsScreen({ navigation }: Props) {
             >
               <Avatar
                 name={title}
-                avatarPath={
-                  item.is_group ? null : otherParticipantOf(item)?.profiles.avatar_path
-                }
+                avatarPath={item.is_group ? null : other?.profiles.avatar_path}
+                online={item.is_group ? undefined : other && isOnline(other.user_id)}
               />
               <View style={styles.rowMain}>
                 <Text style={styles.rowTitle}>{title}</Text>
-                <Text style={styles.rowPreview} numberOfLines={1}>
-                  {previewText(item.messages?.[0])}
+                <Text
+                  style={[styles.rowPreview, isTyping && styles.rowPreviewTyping]}
+                  numberOfLines={1}
+                >
+                  {isTyping ? t('chat.typing') : previewText(item.messages?.[0])}
                 </Text>
               </View>
             </TouchableOpacity>
@@ -220,6 +268,7 @@ const styles = StyleSheet.create({
   rowMain: { flex: 1, minWidth: 0 },
   rowTitle: { fontWeight: '700', fontSize: 15.5, color: colors.ink },
   rowPreview: { color: colors.smoke, marginTop: 2, fontSize: 13.5 },
+  rowPreviewTyping: { color: colors.sage, fontWeight: '600' },
   empty: { alignItems: 'center', marginTop: 64, paddingHorizontal: spacing.xxl },
   emptyTitle: { color: colors.ink, fontWeight: '700', fontSize: 15 },
   emptyHint: { color: colors.smoke, marginTop: 4, fontSize: 13.5 },

@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import { ActivityIndicator, StatusBar, useColorScheme, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/auth/AuthContext';
+import { PresenceProvider } from './src/presence/PresenceContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { initI18n } from './src/i18n';
 import { colors } from './src/theme/tokens';
@@ -25,7 +26,9 @@ function App() {
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
       {isI18nReady ? (
         <AuthProvider>
-          <RootNavigator />
+          <PresenceProvider>
+            <RootNavigator />
+          </PresenceProvider>
         </AuthProvider>
       ) : (
         <View

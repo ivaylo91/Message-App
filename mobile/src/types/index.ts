@@ -3,6 +3,8 @@ export interface Profile {
   email: string;
   display_name: string;
   avatar_path: string | null;
+  username: string | null;
+  phone: string | null;
 }
 
 export interface ConversationParticipant {

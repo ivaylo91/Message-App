@@ -130,7 +130,11 @@ export function NewChatScreen({ navigation }: Props) {
               />
               <View style={styles.rowMain}>
                 <Text style={styles.rowName}>{profile.display_name}</Text>
-                <Text style={styles.rowSub}>{profile.email}</Text>
+                <Text style={styles.rowSub}>
+                  {[profile.username && `@${profile.username}`, profile.phone, profile.email]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </Text>
               </View>
             </TouchableOpacity>
           ))}

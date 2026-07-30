@@ -47,7 +47,7 @@
   "newChat": {
     "title": "New message",
     "cancel": "Cancel",
-    "searchPlaceholder": "Search by name or email",
+    "searchPlaceholder": "Search by name, @username, email, or phone",
     "emptyPrompt": "Start typing to find someone",
     "noResults": "No matches found",
     "newGroup": "New group"
@@ -70,6 +70,7 @@
     "deleteConfirmMessage": "This cannot be undone.",
     "seen": "Seen",
     "typing": "Typing...",
+    "online": "Online",
     "edited": "(edited)",
     "uploadFailedTitle": "Upload failed",
     "uploadFailedMessage": "Could not send the image. Try again.",
@@ -90,8 +91,17 @@
     "cancel": "Cancel",
     "save": "Save",
     "changePhoto": "Tap to change photo",
+    "displayNameLabel": "Display name",
+    "displayNamePlaceholder": "Your name",
     "usernameLabel": "Username",
-    "usernamePlaceholder": "Your name"
+    "usernamePlaceholder": "yourname",
+    "usernameInvalidError": "Username must be 3-20 characters: letters, numbers, and underscores.",
+    "usernameTakenError": "That username is already taken.",
+    "phoneLabel": "Phone number",
+    "phonePlaceholder": "+1 555 123 4567",
+    "phoneInvalidError": "Enter a valid phone number.",
+    "phoneTakenError": "That phone number is already in use.",
+    "saveFailedError": "Couldn't save your profile. Try again."
   },
   "common": {
     "language": "Language"

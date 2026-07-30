@@ -47,7 +47,7 @@
   "newChat": {
     "title": "Ново съобщение",
     "cancel": "Отказ",
-    "searchPlaceholder": "Търсене по име или имейл",
+    "searchPlaceholder": "Търсене по име, @потребителско име, имейл или телефон",
     "emptyPrompt": "Започнете да пишете, за да намерите някого",
     "noResults": "Няма съвпадения",
     "newGroup": "Нова група"
@@ -70,6 +70,7 @@
     "deleteConfirmMessage": "Това действие не може да бъде отменено.",
     "seen": "Видяно",
     "typing": "Пише...",
+    "online": "Онлайн",
     "edited": "(редактирано)",
     "uploadFailedTitle": "Неуспешно качване",
     "uploadFailedMessage": "Снимката не можа да бъде изпратена. Опитайте отново.",
@@ -90,8 +91,17 @@
     "cancel": "Отказ",
     "save": "Запази",
     "changePhoto": "Докоснете, за да смените снимката",
+    "displayNameLabel": "Име за показване",
+    "displayNamePlaceholder": "Вашето име",
     "usernameLabel": "Потребителско име",
-    "usernamePlaceholder": "Вашето име"
+    "usernamePlaceholder": "вашето_име",
+    "usernameInvalidError": "Потребителското име трябва да е от 3 до 20 символа: букви, цифри и долни черти.",
+    "usernameTakenError": "Това потребителско име вече е заето.",
+    "phoneLabel": "Телефонен номер",
+    "phonePlaceholder": "+359 88 123 4567",
+    "phoneInvalidError": "Въведете валиден телефонен номер.",
+    "phoneTakenError": "Този телефонен номер вече се използва.",
+    "saveFailedError": "Профилът не можа да бъде запазен. Опитайте отново."
   },
   "common": {
     "language": "Език"

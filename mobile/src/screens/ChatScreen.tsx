@@ -44,6 +44,7 @@ import * as mediaData from '../data/media';
 import { Avatar } from '../components/Avatar';
 import { AppBackground } from '../components/AppBackground';
 import { useContentWidth } from '../hooks/useContentWidth';
+import { usePresence } from '../presence/PresenceContext';
 import { attachmentPreviewText } from '../utils/messagePreview';
 import { colors, radii, spacing, MAX_BUBBLE_WIDTH } from '../theme/tokens';
 import { ConversationParticipant, Message, MessageReaction, ReplyPreview } from '../types';
@@ -386,6 +387,7 @@ export function ChatScreen({ route, navigation }: Props) {
   const { t } = useTranslation();
   const { conversationId, title } = route.params;
   const { userId } = useAuth();
+  const { isOnline } = usePresence();
   const insets = useSafeAreaInsets();
   const { windowWidth, contentWidth } = useContentWidth();
   const bubbleMaxWidth = Math.min(windowWidth * 0.8, MAX_BUBBLE_WIDTH);
@@ -469,7 +471,7 @@ export function ChatScreen({ route, navigation }: Props) {
           if (replied) {
             const profile = participants.find(
               (p) => p.user_id === replied.sender_id,
-            )?.profiles ?? { id: replied.sender_id, email: '', display_name: '', avatar_path: null };
+            )?.profiles ?? { id: replied.sender_id, email: '', display_name: '', avatar_path: null, username: null, phone: null };
             enriched = {
               ...incoming,
               reply_to: {
@@ -853,7 +855,7 @@ export function ChatScreen({ route, navigation }: Props) {
       setEditingMessageId(null);
       const profile = participants.find(
         (p) => p.user_id === message.sender_id,
-      )?.profiles ?? { id: message.sender_id, email: '', display_name: '', avatar_path: null };
+      )?.profiles ?? { id: message.sender_id, email: '', display_name: '', avatar_path: null, username: null, phone: null };
       setReplyingTo({
         id: message.id,
         body: message.body,
@@ -947,10 +949,21 @@ export function ChatScreen({ route, navigation }: Props) {
           name={displayTitle}
           avatarPath={isGroup ? null : otherParticipant?.profiles.avatar_path}
           size={36}
+          online={
+            isGroup || !otherParticipant ? undefined : isOnline(otherParticipant.user_id)
+          }
         />
         <View>
           <Text style={styles.headerName}>{displayTitle}</Text>
-          {otherTyping && <Text style={styles.headerStatus}>{t('chat.typing')}</Text>}
+          {otherTyping ? (
+            <Text style={styles.headerStatus}>{t('chat.typing')}</Text>
+          ) : (
+            !isGroup &&
+            otherParticipant &&
+            isOnline(otherParticipant.user_id) && (
+              <Text style={styles.headerStatus}>{t('chat.online')}</Text>
+            )
+          )}
         </View>
       </View>
 

@@ -23,6 +23,9 @@ import { Profile } from '../types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Profile'>;
 
+const USERNAME_PATTERN = /^[a-zA-Z0-9_]{3,20}$/;
+const PHONE_PATTERN = /^\+?[0-9]{7,15}$/;
+
 export function ProfileScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const { userId } = useAuth();
@@ -30,6 +33,9 @@ export function ProfileScreen({ navigation }: Props) {
   const { contentWidth } = useContentWidth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [displayName, setDisplayName] = useState('');
+  const [username, setUsername] = useState('');
+  const [phone, setPhone] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
@@ -38,6 +44,8 @@ export function ProfileScreen({ navigation }: Props) {
     void profilesData.fetchProfile(userId).then((p) => {
       setProfile(p);
       setDisplayName(p.display_name);
+      setUsername(p.username ?? '');
+      setPhone(p.phone ?? '');
     });
   }, [userId]);
 
@@ -65,10 +73,36 @@ export function ProfileScreen({ navigation }: Props) {
 
   const onSave = async () => {
     if (!userId || !canSave) return;
+    setError(null);
+
+    const trimmedUsername = username.trim();
+    if (trimmedUsername && !USERNAME_PATTERN.test(trimmedUsername)) {
+      setError(t('profile.usernameInvalidError'));
+      return;
+    }
+    const trimmedPhone = profilesData.normalizePhone(phone);
+    if (trimmedPhone && !PHONE_PATTERN.test(trimmedPhone)) {
+      setError(t('profile.phoneInvalidError'));
+      return;
+    }
+
     setIsSaving(true);
     try {
-      await profilesData.updateProfile(userId, { display_name: displayName.trim() });
+      await profilesData.updateProfile(userId, {
+        display_name: displayName.trim(),
+        username: trimmedUsername || null,
+        phone: trimmedPhone || null,
+      });
       navigation.goBack();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '';
+      if (message.includes('profiles_username_key')) {
+        setError(t('profile.usernameTakenError'));
+      } else if (message.includes('profiles_phone_key')) {
+        setError(t('profile.phoneTakenError'));
+      } else {
+        setError(t('profile.saveFailedError'));
+      }
     } finally {
       setIsSaving(false);
     }
@@ -117,15 +151,41 @@ export function ProfileScreen({ navigation }: Props) {
         </View>
 
         <View style={styles.field}>
-          <Text style={styles.label}>{t('profile.usernameLabel')}</Text>
+          <Text style={styles.label}>{t('profile.displayNameLabel')}</Text>
           <TextInput
             style={styles.input}
             value={displayName}
             onChangeText={setDisplayName}
-            placeholder={t('profile.usernamePlaceholder')}
+            placeholder={t('profile.displayNamePlaceholder')}
             placeholderTextColor={colors.smoke}
           />
         </View>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>{t('profile.usernameLabel')}</Text>
+          <TextInput
+            style={styles.input}
+            value={username}
+            onChangeText={setUsername}
+            placeholder={t('profile.usernamePlaceholder')}
+            placeholderTextColor={colors.smoke}
+            autoCapitalize="none"
+          />
+        </View>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>{t('profile.phoneLabel')}</Text>
+          <TextInput
+            style={styles.input}
+            value={phone}
+            onChangeText={setPhone}
+            placeholder={t('profile.phonePlaceholder')}
+            placeholderTextColor={colors.smoke}
+            keyboardType="phone-pad"
+          />
+        </View>
+
+        {error && <Text style={styles.error}>{error}</Text>}
       </View>
     </View>
   );
@@ -166,7 +226,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   changePhotoHint: { fontSize: 12.5, color: colors.smoke, marginTop: spacing.sm },
-  field: { paddingHorizontal: spacing.lg },
+  field: { paddingHorizontal: spacing.lg, marginBottom: spacing.lg },
   label: {
     fontSize: 12,
     fontWeight: '700',
@@ -184,4 +244,5 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.ink,
   },
+  error: { color: colors.danger, paddingHorizontal: spacing.lg, fontSize: 13 },
 });

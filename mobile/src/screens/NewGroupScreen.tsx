@@ -194,7 +194,11 @@ export function NewGroupScreen({ navigation }: Props) {
                 />
                 <View style={styles.rowMain}>
                   <Text style={styles.rowName}>{profile.display_name}</Text>
-                  <Text style={styles.rowSub}>{profile.email}</Text>
+                  <Text style={styles.rowSub}>
+                    {[profile.username && `@${profile.username}`, profile.phone, profile.email]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </Text>
                 </View>
                 <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
                   {isSelected && (

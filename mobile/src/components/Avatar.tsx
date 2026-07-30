@@ -7,10 +7,13 @@ interface AvatarProps {
   name: string;
   avatarPath?: string | null;
   size?: number;
-  showStatusDot?: boolean;
+  // Undefined hides the dot entirely (e.g. group avatars, where there's
+  // no single person's presence to show); true/false renders it green
+  // or grey.
+  online?: boolean;
 }
 
-export function Avatar({ name, avatarPath, size = 48, showStatusDot = false }: AvatarProps) {
+export function Avatar({ name, avatarPath, size = 48, online }: AvatarProps) {
   const avatarUrl = avatarPath ? getAvatarUrl(avatarPath) : null;
   const dotSize = Math.max(10, size * 0.3);
 
@@ -38,7 +41,7 @@ export function Avatar({ name, avatarPath, size = 48, showStatusDot = false }: A
           </Text>
         )}
       </View>
-      {showStatusDot && (
+      {online !== undefined && (
         <View
           style={[
             styles.statusDot,
@@ -47,6 +50,7 @@ export function Avatar({ name, avatarPath, size = 48, showStatusDot = false }: A
               height: dotSize,
               borderRadius: dotSize / 2,
               borderWidth: Math.max(2, size * 0.045),
+              backgroundColor: online ? colors.sage : colors.smoke,
             },
           ]}
         />
@@ -69,7 +73,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 0,
     bottom: 0,
-    backgroundColor: colors.sage,
     borderColor: colors.paper,
   },
 });
