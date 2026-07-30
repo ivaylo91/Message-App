@@ -41,6 +41,12 @@ export const authStyles = StyleSheet.create({
     fontSize: 15,
     color: colors.ink,
   },
+  hint: {
+    fontSize: 12,
+    color: colors.smoke,
+    marginTop: -spacing.lg + 4,
+    marginBottom: spacing.md,
+  },
   error: { color: colors.danger, marginBottom: spacing.md },
   info: { color: colors.sage, marginBottom: spacing.md },
   spinner: { marginTop: spacing.sm },

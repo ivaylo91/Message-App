@@ -36,6 +36,14 @@ export function RegisterScreen({ navigation }: Props) {
   const onSubmit = async () => {
     setError(null);
     setInfoMessage(null);
+    if (password.length < 8) {
+      setError(t('auth.register.passwordTooShortError'));
+      return;
+    }
+    if (!/[a-zA-Z]/.test(password) || !/[0-9]/.test(password)) {
+      setError(t('auth.register.passwordWeakError'));
+      return;
+    }
     if (password !== confirmPassword) {
       setError(t('auth.register.passwordMismatchError'));
       return;
@@ -95,6 +103,7 @@ export function RegisterScreen({ navigation }: Props) {
         value={password}
         onChangeText={setPassword}
       />
+      <Text style={s.hint}>{t('auth.register.passwordHint')}</Text>
       <PasswordField
         label={t('auth.register.confirmPasswordLabel')}
         value={confirmPassword}

@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -24,7 +24,13 @@ export function WelcomeScreen({ navigation }: Props) {
     >
       <AppBackground />
       <View style={[styles.content, { maxWidth: contentWidth }]}>
-        <View style={styles.mark} />
+        <View style={styles.mark}>
+          <Image
+            source={require('../assets/flame-mark.png')}
+            style={styles.markGlyph}
+            resizeMode="contain"
+          />
+        </View>
         <Text style={styles.wordmark}>Hearth</Text>
         <Text style={styles.tagline}>{t('welcome.tagline')}</Text>
         <View style={styles.actions}>
@@ -64,11 +70,17 @@ const styles = StyleSheet.create({
     height: 88,
     borderRadius: 44,
     backgroundColor: colors.ember,
+    alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: colors.ember,
     shadowOpacity: 0.5,
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 10 },
     elevation: 8,
+  },
+  markGlyph: {
+    width: 48,
+    height: 55,
   },
   wordmark: {
     fontSize: 40,

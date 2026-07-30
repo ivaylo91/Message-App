@@ -34,8 +34,6 @@
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string></string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Allow access to your photos to share images in chats.</string>
 	<key>NSMicrophoneUsageDescription</key>
