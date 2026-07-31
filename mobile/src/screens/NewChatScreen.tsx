@@ -18,10 +18,10 @@ import { useAuth } from '../auth/AuthContext';
 import * as conversationsData from '../data/conversations';
 import * as profilesData from '../data/profiles';
 import { Avatar } from '../components/Avatar';
-import { AppBackground } from '../components/AppBackground';
+import { AppWallpaper } from '../components/AppWallpaper';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { colors, radii, spacing } from '../theme/tokens';
-import { Profile } from '../types';
+import { ProfileSearchResult } from '../types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'NewChat'>;
 
@@ -33,26 +33,22 @@ export function NewChatScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
   const { contentWidth } = useContentWidth();
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<Profile[]>([]);
+  const [results, setResults] = useState<ProfileSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const runSearch = useCallback(
-    (text: string) => {
-      if (!userId) return;
-      if (!text.trim()) {
-        setResults([]);
-        setIsSearching(false);
-        return;
-      }
-      setIsSearching(true);
-      profilesData
-        .searchProfiles(text, userId)
-        .then(setResults)
-        .finally(() => setIsSearching(false));
-    },
-    [userId],
-  );
+  const runSearch = useCallback((text: string) => {
+    if (!text.trim()) {
+      setResults([]);
+      setIsSearching(false);
+      return;
+    }
+    setIsSearching(true);
+    profilesData
+      .searchProfiles(text)
+      .then(setResults)
+      .finally(() => setIsSearching(false));
+  }, []);
 
   const onChangeQuery = (text: string) => {
     setQuery(text);
@@ -60,7 +56,7 @@ export function NewChatScreen({ navigation }: Props) {
     debounceRef.current = setTimeout(() => runSearch(text), SEARCH_DEBOUNCE_MS);
   };
 
-  const onSelectProfile = async (profile: Profile) => {
+  const onSelectProfile = async (profile: ProfileSearchResult) => {
     if (!userId) return;
     try {
       const conversation = await conversationsData.createConversation([profile.id]);
@@ -70,7 +66,7 @@ export function NewChatScreen({ navigation }: Props) {
       navigation.goBack();
       navigation.navigate('Chat', {
         conversationId: conversation.id,
-        title: profile.display_name || profile.email,
+        title: profile.display_name || profile.username || t('conversations.directMessage'),
       });
     } catch {
       Alert.alert(t('newChat.startFailedTitle'), t('newChat.startFailedMessage'));
@@ -79,7 +75,7 @@ export function NewChatScreen({ navigation }: Props) {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + spacing.lg }]}>
-      <AppBackground />
+      <AppWallpaper />
       <View style={[styles.content, { maxWidth: contentWidth }]}>
         <View style={styles.header}>
           <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.goBack()}>
@@ -134,16 +130,14 @@ export function NewChatScreen({ navigation }: Props) {
               onPress={() => void onSelectProfile(profile)}
             >
               <Avatar
-                name={profile.display_name || profile.email}
+                name={profile.display_name || profile.username || '?'}
                 avatarPath={profile.avatar_path}
               />
               <View style={styles.rowMain}>
                 <Text style={styles.rowName}>{profile.display_name}</Text>
-                <Text style={styles.rowSub}>
-                  {[profile.username && `@${profile.username}`, profile.phone, profile.email]
-                    .filter(Boolean)
-                    .join(' · ')}
-                </Text>
+                {profile.username && (
+                  <Text style={styles.rowSub}>@{profile.username}</Text>
+                )}
               </View>
             </TouchableOpacity>
           ))}

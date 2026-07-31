@@ -18,10 +18,10 @@ import { useAuth } from '../auth/AuthContext';
 import * as conversationsData from '../data/conversations';
 import * as profilesData from '../data/profiles';
 import { Avatar } from '../components/Avatar';
-import { AppBackground } from '../components/AppBackground';
+import { AppWallpaper } from '../components/AppWallpaper';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { colors, radii, spacing } from '../theme/tokens';
-import { Profile } from '../types';
+import { ProfileSearchResult } from '../types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'NewGroup'>;
 
@@ -35,28 +35,24 @@ export function NewGroupScreen({ navigation }: Props) {
   const { contentWidth } = useContentWidth();
   const [groupName, setGroupName] = useState('');
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<Profile[]>([]);
+  const [results, setResults] = useState<ProfileSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [selected, setSelected] = useState<Profile[]>([]);
+  const [selected, setSelected] = useState<ProfileSearchResult[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const runSearch = useCallback(
-    (text: string) => {
-      if (!userId) return;
-      if (!text.trim()) {
-        setResults([]);
-        setIsSearching(false);
-        return;
-      }
-      setIsSearching(true);
-      profilesData
-        .searchProfiles(text, userId)
-        .then(setResults)
-        .finally(() => setIsSearching(false));
-    },
-    [userId],
-  );
+  const runSearch = useCallback((text: string) => {
+    if (!text.trim()) {
+      setResults([]);
+      setIsSearching(false);
+      return;
+    }
+    setIsSearching(true);
+    profilesData
+      .searchProfiles(text)
+      .then(setResults)
+      .finally(() => setIsSearching(false));
+  }, []);
 
   const onChangeQuery = (text: string) => {
     setQuery(text);
@@ -64,7 +60,7 @@ export function NewGroupScreen({ navigation }: Props) {
     debounceRef.current = setTimeout(() => runSearch(text), SEARCH_DEBOUNCE_MS);
   };
 
-  const toggleSelected = (profile: Profile) => {
+  const toggleSelected = (profile: ProfileSearchResult) => {
     setSelected((current) =>
       current.some((p) => p.id === profile.id)
         ? current.filter((p) => p.id !== profile.id)
@@ -99,7 +95,7 @@ export function NewGroupScreen({ navigation }: Props) {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + spacing.lg }]}>
-      <AppBackground />
+      <AppWallpaper />
       <View style={[styles.content, { maxWidth: contentWidth }]}>
         <View style={styles.header}>
           <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.goBack()}>
@@ -145,7 +141,7 @@ export function NewGroupScreen({ navigation }: Props) {
                 onPress={() => toggleSelected(profile)}
               >
                 <Avatar
-                  name={profile.display_name || profile.email}
+                  name={profile.display_name || profile.username || '?'}
                   avatarPath={profile.avatar_path}
                   size={40}
                 />
@@ -196,16 +192,14 @@ export function NewGroupScreen({ navigation }: Props) {
                 onPress={() => toggleSelected(profile)}
               >
                 <Avatar
-                  name={profile.display_name || profile.email}
+                  name={profile.display_name || profile.username || '?'}
                   avatarPath={profile.avatar_path}
                 />
                 <View style={styles.rowMain}>
                   <Text style={styles.rowName}>{profile.display_name}</Text>
-                  <Text style={styles.rowSub}>
-                    {[profile.username && `@${profile.username}`, profile.phone, profile.email]
-                      .filter(Boolean)
-                      .join(' · ')}
-                  </Text>
+                  {profile.username && (
+                    <Text style={styles.rowSub}>@{profile.username}</Text>
+                  )}
                 </View>
                 <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
                   {isSelected && (

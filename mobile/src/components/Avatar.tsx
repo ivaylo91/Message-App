@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { getAvatarUrl } from '../data/profiles';
 import { avatarColorFor, colors, initialsFor } from '../theme/tokens';
@@ -14,8 +14,29 @@ interface AvatarProps {
 }
 
 export function Avatar({ name, avatarPath, size = 48, online }: AvatarProps) {
-  const avatarUrl = avatarPath ? getAvatarUrl(avatarPath) : null;
+  // Avatars live in a private bucket now, so the URL has to be signed
+  // (an async fetch) rather than derived synchronously - see
+  // 20260807_make_avatars_bucket_private.sql.
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const dotSize = Math.max(10, size * 0.3);
+
+  useEffect(() => {
+    if (!avatarPath) {
+      setAvatarUrl(null);
+      return;
+    }
+    let cancelled = false;
+    getAvatarUrl(avatarPath)
+      .then((url) => {
+        if (!cancelled) setAvatarUrl(url);
+      })
+      .catch(() => {
+        if (!cancelled) setAvatarUrl(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [avatarPath]);
 
   return (
     <View style={{ width: size, height: size }}>

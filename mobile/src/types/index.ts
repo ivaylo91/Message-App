@@ -7,6 +7,17 @@ export interface Profile {
   phone: string | null;
 }
 
+// What search_profiles() returns - deliberately narrower than Profile.
+// Email/phone are never included here: they're only searchable as an
+// exact match (see the RPC), and once matched there's no need to hand
+// them back to the searcher, who already typed the value.
+export interface ProfileSearchResult {
+  id: string;
+  display_name: string;
+  avatar_path: string | null;
+  username: string | null;
+}
+
 export interface ConversationParticipant {
   id: string;
   conversation_id: string;

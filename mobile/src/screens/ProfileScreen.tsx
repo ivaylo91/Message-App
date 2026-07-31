@@ -16,7 +16,7 @@ import type { AppStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
 import * as profilesData from '../data/profiles';
 import { Avatar } from '../components/Avatar';
-import { AppBackground } from '../components/AppBackground';
+import { AppWallpaper } from '../components/AppWallpaper';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { colors, radii, spacing } from '../theme/tokens';
 import { Profile } from '../types';
@@ -51,15 +51,19 @@ export function ProfileScreen({ navigation }: Props) {
 
   const onChangePhoto = async () => {
     if (!userId) return;
-    const result = await launchImageLibrary({ mediaType: 'photo', quality: 0.7 });
+    const result = await launchImageLibrary({
+      mediaType: 'photo',
+      quality: 0.7,
+      includeBase64: true,
+    });
     const asset = result.assets?.[0];
-    if (!asset?.uri) return;
+    if (!asset?.base64) return;
 
     setIsUploadingPhoto(true);
     try {
       const path = await profilesData.uploadAvatar(
         userId,
-        asset.uri,
+        asset.base64,
         asset.type ?? 'image/jpeg',
       );
       const updated = await profilesData.updateProfile(userId, { avatar_path: path });
@@ -110,7 +114,7 @@ export function ProfileScreen({ navigation }: Props) {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + spacing.lg }]}>
-      <AppBackground />
+      <AppWallpaper />
       <View style={[styles.content, { maxWidth: contentWidth }]}>
         <View style={styles.header}>
           <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.goBack()}>
