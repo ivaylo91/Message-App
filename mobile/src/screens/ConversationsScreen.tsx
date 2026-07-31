@@ -1,6 +1,9 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  Alert,
+  Animated,
   FlatList,
+  PanResponder,
   RefreshControl,
   StyleSheet,
   Text,
@@ -29,6 +32,117 @@ import { Conversation, Message, Profile } from '../types';
 type Props = NativeStackScreenProps<AppStackParamList, 'Conversations'>;
 
 const TYPING_INDICATOR_TIMEOUT_MS = 3000;
+const SWIPE_DELETE_WIDTH = 84;
+const SWIPE_OPEN_THRESHOLD = -40;
+
+interface ConversationRowProps {
+  title: string;
+  avatarPath: string | null | undefined;
+  online: boolean | undefined;
+  unreadCount: number;
+  isTyping: boolean;
+  preview: string;
+  isOpen: boolean;
+  onOpen: () => void;
+  onClose: () => void;
+  onPress: () => void;
+  onDelete: () => void;
+}
+
+// Swipe-to-delete via core RN Animated/PanResponder rather than a gesture
+// library - a plain horizontal drag that reveals a Delete action underneath
+// is well within what PanResponder handles on its own. Only one row's
+// delete action is open at a time (isOpen/onOpen/onClose, coordinated by
+// the parent), matching the usual Mail/WhatsApp-style swipe list feel.
+function ConversationRow({
+  title,
+  avatarPath,
+  online,
+  unreadCount,
+  isTyping,
+  preview,
+  isOpen,
+  onOpen,
+  onClose,
+  onPress,
+  onDelete,
+}: ConversationRowProps) {
+  const translateX = useRef(new Animated.Value(0)).current;
+  const openXRef = useRef(0);
+
+  useEffect(() => {
+    if (!isOpen && openXRef.current !== 0) {
+      openXRef.current = 0;
+      Animated.timing(translateX, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [isOpen, translateX]);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gesture) =>
+        Math.abs(gesture.dx) > 8 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.5,
+      onPanResponderGrant: onOpen,
+      onPanResponderMove: (_, gesture) => {
+        const next = Math.max(-SWIPE_DELETE_WIDTH, Math.min(0, openXRef.current + gesture.dx));
+        translateX.setValue(next);
+      },
+      onPanResponderRelease: (_, gesture) => {
+        const projected = Math.max(
+          -SWIPE_DELETE_WIDTH,
+          Math.min(0, openXRef.current + gesture.dx),
+        );
+        const shouldOpen = projected < SWIPE_OPEN_THRESHOLD;
+        openXRef.current = shouldOpen ? -SWIPE_DELETE_WIDTH : 0;
+        Animated.timing(translateX, {
+          toValue: openXRef.current,
+          duration: 200,
+          useNativeDriver: true,
+        }).start();
+        if (!shouldOpen) onClose();
+      },
+    }),
+  ).current;
+
+  return (
+    <View style={styles.rowContainer}>
+      <TouchableOpacity style={styles.deleteAction} onPress={onDelete}>
+        <FontAwesome6 name="trash" iconStyle="solid" size={18} color={colors.white} />
+      </TouchableOpacity>
+      <Animated.View
+        style={[styles.rowForeground, { transform: [{ translateX }] }]}
+        {...panResponder.panHandlers}
+      >
+        <TouchableOpacity style={styles.row} onPress={onPress} activeOpacity={0.7}>
+          <Avatar name={title} avatarPath={avatarPath} online={online} />
+          <View style={styles.rowMain}>
+            <Text style={styles.rowTitle}>{title}</Text>
+            <Text
+              style={[
+                styles.rowPreview,
+                isTyping && styles.rowPreviewTyping,
+                !isTyping && unreadCount > 0 && styles.rowPreviewUnread,
+              ]}
+              numberOfLines={1}
+            >
+              {preview}
+            </Text>
+          </View>
+          {unreadCount > 0 && (
+            <View style={styles.unreadBadge}>
+              <Text style={styles.unreadBadgeText}>
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </Animated.View>
+    </View>
+  );
+}
 
 export function ConversationsScreen({ navigation }: Props) {
   const { t, i18n } = useTranslation();
@@ -43,6 +157,7 @@ export function ConversationsScreen({ navigation }: Props) {
     new Set(),
   );
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+  const [openRowId, setOpenRowId] = useState<string | null>(null);
 
   function previewText(message: Message | undefined): string {
     if (!message) return t('conversations.noMessagesYet');
@@ -54,10 +169,11 @@ export function ConversationsScreen({ navigation }: Props) {
   }
 
   const load = useCallback(async () => {
+    if (!userId) return;
     setIsRefreshing(true);
     try {
       const [data, counts] = await Promise.all([
-        conversationsData.fetchConversations(),
+        conversationsData.fetchConversations(userId),
         conversationsData.fetchUnreadCounts(),
       ]);
       setConversations(data);
@@ -65,7 +181,31 @@ export function ConversationsScreen({ navigation }: Props) {
     } finally {
       setIsRefreshing(false);
     }
-  }, []);
+  }, [userId]);
+
+  const onDeleteConversation = useCallback(
+    (conversation: Conversation, title: string) => {
+      Alert.alert(
+        t('conversations.deleteConfirmTitle'),
+        t('conversations.deleteConfirmMessage', { name: title }),
+        [
+          { text: t('chat.cancel'), style: 'cancel', onPress: () => setOpenRowId(null) },
+          {
+            text: t('conversations.delete'),
+            style: 'destructive',
+            onPress: () => {
+              if (!userId) return;
+              setConversations((current) => current.filter((c) => c.id !== conversation.id));
+              conversationsData.hideConversation(conversation.id, userId).catch(() => {
+                // best-effort - a failed hide just leaves the row visible after next refresh
+              });
+            },
+          },
+        ],
+      );
+    },
+    [t, userId],
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -215,41 +355,21 @@ export function ConversationsScreen({ navigation }: Props) {
           const isTyping = typingConversationIds.has(item.id);
           const unreadCount = unreadCounts[item.id] ?? 0;
           return (
-            <TouchableOpacity
-              style={styles.row}
-              onPress={() =>
-                navigation.navigate('Chat', {
-                  conversationId: item.id,
-                  title,
-                })
+            <ConversationRow
+              title={title}
+              avatarPath={item.is_group ? null : other?.profiles.avatar_path}
+              online={item.is_group ? undefined : other && isOnline(other.user_id)}
+              unreadCount={unreadCount}
+              isTyping={isTyping}
+              preview={isTyping ? t('chat.typing') : previewText(item.messages?.[0])}
+              isOpen={openRowId === item.id}
+              onOpen={() => setOpenRowId(item.id)}
+              onClose={() =>
+                setOpenRowId((current) => (current === item.id ? null : current))
               }
-            >
-              <Avatar
-                name={title}
-                avatarPath={item.is_group ? null : other?.profiles.avatar_path}
-                online={item.is_group ? undefined : other && isOnline(other.user_id)}
-              />
-              <View style={styles.rowMain}>
-                <Text style={styles.rowTitle}>{title}</Text>
-                <Text
-                  style={[
-                    styles.rowPreview,
-                    isTyping && styles.rowPreviewTyping,
-                    !isTyping && unreadCount > 0 && styles.rowPreviewUnread,
-                  ]}
-                  numberOfLines={1}
-                >
-                  {isTyping ? t('chat.typing') : previewText(item.messages?.[0])}
-                </Text>
-              </View>
-              {unreadCount > 0 && (
-                <View style={styles.unreadBadge}>
-                  <Text style={styles.unreadBadgeText}>
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
+              onPress={() => navigation.navigate('Chat', { conversationId: item.id, title })}
+              onDelete={() => onDeleteConversation(item, title)}
+            />
           );
         }}
         ListEmptyComponent={
@@ -309,6 +429,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.line,
   },
+  rowContainer: { position: 'relative', overflow: 'hidden', width: '100%' },
+  deleteAction: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: SWIPE_DELETE_WIDTH,
+    backgroundColor: colors.danger,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rowForeground: { width: '100%', backgroundColor: colors.paper },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

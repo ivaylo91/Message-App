@@ -44,7 +44,10 @@
     "directMessage": "Лично съобщение",
     "noConversationsYet": "Все още няма разговори.",
     "startConversationHint": "Докоснете +, за да започнете.",
-    "logout": "Изход"
+    "logout": "Изход",
+    "delete": "Изтрий",
+    "deleteConfirmTitle": "Изтриване на разговора?",
+    "deleteConfirmMessage": "Това премахва разговора ви с {{name}} от вашия списък. За тях той остава и ще се появи отново, ако ви пишат пак."
   },
   "newChat": {
     "title": "Ново съобщение",

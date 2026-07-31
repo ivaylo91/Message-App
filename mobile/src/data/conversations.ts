@@ -3,8 +3,17 @@ import { AttachmentType, Conversation, Message } from '../types';
 
 const CONVERSATION_SELECT = '*, conversation_participants(*, profiles(*))';
 
-export async function fetchConversations(): Promise<Conversation[]> {
-  const { data, error } = await supabase
+export async function fetchConversations(userId: string): Promise<Conversation[]> {
+  const { data: hiddenRows, error: hiddenError } = await supabase
+    .from('conversation_participants')
+    .select('conversation_id')
+    .eq('user_id', userId)
+    .not('hidden_at', 'is', null);
+
+  if (hiddenError) throw hiddenError;
+  const hiddenIds = hiddenRows.map((row) => row.conversation_id);
+
+  let query = supabase
     .from('conversations')
     .select(
       `${CONVERSATION_SELECT}, messages(id, body, media_path, attachment_type, attachment_name, created_at, sender_id)`,
@@ -13,8 +22,31 @@ export async function fetchConversations(): Promise<Conversation[]> {
     .order('created_at', { ascending: false, referencedTable: 'messages' })
     .limit(1, { referencedTable: 'messages' });
 
+  if (hiddenIds.length > 0) {
+    query = query.not('id', 'in', `(${hiddenIds.join(',')})`);
+  }
+
+  const { data, error } = await query;
+
   if (error) throw error;
   return data as unknown as Conversation[];
+}
+
+// "Delete chat" - hides the conversation from just this user's own list
+// (see 20260805_add_hide_conversation.sql). The other participant(s) and
+// the message history are untouched, and a new message arriving in the
+// conversation clears this automatically.
+export async function hideConversation(
+  conversationId: string,
+  userId: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from('conversation_participants')
+    .update({ hidden_at: new Date().toISOString() })
+    .eq('conversation_id', conversationId)
+    .eq('user_id', userId);
+
+  if (error) throw error;
 }
 
 export async function fetchUnreadCounts(): Promise<Record<string, number>> {

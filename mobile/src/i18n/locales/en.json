@@ -44,7 +44,10 @@
     "directMessage": "Direct message",
     "noConversationsYet": "No conversations yet.",
     "startConversationHint": "Tap the + to start one.",
-    "logout": "Log out"
+    "logout": "Log out",
+    "delete": "Delete",
+    "deleteConfirmTitle": "Delete chat?",
+    "deleteConfirmMessage": "This removes your conversation with {{name}} from your list. They'll keep it, and it'll come back if they message you again."
   },
   "newChat": {
     "title": "New message",

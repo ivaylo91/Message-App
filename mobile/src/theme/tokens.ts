@@ -5,8 +5,8 @@ export const colors = {
   ink: '#1C1310',
   paper: '#FBF3EA',
   paper2: '#FFFFFF',
-  ember: '#E8622C',
-  emberGlow: '#FF9A56',
+  ember: '#7C3AED',
+  emberGlow: '#A78BFA',
   smoke: '#8A776D',
   char: '#2A1E19',
   line: 'rgba(28, 19, 16, 0.09)',
@@ -15,7 +15,7 @@ export const colors = {
   dusk: '#6E7B94',
   white: '#FFF8F2',
   danger: '#FF3B30',
-  sand: '#F3E3D0',
+  sand: '#ECEAF2',
 } as const;
 
 export const avatarPalette = [colors.clay, colors.sage, colors.dusk] as const;

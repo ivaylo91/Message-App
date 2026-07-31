@@ -13,6 +13,7 @@ export interface ConversationParticipant {
   user_id: string;
   role: 'MEMBER' | 'ADMIN';
   last_read_at: string | null;
+  hidden_at: string | null;
   profiles: Profile;
 }
 
