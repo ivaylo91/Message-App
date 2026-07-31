@@ -21,6 +21,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
@@ -260,6 +261,7 @@ interface MessageBubbleProps {
   bubbleMaxWidth: number;
   isPlaying: boolean;
   onLongPress: () => void;
+  onDismissPicker: () => void;
   onToggleReaction: (emoji: string) => void;
   onEdit: () => void;
   onDelete: () => void;
@@ -279,6 +281,7 @@ function MessageBubble({
   bubbleMaxWidth,
   isPlaying,
   onLongPress,
+  onDismissPicker,
   onToggleReaction,
   onEdit,
   onDelete,
@@ -302,6 +305,7 @@ function MessageBubble({
           message._pending && styles.bubblePending,
         ]}
         onLongPress={onLongPress}
+        onPress={onDismissPicker}
         activeOpacity={0.8}
       >
         {message.reply_to && (
@@ -1058,6 +1062,7 @@ export function ChatScreen({ route, navigation }: Props) {
       keyboardVerticalOffset={0}
     >
       <AppWallpaper />
+      <TouchableWithoutFeedback onPress={() => setPickerMessageId(null)}>
       <View style={[styles.content, { maxWidth: contentWidth }]}>
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
@@ -1119,6 +1124,7 @@ export function ChatScreen({ route, navigation }: Props) {
                 current === item.id ? null : item.id,
               )
             }
+            onDismissPicker={() => setPickerMessageId(null)}
             onToggleReaction={(emoji) => void onToggleReaction(item.id, emoji)}
             onEdit={() => onEditMessage(item)}
             onDelete={() => onDeleteMessage(item.id)}
@@ -1237,6 +1243,7 @@ export function ChatScreen({ route, navigation }: Props) {
         )}
       </View>
       </View>
+      </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
 }
