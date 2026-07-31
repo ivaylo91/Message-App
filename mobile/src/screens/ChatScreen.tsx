@@ -8,6 +8,7 @@ import React, {
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   FlatList,
   Image,
   Keyboard,
@@ -254,7 +255,8 @@ interface MessageBubbleProps {
   reactions: MessageReaction[];
   userId: string | null;
   isPickerOpen: boolean;
-  showSeen: boolean;
+  seenByName: string | null;
+  seenByAvatarPath: string | null;
   bubbleMaxWidth: number;
   isPlaying: boolean;
   onLongPress: () => void;
@@ -272,7 +274,8 @@ function MessageBubble({
   reactions,
   userId,
   isPickerOpen,
-  showSeen,
+  seenByName,
+  seenByAvatarPath,
   bubbleMaxWidth,
   isPlaying,
   onLongPress,
@@ -378,7 +381,69 @@ function MessageBubble({
         </ScrollView>
       )}
 
-      {showSeen && <Text style={styles.seenText}>{t('chat.seen')}</Text>}
+      {seenByName && (
+        <View style={styles.seenAvatar}>
+          <Avatar name={seenByName} avatarPath={seenByAvatarPath} size={16} />
+        </View>
+      )}
+    </View>
+  );
+}
+
+const TYPING_DOT_BOUNCE_MS = 300;
+const TYPING_DOT_STAGGER_MS = 150;
+
+function TypingDot({ delay }: { delay: number }) {
+  const bounce = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.delay(delay),
+        Animated.timing(bounce, {
+          toValue: 1,
+          duration: TYPING_DOT_BOUNCE_MS,
+          useNativeDriver: true,
+        }),
+        Animated.timing(bounce, {
+          toValue: 0,
+          duration: TYPING_DOT_BOUNCE_MS,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [bounce, delay]);
+
+  return (
+    <Animated.View
+      style={[
+        styles.typingDot,
+        {
+          opacity: bounce.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }),
+          transform: [
+            {
+              translateY: bounce.interpolate({ inputRange: [0, 1], outputRange: [0, -4] }),
+            },
+          ],
+        },
+      ]}
+    />
+  );
+}
+
+// Rendered as the FlatList's ListHeaderComponent - since the list is
+// inverted, the "header" slot visually sits at the bottom, right where
+// the other person's next message would appear.
+function TypingBubble() {
+  return (
+    <View style={styles.rowTheirs}>
+      <View style={[styles.bubble, styles.bubbleTheirs, styles.typingBubble]}>
+        <TypingDot delay={0} />
+        <TypingDot delay={TYPING_DOT_STAGGER_MS} />
+        <TypingDot delay={TYPING_DOT_STAGGER_MS * 2} />
+      </View>
     </View>
   );
 }
@@ -952,11 +1017,6 @@ export function ChatScreen({ route, navigation }: Props) {
     [t],
   );
 
-  const latestMineMessageId = useMemo(
-    () => messages.find((m) => m.sender_id === userId)?.id ?? null,
-    [messages, userId],
-  );
-
   const otherParticipant = useMemo(
     () => participants.find((p) => p.user_id !== userId),
     [participants, userId],
@@ -978,19 +1038,18 @@ export function ChatScreen({ route, navigation }: Props) {
     '…';
 
   // Read receipts only make sense 1:1 for now - "seen" in a group would
-  // need to say *who* has seen it, not just a single yes/no.
-  const seenLatestMine = useMemo(() => {
-    if (isGroup) return false;
-    if (!otherParticipant?.last_read_at || !latestMineMessageId) return false;
-    const latestMineMessage = messages.find(
-      (m) => m.id === latestMineMessageId,
+  // need to say *who* has seen it, not just a single yes/no. Messenger-
+  // style: the small avatar sits under the newest message of mine that's
+  // at or before the other person's last_read_at, and moves down (to a
+  // newer message) as that timestamp advances in real time.
+  const lastSeenMineMessageId = useMemo(() => {
+    if (isGroup || !otherParticipant?.last_read_at) return null;
+    const readAt = new Date(otherParticipant.last_read_at).getTime();
+    const seen = messages.find(
+      (m) => m.sender_id === userId && new Date(m.created_at).getTime() <= readAt,
     );
-    if (!latestMineMessage) return false;
-    return (
-      new Date(otherParticipant.last_read_at) >=
-      new Date(latestMineMessage.created_at)
-    );
-  }, [isGroup, otherParticipant, latestMineMessageId, messages]);
+    return seen?.id ?? null;
+  }, [isGroup, otherParticipant, messages, userId]);
 
   return (
     <KeyboardAvoidingView
@@ -1014,15 +1073,12 @@ export function ChatScreen({ route, navigation }: Props) {
         />
         <View>
           <Text style={styles.headerName}>{displayTitle}</Text>
-          {otherTyping ? (
-            <Text style={styles.headerStatus}>{t('chat.typing')}</Text>
-          ) : (
+          {!otherTyping &&
             !isGroup &&
             otherParticipant &&
             isOnline(otherParticipant.user_id) && (
               <Text style={styles.headerStatus}>{t('chat.online')}</Text>
-            )
-          )}
+            )}
         </View>
       </View>
 
@@ -1031,6 +1087,7 @@ export function ChatScreen({ route, navigation }: Props) {
         data={messages}
         keyExtractor={(item) => item.id}
         inverted
+        ListHeaderComponent={otherTyping ? TypingBubble : null}
         renderItem={({ item }) => (
           <MessageBubble
             message={item}
@@ -1045,10 +1102,17 @@ export function ChatScreen({ route, navigation }: Props) {
             isPickerOpen={pickerMessageId === item.id}
             bubbleMaxWidth={bubbleMaxWidth}
             isPlaying={playingMessageId === item.id}
-            showSeen={
-              item.sender_id === userId &&
-              item.id === latestMineMessageId &&
-              seenLatestMine
+            seenByName={
+              item.id === lastSeenMineMessageId
+                ? otherParticipant?.profiles.display_name ||
+                  otherParticipant?.profiles.email ||
+                  null
+                : null
+            }
+            seenByAvatarPath={
+              item.id === lastSeenMineMessageId
+                ? otherParticipant?.profiles.avatar_path ?? null
+                : null
             }
             onLongPress={() =>
               setPickerMessageId((current) =>
@@ -1305,7 +1369,18 @@ const styles = StyleSheet.create({
   pickerEmojiText: { fontSize: 22 },
   pickerActionText: { fontSize: 14, color: colors.ember, fontWeight: '600' },
   pickerDeleteText: { color: colors.danger },
-  seenText: { fontSize: 11, color: colors.smoke, marginTop: 2, marginRight: 4 },
+  seenAvatar: { marginTop: 4 },
+  typingBubble: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  typingDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.smoke,
+  },
   editingBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
