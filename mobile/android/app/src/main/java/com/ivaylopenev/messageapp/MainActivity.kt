@@ -17,6 +17,14 @@ class MainActivity : ReactActivity() {
         WindowManager.LayoutParams.FLAG_SECURE,
     )
     super.onCreate(savedInstanceState)
+    // Tapjacking protection: rejects touches that arrive while another
+    // app's overlay is covering (fully or partially) this window - e.g. a
+    // malicious SYSTEM_ALERT_WINDOW overlay tricking a tap on login/logout/
+    // delete. React Native doesn't expose this as a JS prop on Touchables,
+    // so it's set once here on the window's root view, which protects
+    // every touch target app-wide (touch filtering propagates down the
+    // view hierarchy from whichever view this flag is set on).
+    window.decorView.filterTouchesWhenObscured = true
   }
 
   /**

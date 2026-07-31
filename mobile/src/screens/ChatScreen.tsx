@@ -413,6 +413,22 @@ export function ChatScreen({ route, navigation }: Props) {
   const channelRef = useRef<RealtimeChannel | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTypingSentAtRef = useRef(0);
+  // Kept in sync with `participants` below and read from inside
+  // upsertMessage instead of depending on `participants` directly - that
+  // state updates asynchronously right after mount (once fetchConversation
+  // resolves), and having upsertMessage depend on it gave it a new identity
+  // at that point. Since the realtime-channel effect further down depends
+  // on upsertMessage, that made it tear down and recreate the channel via
+  // an un-awaited removeChannel(), which raced ahead of the actual removal:
+  // the next .channel() call for the same topic got back the still-not-
+  // fully-removed, already-subscribed channel, and calling .on(...) on it
+  // threw "cannot add postgres_changes callbacks ... after subscribe()" -
+  // crashing the screen almost every time a chat was opened.
+  const participantsRef = useRef<ConversationParticipant[]>([]);
+
+  useEffect(() => {
+    participantsRef.current = participants;
+  }, [participants]);
 
   useEffect(() => {
     void conversationsData.fetchConversation(conversationId).then((conversation) => {
@@ -490,7 +506,7 @@ export function ChatScreen({ route, navigation }: Props) {
             (m) => m.id === incoming.reply_to_message_id,
           );
           if (replied) {
-            const profile = participants.find(
+            const profile = participantsRef.current.find(
               (p) => p.user_id === replied.sender_id,
             )?.profiles ?? { id: replied.sender_id, email: '', display_name: '', avatar_path: null, username: null, phone: null };
             enriched = {
@@ -512,7 +528,7 @@ export function ChatScreen({ route, navigation }: Props) {
       });
       markRead();
     },
-    [markRead, participants],
+    [markRead],
   );
 
   useFocusEffect(
@@ -528,102 +544,124 @@ export function ChatScreen({ route, navigation }: Props) {
   );
 
   useEffect(() => {
-    const channel = supabase
-      .channel(`messages:${conversationId}`, { config: { private: true } })
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => upsertMessage(payload.new as Message),
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'messages',
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          const updated = payload.new as Message;
-          if (updated.deleted_at) {
-            setMessages((current) =>
-              current.filter((m) => m.id !== updated.id),
-            );
-          } else {
-            setMessages((current) =>
-              current.map((m) => (m.id === updated.id ? updated : m)),
-            );
-          }
-        },
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'message_reactions',
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          const incoming = payload.new as MessageReaction;
-          setReactions((current) =>
-            current.some((r) => r.id === incoming.id)
-              ? current
-              : [...current, incoming],
-          );
-        },
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'message_reactions',
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          const removed = payload.old as MessageReaction;
-          setReactions((current) => current.filter((r) => r.id !== removed.id));
-        },
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'conversation_participants',
-          filter: `conversation_id=eq.${conversationId}`,
-        },
-        (payload) => {
-          const updated = payload.new as ConversationParticipant;
-          setParticipants((current) =>
-            current.map((p) =>
-              p.id === updated.id ? { ...p, ...updated } : p,
-            ),
-          );
-        },
-      )
-      .on('broadcast', { event: 'typing' }, ({ payload }) => {
-        if (payload.userId === userId) return;
-        setOtherTyping(true);
-        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-        typingTimeoutRef.current = setTimeout(
-          () => setOtherTyping(false),
-          TYPING_INDICATOR_TIMEOUT_MS,
-        );
-      })
-      .subscribe();
+    let cancelled = false;
+    let channel: RealtimeChannel | null = null;
 
-    channelRef.current = channel;
+    // Supabase's client reuses any existing channel object already
+    // registered under this exact topic instead of creating a fresh one
+    // (see RealtimeClient.channel() upstream) - and removeChannel() is
+    // async (it awaits an unsubscribe round-trip before deregistering).
+    // If this effect re-runs before a previous run's un-awaited
+    // removeChannel() call has actually finished (observed even without
+    // React StrictMode - e.g. rapid re-focus), the "new" channel() call
+    // below hands back that same already-subscribed channel, and the
+    // .on(...) calls after it throw "cannot add ... callbacks ... after
+    // subscribe()", crashing the screen. Awaiting the removal of any
+    // stale same-topic channel first closes that race unconditionally.
+    void (async () => {
+      const realtimeTopic = `realtime:messages:${conversationId}`;
+      const stale = supabase.getChannels().find((c) => c.topic === realtimeTopic);
+      if (stale) await supabase.removeChannel(stale);
+      if (cancelled) return;
+
+      channel = supabase
+        .channel(`messages:${conversationId}`, { config: { private: true } })
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages',
+            filter: `conversation_id=eq.${conversationId}`,
+          },
+          (payload) => upsertMessage(payload.new as Message),
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'messages',
+            filter: `conversation_id=eq.${conversationId}`,
+          },
+          (payload) => {
+            const updated = payload.new as Message;
+            if (updated.deleted_at) {
+              setMessages((current) =>
+                current.filter((m) => m.id !== updated.id),
+              );
+            } else {
+              setMessages((current) =>
+                current.map((m) => (m.id === updated.id ? updated : m)),
+              );
+            }
+          },
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'message_reactions',
+            filter: `conversation_id=eq.${conversationId}`,
+          },
+          (payload) => {
+            const incoming = payload.new as MessageReaction;
+            setReactions((current) =>
+              current.some((r) => r.id === incoming.id)
+                ? current
+                : [...current, incoming],
+            );
+          },
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'DELETE',
+            schema: 'public',
+            table: 'message_reactions',
+            filter: `conversation_id=eq.${conversationId}`,
+          },
+          (payload) => {
+            const removed = payload.old as MessageReaction;
+            setReactions((current) => current.filter((r) => r.id !== removed.id));
+          },
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'conversation_participants',
+            filter: `conversation_id=eq.${conversationId}`,
+          },
+          (payload) => {
+            const updated = payload.new as ConversationParticipant;
+            setParticipants((current) =>
+              current.map((p) =>
+                p.id === updated.id ? { ...p, ...updated } : p,
+              ),
+            );
+          },
+        )
+        .on('broadcast', { event: 'typing' }, ({ payload }) => {
+          if (payload.userId === userId) return;
+          setOtherTyping(true);
+          if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+          typingTimeoutRef.current = setTimeout(
+            () => setOtherTyping(false),
+            TYPING_INDICATOR_TIMEOUT_MS,
+          );
+        })
+        .subscribe();
+
+      channelRef.current = channel;
+    })();
 
     return () => {
+      cancelled = true;
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-      void supabase.removeChannel(channel);
+      if (channel) void supabase.removeChannel(channel);
       channelRef.current = null;
     };
   }, [conversationId, upsertMessage, userId]);
