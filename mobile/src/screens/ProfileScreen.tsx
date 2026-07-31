@@ -118,6 +118,7 @@ export function ProfileScreen({ navigation }: Props) {
       <View style={[styles.content, { maxWidth: contentWidth }]}>
         <View style={styles.header}>
           <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.goBack()}>
+            <FontAwesome6 name="xmark" iconStyle="solid" size={13} color={colors.danger} />
             <Text style={styles.cancelText}>{t('profile.cancel')}</Text>
           </TouchableOpacity>
           <Text style={styles.title}>{t('profile.title')}</Text>
@@ -127,11 +128,19 @@ export function ProfileScreen({ navigation }: Props) {
             disabled={isSaving || !canSave}
           >
             {isSaving ? (
-              <ActivityIndicator size="small" color={colors.ember} />
+              <ActivityIndicator size="small" color={colors.sage} />
             ) : (
-              <Text style={[styles.saveText, !canSave && styles.saveTextDisabled]}>
-                {t('profile.save')}
-              </Text>
+              <>
+                <FontAwesome6
+                  name="check"
+                  iconStyle="solid"
+                  size={13}
+                  color={canSave ? colors.sage : colors.smoke}
+                />
+                <Text style={[styles.saveText, !canSave && styles.saveTextDisabled]}>
+                  {t('profile.save')}
+                </Text>
+              </>
             )}
           </TouchableOpacity>
         </View>
@@ -205,11 +214,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     flexDirection: 'row',
   },
-  cancelButton: { position: 'absolute', left: spacing.lg, top: 0 },
-  cancelText: { color: colors.ember, fontSize: 15, fontWeight: '600' },
+  cancelButton: {
+    position: 'absolute',
+    left: spacing.lg,
+    top: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  cancelText: { color: colors.danger, fontSize: 15, fontWeight: '600' },
   title: { fontSize: 17, fontWeight: '700', color: colors.ink },
-  saveButton: { position: 'absolute', right: spacing.lg, top: 0 },
-  saveText: { color: colors.ember, fontSize: 15, fontWeight: '700' },
+  saveButton: {
+    position: 'absolute',
+    right: spacing.lg,
+    top: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  saveText: { color: colors.sage, fontSize: 15, fontWeight: '700' },
   saveTextDisabled: { color: colors.smoke },
   avatarSection: {
     alignItems: 'center',

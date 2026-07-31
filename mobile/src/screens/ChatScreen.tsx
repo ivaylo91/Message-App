@@ -140,7 +140,7 @@ function ReplyQuote({
     : reply.body || attachmentPreviewText(reply.attachment_type, reply.attachment_name, t) || '';
 
   return (
-    <View style={[styles.replyQuote, isMine ? styles.replyQuoteMine : styles.replyQuoteTheirs]}>
+    <View style={styles.replyQuote}>
       <Text
         style={isMine ? styles.replyQuoteSenderMine : styles.replyQuoteSenderTheirs}
         numberOfLines={1}
@@ -1314,23 +1314,9 @@ const styles = StyleSheet.create({
   bubbleTextTheirs: { color: colors.ink, fontSize: 14.5, lineHeight: 20 },
   editedTag: { fontSize: 10, color: colors.smoke, marginTop: 2 },
   replyQuote: {
-    borderLeftWidth: 3,
-    borderRadius: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 2,
+    paddingVertical: 2,
     marginBottom: 6,
-  },
-  replyQuoteMine: {
-    borderLeftColor: colors.white,
-    backgroundColor: 'rgba(255, 255, 255, 0.18)',
-  },
-  replyQuoteTheirs: {
-    // A flat colors.paper fill used to sit on the old white "theirs"
-    // bubble, but now that bubble is colors.sand (a close, muddy match
-    // for paper), the quote block barely stood out. A dark, translucent
-    // overlay reads as "depth" regardless of the bubble color under it.
-    borderLeftColor: colors.ember,
-    backgroundColor: 'rgba(28, 19, 16, 0.07)',
   },
   replyQuoteSenderMine: { fontSize: 12, fontWeight: '700', color: colors.white },
   replyQuoteSenderTheirs: { fontSize: 12, fontWeight: '700', color: colors.ember },
