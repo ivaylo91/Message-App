@@ -43,7 +43,7 @@ import * as conversationsData from '../data/conversations';
 import * as reactionsData from '../data/reactions';
 import * as mediaData from '../data/media';
 import { Avatar } from '../components/Avatar';
-import { AppBackground } from '../components/AppBackground';
+import { ChatWallpaper } from '../components/ChatWallpaper';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { usePresence } from '../presence/PresenceContext';
 import { attachmentPreviewText } from '../utils/messagePreview';
@@ -1057,7 +1057,7 @@ export function ChatScreen({ route, navigation }: Props) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={0}
     >
-      <AppBackground />
+      <ChatWallpaper />
       <View style={[styles.content, { maxWidth: contentWidth }]}>
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
@@ -1322,11 +1322,15 @@ const styles = StyleSheet.create({
   },
   replyQuoteMine: {
     borderLeftColor: colors.white,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
   },
   replyQuoteTheirs: {
+    // A flat colors.paper fill used to sit on the old white "theirs"
+    // bubble, but now that bubble is colors.sand (a close, muddy match
+    // for paper), the quote block barely stood out. A dark, translucent
+    // overlay reads as "depth" regardless of the bubble color under it.
     borderLeftColor: colors.ember,
-    backgroundColor: colors.paper,
+    backgroundColor: 'rgba(28, 19, 16, 0.07)',
   },
   replyQuoteSenderMine: { fontSize: 12, fontWeight: '700', color: colors.white },
   replyQuoteSenderTheirs: { fontSize: 12, fontWeight: '700', color: colors.ember },
