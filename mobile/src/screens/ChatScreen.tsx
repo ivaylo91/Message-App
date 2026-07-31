@@ -43,7 +43,7 @@ import * as conversationsData from '../data/conversations';
 import * as reactionsData from '../data/reactions';
 import * as mediaData from '../data/media';
 import { Avatar } from '../components/Avatar';
-import { ChatWallpaper } from '../components/ChatWallpaper';
+import { AppWallpaper } from '../components/AppWallpaper';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { usePresence } from '../presence/PresenceContext';
 import { attachmentPreviewText } from '../utils/messagePreview';
@@ -1057,7 +1057,7 @@ export function ChatScreen({ route, navigation }: Props) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={0}
     >
-      <ChatWallpaper />
+      <AppWallpaper />
       <View style={[styles.content, { maxWidth: contentWidth }]}>
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>

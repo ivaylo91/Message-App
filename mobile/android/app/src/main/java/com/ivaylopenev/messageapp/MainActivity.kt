@@ -1,7 +1,6 @@
 package com.ivaylopenev.messageapp
 
 import android.os.Bundle
-import android.view.WindowManager
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
@@ -10,12 +9,6 @@ import com.facebook.react.defaults.DefaultReactActivityDelegate
 class MainActivity : ReactActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
-    // Blocks screenshots/screen recording and hides chat content from the
-    // recent-apps switcher thumbnail, since messages can contain sensitive data.
-    window.setFlags(
-        WindowManager.LayoutParams.FLAG_SECURE,
-        WindowManager.LayoutParams.FLAG_SECURE,
-    )
     super.onCreate(savedInstanceState)
     // Tapjacking protection: rejects touches that arrive while another
     // app's overlay is covering (fully or partially) this window - e.g. a

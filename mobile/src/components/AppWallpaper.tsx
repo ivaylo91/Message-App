@@ -3,10 +3,10 @@ import { Dimensions, StyleSheet, View } from 'react-native';
 import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
 import { colors } from '../theme/tokens';
 
-// A fixed (non-scrolling) wallpaper behind the message list, echoing the
+// A fixed (non-scrolling) wallpaper shown behind every screen, echoing the
 // doodle-pattern chat backgrounds in Viber/WhatsApp: a brick-offset grid
 // of assorted chat/communication icons, faint enough to sit behind real
-// message bubbles without hurting readability.
+// content (lists, text, forms, message bubbles) without hurting readability.
 const ICON_NAMES = [
   'comment',
   'comment-dots',
@@ -33,7 +33,7 @@ interface WallpaperIcon {
   color: string;
 }
 
-export function ChatWallpaper() {
+export function AppWallpaper() {
   const icons = useMemo<WallpaperIcon[]>(() => {
     const { width, height } = Dimensions.get('window');
     const columns = Math.ceil(width / CELL_SIZE) + 1;

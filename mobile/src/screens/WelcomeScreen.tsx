@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '../navigation/RootNavigator';
-import { AppBackground } from '../components/AppBackground';
+import { AppWallpaper } from '../components/AppWallpaper';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { colors, radii, spacing } from '../theme/tokens';
 
@@ -22,7 +22,7 @@ export function WelcomeScreen({ navigation }: Props) {
         { paddingTop: insets.top + spacing.xxl, paddingBottom: insets.bottom + spacing.xxl },
       ]}
     >
-      <AppBackground />
+      <AppWallpaper />
       <View style={[styles.content, { maxWidth: contentWidth }]}>
         <View style={styles.mark}>
           <Image

@@ -22,7 +22,7 @@ import * as conversationsData from '../data/conversations';
 import * as profilesData from '../data/profiles';
 import { setLanguage, SUPPORTED_LANGUAGES, SupportedLanguage } from '../i18n';
 import { Avatar } from '../components/Avatar';
-import { AppBackground } from '../components/AppBackground';
+import { AppWallpaper } from '../components/AppWallpaper';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { usePresence } from '../presence/PresenceContext';
 import { attachmentPreviewText } from '../utils/messagePreview';
@@ -300,7 +300,7 @@ export function ConversationsScreen({ navigation }: Props) {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + spacing.lg }]}>
-      <AppBackground />
+      <AppWallpaper />
       <View style={[styles.content, { maxWidth: contentWidth }]}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>

@@ -13,7 +13,7 @@ import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
-import { AppBackground } from '../components/AppBackground';
+import { AppWallpaper } from '../components/AppWallpaper';
 import { PasswordField } from '../components/PasswordField';
 import { useToast } from '../components/Toast';
 import { useContentWidth } from '../hooks/useContentWidth';
@@ -74,7 +74,7 @@ export function RegisterScreen({ navigation }: Props) {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.paper }}>
-      <AppBackground />
+      <AppWallpaper />
       <ScrollView
         contentContainerStyle={[
           s.container,
