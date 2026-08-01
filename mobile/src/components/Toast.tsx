@@ -2,12 +2,14 @@ import React, {
   createContext,
   useCallback,
   useContext,
+  useMemo,
   useRef,
   useState,
 } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, radii, spacing } from '../theme/tokens';
+import { radii, spacing, ThemeColors } from '../theme/tokens';
+import { useTheme } from '../theme/ThemeContext';
 
 type ToastKind = 'success' | 'error';
 
@@ -27,6 +29,8 @@ const FADE_MS = 200;
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const insets = useSafeAreaInsets();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [toast, setToast] = useState<ToastState | null>(null);
   const opacity = useRef(new Animated.Value(0)).current;
   const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -80,24 +84,25 @@ export function useToast(): ToastContextValue {
   return useContext(ToastContext);
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1 },
-  toast: {
-    position: 'absolute',
-    left: spacing.lg,
-    right: spacing.lg,
-    borderRadius: radii.lg,
-    paddingVertical: 12,
-    paddingHorizontal: spacing.lg,
-    alignItems: 'center',
-    shadowColor: colors.ink,
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 6,
-    zIndex: 999,
-  },
-  success: { backgroundColor: colors.sage },
-  error: { backgroundColor: colors.danger },
-  text: { color: colors.white, fontWeight: '700', fontSize: 14 },
-});
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    root: { flex: 1 },
+    toast: {
+      position: 'absolute',
+      left: spacing.lg,
+      right: spacing.lg,
+      borderRadius: radii.lg,
+      paddingVertical: 12,
+      paddingHorizontal: spacing.lg,
+      alignItems: 'center',
+      shadowColor: colors.ink,
+      shadowOpacity: 0.2,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 6,
+      zIndex: 999,
+    },
+    success: { backgroundColor: colors.sage },
+    error: { backgroundColor: colors.danger },
+    text: { color: colors.white, fontWeight: '700', fontSize: 14 },
+  });

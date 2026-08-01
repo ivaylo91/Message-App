@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Dimensions, StyleSheet, View } from 'react-native';
 import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
-import { colors } from '../theme/tokens';
+import { useTheme } from '../theme/ThemeContext';
 
 // A fixed (non-scrolling) wallpaper shown behind every screen, echoing the
 // doodle-pattern chat backgrounds in Viber/WhatsApp: a brick-offset grid
@@ -34,6 +34,7 @@ interface WallpaperIcon {
 }
 
 export function AppWallpaper() {
+  const { colors } = useTheme();
   const icons = useMemo<WallpaperIcon[]>(() => {
     const { width, height } = Dimensions.get('window');
     const columns = Math.ceil(width / CELL_SIZE) + 1;
@@ -55,7 +56,7 @@ export function AppWallpaper() {
       }
     }
     return items;
-  }, []);
+  }, [colors]);
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">

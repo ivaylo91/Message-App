@@ -1,7 +1,27 @@
 // Design tokens for Hearth, matching the ember/hearth palette from the
 // design review (https://claude.ai/code/artifact/c8ef954b-9c38-4fb4-b9f5-0d0d620f0e2a).
+//
+// Colors come in light/dark pairs (see ThemeContext.tsx for how the active
+// one is picked from the system setting) - every other token here
+// (spacing, radii, typography) is theme-independent and used as-is.
 
-export const colors = {
+export interface ThemeColors {
+  ink: string;
+  paper: string;
+  paper2: string;
+  ember: string;
+  emberGlow: string;
+  smoke: string;
+  char: string;
+  line: string;
+  sage: string;
+  clay: string;
+  dusk: string;
+  white: string;
+  danger: string;
+}
+
+export const lightColors: ThemeColors = {
   ink: '#1C1310',
   paper: '#FBF3EA',
   paper2: '#FFFFFF',
@@ -15,12 +35,44 @@ export const colors = {
   dusk: '#6E7B94',
   white: '#FFF8F2',
   danger: '#FF3B30',
-  sand: '#ECEAF2',
-} as const;
+};
 
-export const avatarPalette = [colors.clay, colors.sage, colors.dusk] as const;
+export const darkColors: ThemeColors = {
+  ink: '#F3ECE4',
+  paper: '#15100D',
+  paper2: '#231C18',
+  ember: '#8B5CF6',
+  emberGlow: '#C4B5FD',
+  smoke: '#A79A91',
+  char: '#EDE4DC',
+  line: 'rgba(255, 255, 255, 0.12)',
+  sage: '#8FA37E',
+  clay: '#C97A5E',
+  dusk: '#7C8CAD',
+  white: '#FFF8F2',
+  danger: '#FF6B60',
+};
 
-export function avatarColorFor(seed: string): string {
+export type ThemeScheme = 'light' | 'dark';
+
+// The rose->purple message-bubble gradient, in both directions of the
+// conversation. "theirs" is a soft pastel tint in light mode (dark ink
+// text reads fine on it) and a deep muted tint in dark mode (so it still
+// needs light ink text) - see bubbleTextTheirs in ChatScreen, which just
+// uses colors.ink and gets the right contrast in both cases for free.
+export const gradients: Record<ThemeScheme, { mine: readonly [string, string]; theirs: readonly [string, string] }> = {
+  light: {
+    mine: ['#FB4B84', '#7C3AED'],
+    theirs: ['#FCE0EC', '#E4DCFB'],
+  },
+  dark: {
+    mine: ['#FF6F9C', '#9D6FFF'],
+    theirs: ['#4A2338', '#382558'],
+  },
+};
+
+export function avatarColorFor(seed: string, colors: ThemeColors): string {
+  const avatarPalette = [colors.clay, colors.sage, colors.dusk];
   let hash = 0;
   for (let i = 0; i < seed.length; i++) {
     hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;

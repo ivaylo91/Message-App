@@ -113,5 +113,16 @@
   },
   "common": {
     "language": "Език"
+  },
+  "footer": {
+    "notifications": "Известия",
+    "chats": "Чатове",
+    "group": "Група",
+    "exit": "Изход"
+  },
+  "notifications": {
+    "title": "Известия",
+    "emptyTitle": "Няма нищо ново",
+    "emptyHint": "Новите съобщения ще се показват тук."
   }
 }

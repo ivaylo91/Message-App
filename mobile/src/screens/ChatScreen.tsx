@@ -25,6 +25,7 @@ import {
   View,
 } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
+import LinearGradient from 'react-native-linear-gradient';
 import {
   errorCodes,
   isErrorWithCode,
@@ -45,10 +46,13 @@ import * as reactionsData from '../data/reactions';
 import * as mediaData from '../data/media';
 import { Avatar } from '../components/Avatar';
 import { AppWallpaper } from '../components/AppWallpaper';
+import { AppLogo } from '../components/AppLogo';
+import { FooterNav } from '../components/FooterNav';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { usePresence } from '../presence/PresenceContext';
 import { attachmentPreviewText } from '../utils/messagePreview';
-import { colors, radii, spacing, MAX_BUBBLE_WIDTH } from '../theme/tokens';
+import { radii, spacing, MAX_BUBBLE_WIDTH, ThemeColors } from '../theme/tokens';
+import { useTheme } from '../theme/ThemeContext';
 import { ConversationParticipant, Message, MessageReaction, ReplyPreview } from '../types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Chat'>;
@@ -95,6 +99,28 @@ function formatDuration(totalSeconds: number): string {
   return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
+const WAVEFORM_BAR_COUNT = 24;
+const WAVEFORM_MIN_HEIGHT = 4;
+const WAVEFORM_MAX_HEIGHT = 20;
+
+// Real audio waveforms would need decoding the file itself just for a
+// decorative visual - instead this derives a fixed-looking one from the
+// message id, so the same voice message always renders the same "shape"
+// (and different messages look different) without any audio analysis.
+function waveformHeights(seed: string, count: number): number[] {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
+  }
+  const heights: number[] = [];
+  for (let i = 0; i < count; i++) {
+    hash = (hash * 1103515245 + 12345) >>> 0;
+    const t = (hash % 1000) / 1000;
+    heights.push(WAVEFORM_MIN_HEIGHT + t * (WAVEFORM_MAX_HEIGHT - WAVEFORM_MIN_HEIGHT));
+  }
+  return heights;
+}
+
 type FileIconName =
   | 'file'
   | 'file-pdf'
@@ -136,6 +162,8 @@ function ReplyQuote({
   isMine: boolean;
 }) {
   const { t } = useTranslation();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const snippet = reply.deleted_at
     ? t('chat.deletedMessage')
     : reply.body || attachmentPreviewText(reply.attachment_type, reply.attachment_name, t) || '';
@@ -159,6 +187,8 @@ function ReplyQuote({
 }
 
 function MediaImage({ path }: { path: string }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [url, setUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -193,7 +223,13 @@ function AudioMessageBubble({
   isPlaying: boolean;
   onTogglePlay: () => void;
 }) {
+  const { colors, gradients } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const totalSeconds = Math.round((message.attachment_duration_ms ?? 0) / 1000);
+  const waveform = useMemo(
+    () => waveformHeights(message.id, WAVEFORM_BAR_COUNT),
+    [message.id],
+  );
 
   return (
     <TouchableOpacity
@@ -206,8 +242,23 @@ function AudioMessageBubble({
           name={isPlaying ? 'pause' : 'play'}
           iconStyle="solid"
           size={13}
-          color={isMine ? colors.ember : colors.white}
+          color={isMine ? gradients.mine[0] : colors.white}
         />
+      </View>
+      <View style={styles.waveform}>
+        {waveform.map((height, i) => (
+          <View
+            key={i}
+            style={[
+              styles.waveformBar,
+              {
+                height,
+                backgroundColor: isMine ? colors.white : colors.ink,
+                opacity: isMine ? 0.85 : 0.5,
+              },
+            ]}
+          />
+        ))}
       </View>
       <Text style={isMine ? styles.bubbleTextMine : styles.bubbleTextTheirs}>
         {formatDuration(totalSeconds)}
@@ -218,6 +269,8 @@ function AudioMessageBubble({
 
 function FileMessageBubble({ message, isMine }: { message: LocalMessage; isMine: boolean }) {
   const { t } = useTranslation();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const onOpen = async () => {
     if (!message.media_path || message._pending) return;
@@ -289,6 +342,8 @@ function MessageBubble({
   onTogglePlay,
 }: MessageBubbleProps) {
   const { t } = useTranslation();
+  const { colors, gradients } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const summary = useMemo(
     () => summarizeReactions(reactions, userId),
     [reactions, userId],
@@ -297,40 +352,41 @@ function MessageBubble({
   return (
     <View style={isMine ? styles.rowMine : styles.rowTheirs}>
       {senderName && <Text style={styles.senderLabel}>{senderName}</Text>}
-      <TouchableOpacity
-        style={[
-          message.attachment_type === 'image' ? styles.mediaBubble : styles.bubble,
-          { maxWidth: bubbleMaxWidth },
-          isMine ? styles.bubbleMine : styles.bubbleTheirs,
-          message._pending && styles.bubblePending,
-        ]}
-        onLongPress={onLongPress}
-        onPress={onDismissPicker}
-        activeOpacity={0.8}
-      >
-        {message.reply_to && (
-          <ReplyQuote reply={message.reply_to} userId={userId} isMine={isMine} />
-        )}
-        {message.attachment_type === 'image' && message.media_path && (
-          <MediaImage path={message.media_path} />
-        )}
-        {message.attachment_type === 'audio' && (
-          <AudioMessageBubble
-            message={message}
-            isMine={isMine}
-            isPlaying={isPlaying}
-            onTogglePlay={onTogglePlay}
-          />
-        )}
-        {message.attachment_type === 'file' && (
-          <FileMessageBubble message={message} isMine={isMine} />
-        )}
-        {message.body && (
-          <Text style={isMine ? styles.bubbleTextMine : styles.bubbleTextTheirs}>
-            {message.body}
-          </Text>
-        )}
-        {message.edited_at && <Text style={styles.editedTag}>{t('chat.edited')}</Text>}
+      <TouchableOpacity onLongPress={onLongPress} onPress={onDismissPicker} activeOpacity={0.8}>
+        <LinearGradient
+          colors={isMine ? [...gradients.mine] : [...gradients.theirs]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[
+            message.attachment_type === 'image' ? styles.mediaBubble : styles.bubble,
+            { maxWidth: bubbleMaxWidth },
+            message._pending && styles.bubblePending,
+          ]}
+        >
+          {message.reply_to && (
+            <ReplyQuote reply={message.reply_to} userId={userId} isMine={isMine} />
+          )}
+          {message.attachment_type === 'image' && message.media_path && (
+            <MediaImage path={message.media_path} />
+          )}
+          {message.attachment_type === 'audio' && (
+            <AudioMessageBubble
+              message={message}
+              isMine={isMine}
+              isPlaying={isPlaying}
+              onTogglePlay={onTogglePlay}
+            />
+          )}
+          {message.attachment_type === 'file' && (
+            <FileMessageBubble message={message} isMine={isMine} />
+          )}
+          {message.body && (
+            <Text style={isMine ? styles.bubbleTextMine : styles.bubbleTextTheirs}>
+              {message.body}
+            </Text>
+          )}
+          {message.edited_at && <Text style={styles.editedTag}>{t('chat.edited')}</Text>}
+        </LinearGradient>
       </TouchableOpacity>
 
       {summary.length > 0 && (
@@ -398,6 +454,8 @@ const TYPING_DOT_BOUNCE_MS = 300;
 const TYPING_DOT_STAGGER_MS = 150;
 
 function TypingDot({ delay }: { delay: number }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const bounce = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -441,13 +499,20 @@ function TypingDot({ delay }: { delay: number }) {
 // inverted, the "header" slot visually sits at the bottom, right where
 // the other person's next message would appear.
 function TypingBubble() {
+  const { colors, gradients } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.rowTheirs}>
-      <View style={[styles.bubble, styles.bubbleTheirs, styles.typingBubble]}>
+      <LinearGradient
+        colors={[...gradients.theirs]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.bubble, styles.typingBubble]}
+      >
         <TypingDot delay={0} />
         <TypingDot delay={TYPING_DOT_STAGGER_MS} />
         <TypingDot delay={TYPING_DOT_STAGGER_MS * 2} />
-      </View>
+      </LinearGradient>
     </View>
   );
 }
@@ -459,6 +524,8 @@ export function ChatScreen({ route, navigation }: Props) {
   const { isOnline } = usePresence();
   const insets = useSafeAreaInsets();
   const { windowWidth, contentWidth } = useContentWidth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const bubbleMaxWidth = Math.min(windowWidth * 0.8, MAX_BUBBLE_WIDTH);
   const [messages, setMessages] = useState<LocalMessage[]>([]);
   const [reactions, setReactions] = useState<MessageReaction[]>([]);
@@ -1076,7 +1143,7 @@ export function ChatScreen({ route, navigation }: Props) {
             isGroup || !otherParticipant ? undefined : isOnline(otherParticipant.user_id)
           }
         />
-        <View>
+        <View style={styles.headerNameBlock}>
           <Text style={styles.headerName}>{displayTitle}</Text>
           {!otherTyping &&
             !isGroup &&
@@ -1085,6 +1152,7 @@ export function ChatScreen({ route, navigation }: Props) {
               <Text style={styles.headerStatus}>{t('chat.online')}</Text>
             )}
         </View>
+        <AppLogo size={26} />
       </View>
 
       <FlatList
@@ -1242,13 +1310,15 @@ export function ChatScreen({ route, navigation }: Props) {
           </>
         )}
       </View>
+      {!isKeyboardVisible && <FooterNav active="chats" />}
       </View>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.paper },
   content: { flex: 1, width: '100%', alignSelf: 'center' },
   header: {
@@ -1261,6 +1331,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.line,
   },
   backButton: { paddingHorizontal: 4, paddingVertical: 4 },
+  headerNameBlock: { flex: 1 },
   headerName: { fontWeight: '700', fontSize: 15, color: colors.ink },
   headerStatus: { fontSize: 11.5, fontWeight: '600', color: colors.sage },
   list: { flex: 1, paddingHorizontal: 12 },
@@ -1289,7 +1360,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    minWidth: 140,
+    minWidth: 200,
+  },
+  waveform: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+  },
+  waveformBar: {
+    width: 2.5,
+    borderRadius: 1.5,
   },
   fileRow: {
     flexDirection: 'row',
@@ -1307,8 +1388,6 @@ const styles = StyleSheet.create({
   },
   iconCircleMine: { backgroundColor: colors.white },
   iconCircleTheirs: { backgroundColor: colors.ember },
-  bubbleMine: { backgroundColor: colors.ember },
-  bubbleTheirs: { backgroundColor: colors.sand },
   bubblePending: { opacity: 0.55 },
   senderLabel: {
     fontSize: 11.5,

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   StyleSheet,
@@ -18,7 +18,8 @@ import * as profilesData from '../data/profiles';
 import { Avatar } from '../components/Avatar';
 import { AppWallpaper } from '../components/AppWallpaper';
 import { useContentWidth } from '../hooks/useContentWidth';
-import { colors, radii, spacing } from '../theme/tokens';
+import { radii, spacing, ThemeColors } from '../theme/tokens';
+import { useTheme } from '../theme/ThemeContext';
 import { Profile } from '../types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Profile'>;
@@ -31,6 +32,8 @@ export function ProfileScreen({ navigation }: Props) {
   const { userId } = useAuth();
   const insets = useSafeAreaInsets();
   const { contentWidth } = useContentWidth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
@@ -204,7 +207,8 @@ export function ProfileScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.paper },
   content: { width: '100%', alignSelf: 'center' },
   header: {

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -23,10 +24,12 @@ import * as profilesData from '../data/profiles';
 import { setLanguage, SUPPORTED_LANGUAGES, SupportedLanguage } from '../i18n';
 import { Avatar } from '../components/Avatar';
 import { AppWallpaper } from '../components/AppWallpaper';
+import { FooterNav } from '../components/FooterNav';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { usePresence } from '../presence/PresenceContext';
 import { attachmentPreviewText } from '../utils/messagePreview';
-import { colors, radii, spacing } from '../theme/tokens';
+import { radii, spacing, ThemeColors } from '../theme/tokens';
+import { useTheme } from '../theme/ThemeContext';
 import { Conversation, Message, Profile } from '../types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Conversations'>;
@@ -67,6 +70,8 @@ function ConversationRow({
   onPress,
   onDelete,
 }: ConversationRowProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const translateX = useRef(new Animated.Value(0)).current;
   const openXRef = useRef(0);
 
@@ -146,10 +151,12 @@ function ConversationRow({
 
 export function ConversationsScreen({ navigation }: Props) {
   const { t, i18n } = useTranslation();
-  const { userId, logout } = useAuth();
+  const { userId } = useAuth();
   const { isOnline } = usePresence();
   const insets = useSafeAreaInsets();
   const { contentWidth } = useContentWidth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [ownProfile, setOwnProfile] = useState<Profile | null>(null);
@@ -263,24 +270,43 @@ export function ConversationsScreen({ navigation }: Props) {
   // and coming back re-fetches counts via the useFocusEffect above.
   useEffect(() => {
     if (!userId) return;
-    const channel = supabase
-      .channel('unread-messages')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages' },
-        (payload) => {
-          const incoming = payload.new as Message;
-          if (incoming.sender_id === userId) return;
-          setUnreadCounts((current) => ({
-            ...current,
-            [incoming.conversation_id]: (current[incoming.conversation_id] ?? 0) + 1,
-          }));
-        },
-      )
-      .subscribe();
+    let cancelled = false;
+    let channel: RealtimeChannel | null = null;
+
+    // Same fix as ChatScreen's per-conversation channel: supabase.channel()
+    // reuses any existing channel object already registered under this
+    // topic, and removeChannel() is async - if this effect re-runs (e.g.
+    // this screen regaining focus after being navigated back to) before a
+    // previous run's un-awaited removeChannel() finishes, the "new"
+    // channel() call hands back that same already-subscribed channel, and
+    // .on(...) throws "cannot add ... callbacks ... after subscribe()".
+    void (async () => {
+      const stale = supabase
+        .getChannels()
+        .find((c) => c.topic === 'realtime:unread-messages');
+      if (stale) await supabase.removeChannel(stale);
+      if (cancelled) return;
+
+      channel = supabase
+        .channel('unread-messages')
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'messages' },
+          (payload) => {
+            const incoming = payload.new as Message;
+            if (incoming.sender_id === userId) return;
+            setUnreadCounts((current) => ({
+              ...current,
+              [incoming.conversation_id]: (current[incoming.conversation_id] ?? 0) + 1,
+            }));
+          },
+        )
+        .subscribe();
+    })();
 
     return () => {
-      void supabase.removeChannel(channel);
+      cancelled = true;
+      if (channel) void supabase.removeChannel(channel);
     };
   }, [userId]);
 
@@ -379,24 +405,14 @@ export function ConversationsScreen({ navigation }: Props) {
           </View>
         }
       />
-      <TouchableOpacity
-        style={[styles.logoutButton, { paddingBottom: insets.bottom + spacing.md }]}
-        onPress={() => void logout()}
-      >
-        <FontAwesome6
-          name="right-from-bracket"
-          iconStyle="solid"
-          size={13}
-          color={colors.smoke}
-        />
-        <Text style={styles.logoutText}>{t('conversations.logout')}</Text>
-      </TouchableOpacity>
+      <FooterNav active="chats" />
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.paper, paddingTop: spacing.lg },
   content: { flex: 1, width: '100%', alignSelf: 'center' },
   header: {
@@ -466,14 +482,4 @@ const styles = StyleSheet.create({
   empty: { alignItems: 'center', marginTop: 64, paddingHorizontal: spacing.xxl },
   emptyTitle: { color: colors.ink, fontWeight: '700', fontSize: 15 },
   emptyHint: { color: colors.smoke, marginTop: 4, fontSize: 13.5 },
-  logoutButton: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.md,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.line,
-  },
-  logoutText: { color: colors.smoke, fontWeight: '600', fontSize: 13.5 },
 });

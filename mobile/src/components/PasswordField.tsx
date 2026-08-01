@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
-import { colors, radii, spacing } from '../theme/tokens';
+import { radii, spacing, ThemeColors } from '../theme/tokens';
+import { useTheme } from '../theme/ThemeContext';
 
 interface PasswordFieldProps {
   label: string;
@@ -11,6 +12,8 @@ interface PasswordFieldProps {
 
 export function PasswordField({ label, value, onChangeText }: PasswordFieldProps) {
   const [visible, setVisible] = useState(false);
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   return (
     <View style={styles.field}>
@@ -39,29 +42,30 @@ export function PasswordField({ label, value, onChangeText }: PasswordFieldProps
   );
 }
 
-const styles = StyleSheet.create({
-  field: { marginBottom: spacing.lg },
-  label: {
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-    textTransform: 'uppercase',
-    color: colors.smoke,
-    marginBottom: 7,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.line,
-    backgroundColor: colors.paper2,
-    borderRadius: radii.md,
-  },
-  input: {
-    flex: 1,
-    padding: 13,
-    fontSize: 15,
-    color: colors.ink,
-  },
-  toggle: { paddingHorizontal: 13 },
-});
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    field: { marginBottom: spacing.lg },
+    label: {
+      fontSize: 12,
+      fontWeight: '700',
+      letterSpacing: 0.5,
+      textTransform: 'uppercase',
+      color: colors.smoke,
+      marginBottom: 7,
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.line,
+      backgroundColor: colors.paper2,
+      borderRadius: radii.md,
+    },
+    input: {
+      flex: 1,
+      padding: 13,
+      fontSize: 15,
+      color: colors.ink,
+    },
+    toggle: { paddingHorizontal: 13 },
+  });

@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -19,8 +19,10 @@ import * as conversationsData from '../data/conversations';
 import * as profilesData from '../data/profiles';
 import { Avatar } from '../components/Avatar';
 import { AppWallpaper } from '../components/AppWallpaper';
+import { AppLogo } from '../components/AppLogo';
 import { useContentWidth } from '../hooks/useContentWidth';
-import { colors, radii, spacing } from '../theme/tokens';
+import { radii, spacing, ThemeColors } from '../theme/tokens';
+import { useTheme } from '../theme/ThemeContext';
 import { ProfileSearchResult } from '../types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'NewGroup'>;
@@ -33,6 +35,8 @@ export function NewGroupScreen({ navigation }: Props) {
   const { userId } = useAuth();
   const insets = useSafeAreaInsets();
   const { contentWidth } = useContentWidth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [groupName, setGroupName] = useState('');
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<ProfileSearchResult[]>([]);
@@ -101,6 +105,7 @@ export function NewGroupScreen({ navigation }: Props) {
           <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.goBack()}>
             <Text style={styles.cancelText}>{t('newChat.cancel')}</Text>
           </TouchableOpacity>
+          <AppLogo size={20} />
           <Text style={styles.title}>{t('newGroup.title')}</Text>
           <TouchableOpacity
             style={styles.createButton}
@@ -220,7 +225,8 @@ export function NewGroupScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.paper, paddingTop: spacing.lg },
   content: { flex: 1, width: '100%', alignSelf: 'center' },
   header: {
@@ -229,6 +235,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
+    gap: 6,
   },
   cancelButton: { position: 'absolute', left: spacing.lg, top: 0 },
   cancelText: { color: colors.ember, fontSize: 15, fontWeight: '600' },

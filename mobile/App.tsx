@@ -5,17 +5,17 @@
  */
 
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, StatusBar, useColorScheme, View } from 'react-native';
+import { ActivityIndicator, StatusBar, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/auth/AuthContext';
 import { PresenceProvider } from './src/presence/PresenceContext';
 import { ToastProvider } from './src/components/Toast';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { initI18n } from './src/i18n';
-import { colors } from './src/theme/tokens';
+import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 
-function App() {
-  const isDarkMode = useColorScheme() === 'dark';
+function AppContent() {
+  const { colors, scheme } = useTheme();
   const [isI18nReady, setIsI18nReady] = useState(false);
 
   useEffect(() => {
@@ -23,8 +23,8 @@ function App() {
   }, []);
 
   return (
-    <SafeAreaProvider>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+    <>
+      <StatusBar barStyle={scheme === 'dark' ? 'light-content' : 'dark-content'} />
       {isI18nReady ? (
         <ToastProvider>
           <AuthProvider>
@@ -45,6 +45,16 @@ function App() {
           <ActivityIndicator />
         </View>
       )}
+    </>
+  );
+}
+
+function App() {
+  return (
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <AppContent />
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }

@@ -113,5 +113,16 @@
   },
   "common": {
     "language": "Language"
+  },
+  "footer": {
+    "notifications": "Notifications",
+    "chats": "Chats",
+    "group": "Group",
+    "exit": "Exit"
+  },
+  "notifications": {
+    "title": "Notifications",
+    "emptyTitle": "You're all caught up",
+    "emptyHint": "New messages will show up here."
   }
 }

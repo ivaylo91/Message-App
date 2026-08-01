@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { getAvatarUrl } from '../data/profiles';
-import { avatarColorFor, colors, initialsFor } from '../theme/tokens';
+import { avatarColorFor, initialsFor, ThemeColors } from '../theme/tokens';
+import { useTheme } from '../theme/ThemeContext';
 
 interface AvatarProps {
   name: string;
@@ -14,6 +15,8 @@ interface AvatarProps {
 }
 
 export function Avatar({ name, avatarPath, size = 48, online }: AvatarProps) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   // Avatars live in a private bucket now, so the URL has to be signed
   // (an async fetch) rather than derived synchronously - see
   // 20260807_make_avatars_bucket_private.sql.
@@ -47,7 +50,7 @@ export function Avatar({ name, avatarPath, size = 48, online }: AvatarProps) {
             width: size,
             height: size,
             borderRadius: size / 2,
-            backgroundColor: avatarUrl ? colors.line : avatarColorFor(name),
+            backgroundColor: avatarUrl ? colors.line : avatarColorFor(name, colors),
           },
         ]}
       >
@@ -80,20 +83,21 @@ export function Avatar({ name, avatarPath, size = 48, online }: AvatarProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  circle: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  text: {
-    color: colors.white,
-    fontWeight: '700',
-  },
-  statusDot: {
-    position: 'absolute',
-    right: 0,
-    bottom: 0,
-    borderColor: colors.paper,
-  },
-});
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    circle: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      overflow: 'hidden',
+    },
+    text: {
+      color: colors.white,
+      fontWeight: '700',
+    },
+    statusDot: {
+      position: 'absolute',
+      right: 0,
+      bottom: 0,
+      borderColor: colors.paper,
+    },
+  });

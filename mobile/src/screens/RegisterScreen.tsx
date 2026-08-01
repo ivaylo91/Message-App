@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -17,8 +17,9 @@ import { AppWallpaper } from '../components/AppWallpaper';
 import { PasswordField } from '../components/PasswordField';
 import { useToast } from '../components/Toast';
 import { useContentWidth } from '../hooks/useContentWidth';
-import { colors, spacing } from '../theme/tokens';
-import { authStyles as s } from './authStyles';
+import { spacing } from '../theme/tokens';
+import { useTheme } from '../theme/ThemeContext';
+import { makeAuthStyles } from './authStyles';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
@@ -28,6 +29,8 @@ export function RegisterScreen({ navigation }: Props) {
   const { showToast } = useToast();
   const insets = useSafeAreaInsets();
   const { contentWidth } = useContentWidth();
+  const { colors } = useTheme();
+  const s = useMemo(() => makeAuthStyles(colors), [colors]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');

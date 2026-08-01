@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -20,7 +20,8 @@ import * as profilesData from '../data/profiles';
 import { Avatar } from '../components/Avatar';
 import { AppWallpaper } from '../components/AppWallpaper';
 import { useContentWidth } from '../hooks/useContentWidth';
-import { colors, radii, spacing } from '../theme/tokens';
+import { radii, spacing, ThemeColors } from '../theme/tokens';
+import { useTheme } from '../theme/ThemeContext';
 import { ProfileSearchResult } from '../types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'NewChat'>;
@@ -32,6 +33,8 @@ export function NewChatScreen({ navigation }: Props) {
   const { userId } = useAuth();
   const insets = useSafeAreaInsets();
   const { contentWidth } = useContentWidth();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<ProfileSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -147,7 +150,8 @@ export function NewChatScreen({ navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.paper, paddingTop: spacing.lg },
   content: { flex: 1, width: '100%', alignSelf: 'center' },
   header: {

@@ -1,9 +1,13 @@
 import React, { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import {
+  DarkTheme as NavDarkTheme,
+  DefaultTheme as NavDefaultTheme,
+  NavigationContainer,
+} from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../auth/AuthContext';
-import { colors } from '../theme/tokens';
+import { useTheme } from '../theme/ThemeContext';
 import { navigationRef } from './navigationRef';
 import {
   attachNotificationListeners,
@@ -17,6 +21,7 @@ import { NewChatScreen } from '../screens/NewChatScreen';
 import { NewGroupScreen } from '../screens/NewGroupScreen';
 import { ChatScreen } from '../screens/ChatScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
+import { NotificationsScreen } from '../screens/NotificationsScreen';
 
 export type AuthStackParamList = {
   Welcome: undefined;
@@ -29,22 +34,24 @@ export type AppStackParamList = {
   NewChat: undefined;
   NewGroup: undefined;
   Profile: undefined;
+  Notifications: undefined;
   Chat: { conversationId: string; title: string };
 };
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const AppStack = createNativeStackNavigator<AppStackParamList>();
 
-// Each screen paints its own opaque background (with its own local
-// AppBackground layer) - previous screens stay mounted underneath in
-// the stack, so a transparent contentStyle here would let them show
-// through beneath whichever screen is on top.
-const screenOptions = {
-  headerShown: false,
-  contentStyle: { backgroundColor: colors.paper },
-} as const;
-
 function AuthNavigator() {
+  const { colors } = useTheme();
+  // Each screen paints its own opaque background (with its own local
+  // AppWallpaper layer) - previous screens stay mounted underneath in
+  // the stack, so a transparent contentStyle here would let them show
+  // through beneath whichever screen is on top.
+  const screenOptions = {
+    headerShown: false,
+    contentStyle: { backgroundColor: colors.paper },
+  } as const;
+
   return (
     <AuthStack.Navigator screenOptions={screenOptions}>
       <AuthStack.Screen name="Welcome" component={WelcomeScreen} />
@@ -55,6 +62,12 @@ function AuthNavigator() {
 }
 
 function AppNavigator() {
+  const { colors } = useTheme();
+  const screenOptions = {
+    headerShown: false,
+    contentStyle: { backgroundColor: colors.paper },
+  } as const;
+
   return (
     <AppStack.Navigator screenOptions={screenOptions}>
       <AppStack.Screen name="Conversations" component={ConversationsScreen} />
@@ -74,12 +87,14 @@ function AppNavigator() {
         options={{ presentation: 'modal' }}
       />
       <AppStack.Screen name="Chat" component={ChatScreen} />
+      <AppStack.Screen name="Notifications" component={NotificationsScreen} />
     </AppStack.Navigator>
   );
 }
 
 export function RootNavigator() {
   const { session, userId, isLoading } = useAuth();
+  const { colors, scheme } = useTheme();
 
   useEffect(() => attachNotificationListeners(), []);
 
@@ -105,8 +120,20 @@ export function RootNavigator() {
     );
   }
 
+  const navTheme = {
+    ...(scheme === 'dark' ? NavDarkTheme : NavDefaultTheme),
+    colors: {
+      ...(scheme === 'dark' ? NavDarkTheme.colors : NavDefaultTheme.colors),
+      background: colors.paper,
+      card: colors.paper2,
+      text: colors.ink,
+      border: colors.line,
+      primary: colors.ember,
+    },
+  };
+
   return (
-    <NavigationContainer ref={navigationRef}>
+    <NavigationContainer ref={navigationRef} theme={navTheme}>
       {session ? <AppNavigator /> : <AuthNavigator />}
     </NavigationContainer>
   );
