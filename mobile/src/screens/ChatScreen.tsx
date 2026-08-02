@@ -48,6 +48,7 @@ import { Avatar } from '../components/Avatar';
 import { AppWallpaper } from '../components/AppWallpaper';
 import { AppLogo } from '../components/AppLogo';
 import { FooterNav } from '../components/FooterNav';
+import { useCall } from '../calling/CallContext';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { usePresence } from '../presence/PresenceContext';
 import { attachmentPreviewText } from '../utils/messagePreview';
@@ -522,6 +523,7 @@ export function ChatScreen({ route, navigation }: Props) {
   const { conversationId, title } = route.params;
   const { userId } = useAuth();
   const { isOnline } = usePresence();
+  const { startCall } = useCall();
   const insets = useSafeAreaInsets();
   const { windowWidth, contentWidth } = useContentWidth();
   const { colors } = useTheme();
@@ -1152,6 +1154,21 @@ export function ChatScreen({ route, navigation }: Props) {
               <Text style={styles.headerStatus}>{t('chat.online')}</Text>
             )}
         </View>
+        {!isGroup && otherParticipant && (
+          <TouchableOpacity
+            style={styles.callButton}
+            onPress={() =>
+              void startCall({
+                conversationId,
+                peerUserId: otherParticipant.user_id,
+                peerName: displayTitle,
+                peerAvatarPath: otherParticipant.profiles.avatar_path,
+              })
+            }
+          >
+            <FontAwesome6 name="video" iconStyle="solid" size={17} color={colors.ember} />
+          </TouchableOpacity>
+        )}
         <AppLogo size={26} />
       </View>
 
@@ -1332,6 +1349,7 @@ const makeStyles = (colors: ThemeColors) =>
   },
   backButton: { paddingHorizontal: 4, paddingVertical: 4 },
   headerNameBlock: { flex: 1 },
+  callButton: { paddingHorizontal: 4, paddingVertical: 4 },
   headerName: { fontWeight: '700', fontSize: 15, color: colors.ink },
   headerStatus: { fontSize: 11.5, fontWeight: '600', color: colors.sage },
   list: { flex: 1, paddingHorizontal: 12 },

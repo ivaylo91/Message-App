@@ -124,5 +124,10 @@
     "title": "Notifications",
     "emptyTitle": "You're all caught up",
     "emptyHint": "New messages will show up here."
+  },
+  "call": {
+    "incoming": "Incoming video call",
+    "calling": "Calling...",
+    "connected": "Connected"
   }
 }

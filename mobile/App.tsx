@@ -9,6 +9,8 @@ import { ActivityIndicator, StatusBar, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './src/auth/AuthContext';
 import { PresenceProvider } from './src/presence/PresenceContext';
+import { CallProvider } from './src/calling/CallContext';
+import { CallOverlay } from './src/calling/CallOverlay';
 import { ToastProvider } from './src/components/Toast';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { initI18n } from './src/i18n';
@@ -29,7 +31,10 @@ function AppContent() {
         <ToastProvider>
           <AuthProvider>
             <PresenceProvider>
-              <RootNavigator />
+              <CallProvider>
+                <RootNavigator />
+                <CallOverlay />
+              </CallProvider>
             </PresenceProvider>
           </AuthProvider>
         </ToastProvider>
