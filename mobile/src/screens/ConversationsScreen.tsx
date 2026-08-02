@@ -24,6 +24,7 @@ import * as profilesData from '../data/profiles';
 import { setLanguage, SUPPORTED_LANGUAGES, SupportedLanguage } from '../i18n';
 import { Avatar } from '../components/Avatar';
 import { AppWallpaper } from '../components/AppWallpaper';
+import { AppLogo } from '../components/AppLogo';
 import { FooterNav } from '../components/FooterNav';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { usePresence } from '../presence/PresenceContext';
@@ -339,6 +340,7 @@ export function ConversationsScreen({ navigation }: Props) {
             />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>{t('conversations.title')}</Text>
+          <AppLogo size={26} />
         </View>
         <View style={styles.headerActions}>
           {SUPPORTED_LANGUAGES.map((lang: SupportedLanguage) => (

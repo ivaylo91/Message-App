@@ -22,8 +22,10 @@ interface FooterNavProps {
 }
 
 // A persistent bottom bar for the app's main screens (Conversations,
-// Chat, Notifications) - self-contained so any screen can just drop in
+// Chat) - self-contained so any screen can just drop in
 // <FooterNav active="..." /> without wiring up navigation/logout itself.
+// The Notifications tab currently just opens the main chat list (all
+// chats) rather than a separate filtered screen.
 export function FooterNav({ active }: FooterNavProps) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -42,7 +44,7 @@ export function FooterNav({ active }: FooterNavProps) {
       key: 'notifications',
       icon: 'bell',
       label: t('footer.notifications'),
-      onPress: () => navigation.navigate('Notifications'),
+      onPress: () => navigation.navigate('Conversations'),
     },
     {
       key: 'chats',
