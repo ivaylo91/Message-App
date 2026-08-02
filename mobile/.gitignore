@@ -33,6 +33,7 @@ local.properties
 .cxx/
 *.keystore
 !debug.keystore
+keystore.properties
 .kotlin/
 
 # Firebase (client config, not a build-time secret, but environment-specific)
