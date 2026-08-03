@@ -11,13 +11,40 @@
 import 'fast-text-encoding';
 import { AppRegistry } from 'react-native';
 import messaging from '@react-native-firebase/messaging';
+import notifee, { EventType } from '@notifee/react-native';
+import {
+  declineIncomingCallFromNotification,
+  displayIncomingCallNotification,
+} from './src/notifications';
 import App from './App';
 import { name as appName } from './app.json';
 
-// Messages we send always include a `notification` payload, so Android
-// displays them automatically while backgrounded/killed - this handler
-// just needs to exist so react-native-firebase doesn't warn, and gives
-// us a hook if we ever need silent/data-only messages later.
-messaging().setBackgroundMessageHandler(async () => {});
+// Regular messages always include a `notification` payload, so Android
+// displays them automatically while backgrounded/killed and this handler
+// has nothing to do for them. Calls are the exception: their push is
+// data-only (see supabase/functions/send-call-notification) specifically
+// so the app can show its own full-screen ringing UI via notifee instead
+// of a plain notification-shade entry.
+messaging().setBackgroundMessageHandler(async (remoteMessage) => {
+  if (remoteMessage.data?.type === 'call') {
+    await displayIncomingCallNotification(remoteMessage);
+  }
+});
+
+// Handles the notification's "Decline" action button being pressed while
+// the app is backgrounded or fully killed - notifee runs this via a
+// headless task in that case, so it can't touch CallContext/React state
+// directly, only send the decline signal itself (see
+// declineIncomingCallFromNotification).
+notifee.onBackgroundEvent(async ({ type, detail }) => {
+  if (type !== EventType.ACTION_PRESS || detail.pressAction?.id !== 'decline') return;
+  const callerId = detail.notification?.data?.callerId;
+  if (typeof callerId === 'string') {
+    await declineIncomingCallFromNotification(callerId);
+  }
+  if (detail.notification?.id) {
+    await notifee.cancelNotification(detail.notification.id);
+  }
+});
 
 AppRegistry.registerComponent(appName, () => App);

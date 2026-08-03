@@ -108,6 +108,20 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const pendingOfferRef = useRef<OfferPayload | null>(null);
   const pendingCandidatesRef = useRef<unknown[]>([]);
   const hasRemoteDescriptionRef = useRef(false);
+  // The callee's realtime channel may not be subscribed yet the moment a
+  // call-offer first goes out - most commonly right after a push wakes
+  // their app from background/killed, which takes a beat to get through
+  // login/session restore and back to this provider. Resending the same
+  // offer for a few seconds covers that without needing to embed the SDP
+  // in the push payload itself.
+  const offerResendTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  function stopOfferResend() {
+    if (offerResendTimerRef.current) {
+      clearInterval(offerResendTimerRef.current);
+      offerResendTimerRef.current = null;
+    }
+  }
 
   useEffect(() => {
     userIdRef.current = userId;
@@ -134,6 +148,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     const currentUserId = userIdRef.current;
     const connectedAt = connectedAtRef.current;
 
+    stopOfferResend();
     pcRef.current?.close();
     pcRef.current = null;
     localStreamRef.current?.getTracks().forEach((track) => track.stop());
@@ -195,6 +210,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       const pc = pcRef.current;
+      stopOfferResend();
       void pc
         .setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: payload.sdp }))
         .then(() => {
@@ -245,6 +261,13 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     channel.on('broadcast', { event: 'call-offer' }, ({ payload }) => {
       const offer = payload as OfferPayload;
       if (offer.from === userId) return;
+
+      // A resent copy of the offer already being shown (see startCall's
+      // offerResendTimerRef) - not a second, concurrent call.
+      if (statusRef.current === 'incoming' && pendingOfferRef.current?.from === offer.from) {
+        pendingOfferRef.current = offer;
+        return;
+      }
 
       if (statusRef.current !== 'idle') {
         const busyChannel = supabase.channel(`calls:${offer.from}`, {
@@ -306,26 +329,45 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
 
+        const offerPayload = {
+          from: userId,
+          callerName: ownProfile.display_name || ownProfile.email,
+          callerAvatarPath: ownProfile.avatar_path,
+          conversationId: callPeer.conversationId,
+          sdp: offer.sdp,
+        };
+
         const channel = supabase.channel(`calls:${callPeer.peerUserId}`, {
           config: { private: true },
         });
         attachSignalingHandlers(channel);
         channel.subscribe((subStatus) => {
           if (subStatus === 'SUBSCRIBED') {
-            channel.send({
-              type: 'broadcast',
-              event: 'call-offer',
-              payload: {
-                from: userId,
-                callerName: ownProfile.display_name || ownProfile.email,
-                callerAvatarPath: ownProfile.avatar_path,
-                conversationId: callPeer.conversationId,
-                sdp: offer.sdp,
-              },
-            });
+            channel.send({ type: 'broadcast', event: 'call-offer', payload: offerPayload });
+
+            // Covers the callee's device being backgrounded/killed: the
+            // push notification below wakes it and shows a ringing UI, but
+            // that takes a moment, and the very first broadcast may go out
+            // before the callee's inbox channel is subscribed again. A
+            // live callee's client just gets the same offer twice, which
+            // it handles fine (statusRef is no longer 'idle' the second
+            // time, so it's ignored).
+            offerResendTimerRef.current = setInterval(() => {
+              channel.send({ type: 'broadcast', event: 'call-offer', payload: offerPayload });
+            }, 2500);
+            setTimeout(stopOfferResend, 25000);
           }
         });
         callChannelRef.current = channel;
+
+        // Best-effort wake-up push for the callee - if this fails (e.g. no
+        // network to the edge function), the call still proceeds via
+        // realtime for anyone with the app already open.
+        void supabase.functions
+          .invoke('send-call-notification', {
+            body: { conversationId: callPeer.conversationId, calleeUserId: callPeer.peerUserId },
+          })
+          .catch(() => {});
       } catch {
         // Nothing was ever signaled to the other person (callChannelRef
         // is still unset), so this cleans up locally without logging a
