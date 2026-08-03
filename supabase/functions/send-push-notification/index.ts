@@ -103,19 +103,22 @@ async function sendFcmMessage(
   }
 }
 
-function attachmentPreview(message: {
-  attachment_type?: string | null;
-  attachment_name?: string | null;
-}): string | null {
+// Deliberately generic, regardless of attachment type - the actual
+// message text (or an attachment's filename, which can be just as
+// revealing) never leaves the server. A push notification is commonly
+// visible on a locked device before anyone has authenticated, so this
+// is the one place in the app that can't rely on "the user is signed
+// in" as a privacy boundary.
+function genericBodyFor(message: { attachment_type?: string | null }): string {
   switch (message.attachment_type) {
     case "image":
-      return "📷 Photo";
+      return "📷 Sent a photo";
     case "audio":
-      return "🎤 Voice message";
+      return "🎤 Sent a voice message";
     case "file":
-      return `📎 ${message.attachment_name ?? "File"}`;
+      return "📎 Sent a file";
     default:
-      return null;
+      return "Sent you a message";
   }
 }
 
@@ -166,7 +169,7 @@ Deno.serve(async (req: Request) => {
       .single();
 
     const title = sender?.display_name ?? "New message";
-    const body = attachmentPreview(message) ?? message.body ?? "New message";
+    const body = genericBodyFor(message);
 
     const serviceAccount: ServiceAccount = JSON.parse(FIREBASE_SERVICE_ACCOUNT);
     const accessToken = await getAccessToken(serviceAccount);
