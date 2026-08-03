@@ -18,6 +18,8 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../auth/AuthContext';
 import * as profilesData from '../data/profiles';
+import * as conversationsData from '../data/conversations';
+import type { CallStatus as CallLogStatus } from '../types';
 
 // STUN only (no TURN) - free, no account needed, and enough for most
 // home/office networks. Some restrictive networks (symmetric NAT, some
@@ -91,8 +93,12 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   // channel (see participantsRef there).
   const statusRef = useRef<CallStatus>('idle');
   const userIdRef = useRef<string | null>(null);
+  const peerRef = useRef<CallPeer | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
+  // Set the moment a call reaches 'connected', on whichever side - used
+  // to compute the logged call duration.
+  const connectedAtRef = useRef<number | null>(null);
   const inboxChannelRef = useRef<RealtimeChannel | null>(null);
   // The ephemeral channel a caller opens on the callee's topic for the
   // duration of one outgoing call. Unset (null) when we're the callee -
@@ -107,11 +113,27 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     userIdRef.current = userId;
   }, [userId]);
 
+  useEffect(() => {
+    peerRef.current = peer;
+  }, [peer]);
+
   function activeChannel(): RealtimeChannel | null {
     return callChannelRef.current ?? inboxChannelRef.current;
   }
 
-  function cleanupCall() {
+  // Only the caller logs a call-summary message (see sendCallLogMessage) -
+  // both participants read the same row anyway, since it's a normal
+  // message in their shared conversation. `fallbackOutcome` is what to
+  // log if the call never connected; a call that DID connect always logs
+  // as 'completed' with its duration regardless of what's passed, since
+  // however it ended at that point, it still happened.
+  function cleanupCall(fallbackOutcome: 'missed' | 'declined') {
+    const wasCaller = callChannelRef.current !== null;
+    const wasConnected = statusRef.current === 'connected';
+    const currentPeer = peerRef.current;
+    const currentUserId = userIdRef.current;
+    const connectedAt = connectedAtRef.current;
+
     pcRef.current?.close();
     pcRef.current = null;
     localStreamRef.current?.getTracks().forEach((track) => track.stop());
@@ -125,11 +147,22 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     pendingOfferRef.current = null;
     pendingCandidatesRef.current = [];
     hasRemoteDescriptionRef.current = false;
+    connectedAtRef.current = null;
     setPeer(null);
     setIsMuted(false);
     setIsCameraOff(false);
     statusRef.current = 'idle';
     setStatus('idle');
+
+    if (wasCaller && currentPeer && currentUserId) {
+      const outcome: CallLogStatus = wasConnected ? 'completed' : fallbackOutcome;
+      const durationMs = wasConnected && connectedAt ? Date.now() - connectedAt : null;
+      void conversationsData
+        .sendCallLogMessage(currentPeer.conversationId, currentUserId, outcome, durationMs)
+        .catch(() => {
+          // best-effort - a missing call-log entry isn't worth surfacing an error for
+        });
+    }
   }
 
   function createPeerConnection(): RTCPeerConnection {
@@ -171,6 +204,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           for (const candidate of queued) {
             void pc.addIceCandidate(new RTCIceCandidate(candidate as any));
           }
+          connectedAtRef.current = Date.now();
           statusRef.current = 'connected';
           setStatus('connected');
         });
@@ -187,17 +221,17 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
     channel.on('broadcast', { event: 'call-end' }, ({ payload }) => {
       if (payload.from === userIdRef.current) return;
-      cleanupCall();
+      cleanupCall('missed');
     });
 
     channel.on('broadcast', { event: 'call-decline' }, ({ payload }) => {
       if (payload.from === userIdRef.current) return;
-      cleanupCall();
+      cleanupCall('declined');
     });
 
     channel.on('broadcast', { event: 'call-busy' }, ({ payload }) => {
       if (payload.from === userIdRef.current) return;
-      cleanupCall();
+      cleanupCall('missed');
     });
   }
 
@@ -257,40 +291,48 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       statusRef.current = 'outgoing';
       setStatus('outgoing');
 
-      const [ownProfile, stream] = await Promise.all([
-        profilesData.fetchProfile(userId),
-        mediaDevices.getUserMedia({ audio: true, video: { facingMode: 'user' } }),
-      ]);
-      localStreamRef.current = stream;
-      setLocalStream(stream);
+      try {
+        const [ownProfile, stream] = await Promise.all([
+          profilesData.fetchProfile(userId),
+          mediaDevices.getUserMedia({ audio: true, video: { facingMode: 'user' } }),
+        ]);
+        localStreamRef.current = stream;
+        setLocalStream(stream);
 
-      const pc = createPeerConnection();
-      pcRef.current = pc;
-      stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+        const pc = createPeerConnection();
+        pcRef.current = pc;
+        stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
 
-      const channel = supabase.channel(`calls:${callPeer.peerUserId}`, {
-        config: { private: true },
-      });
-      attachSignalingHandlers(channel);
-      channel.subscribe((subStatus) => {
-        if (subStatus === 'SUBSCRIBED') {
-          channel.send({
-            type: 'broadcast',
-            event: 'call-offer',
-            payload: {
-              from: userId,
-              callerName: ownProfile.display_name || ownProfile.email,
-              callerAvatarPath: ownProfile.avatar_path,
-              conversationId: callPeer.conversationId,
-              sdp: offer.sdp,
-            },
-          });
-        }
-      });
-      callChannelRef.current = channel;
+        const channel = supabase.channel(`calls:${callPeer.peerUserId}`, {
+          config: { private: true },
+        });
+        attachSignalingHandlers(channel);
+        channel.subscribe((subStatus) => {
+          if (subStatus === 'SUBSCRIBED') {
+            channel.send({
+              type: 'broadcast',
+              event: 'call-offer',
+              payload: {
+                from: userId,
+                callerName: ownProfile.display_name || ownProfile.email,
+                callerAvatarPath: ownProfile.avatar_path,
+                conversationId: callPeer.conversationId,
+                sdp: offer.sdp,
+              },
+            });
+          }
+        });
+        callChannelRef.current = channel;
+      } catch {
+        // Nothing was ever signaled to the other person (callChannelRef
+        // is still unset), so this cleans up locally without logging a
+        // call - camera/mic access failing, or the profile fetch
+        // failing, shouldn't leave the call stuck in "outgoing" forever.
+        cleanupCall('missed');
+      }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [userId],
@@ -330,6 +372,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       payload: { from: userId, sdp: answer.sdp },
     });
 
+    connectedAtRef.current = Date.now();
     statusRef.current = 'connected';
     setStatus('connected');
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -342,16 +385,16 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       event: 'call-decline',
       payload: { from: userId },
     });
-    pendingOfferRef.current = null;
-    setPeer(null);
-    statusRef.current = 'idle';
-    setStatus('idle');
+    // Never logged (wasCaller is always false here, since only the
+    // caller's side ever sets callChannelRef) - the fallback outcome is
+    // just to satisfy cleanupCall's signature.
+    cleanupCall('declined');
   }, [userId]);
 
   const endCall = useCallback(() => {
     if (statusRef.current === 'idle') return;
     activeChannel()?.send({ type: 'broadcast', event: 'call-end', payload: { from: userId } });
-    cleanupCall();
+    cleanupCall('missed');
   }, [userId]);
 
   const toggleMute = useCallback(() => {

@@ -28,7 +28,7 @@ import { AppLogo } from '../components/AppLogo';
 import { FooterNav } from '../components/FooterNav';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { usePresence } from '../presence/PresenceContext';
-import { attachmentPreviewText } from '../utils/messagePreview';
+import { attachmentPreviewText, callStatusPreviewText } from '../utils/messagePreview';
 import { radii, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 import { Conversation, Message, Profile } from '../types';
@@ -170,6 +170,7 @@ export function ConversationsScreen({ navigation }: Props) {
   function previewText(message: Message | undefined): string {
     if (!message) return t('conversations.noMessagesYet');
     return (
+      callStatusPreviewText(message.call_status, message.attachment_duration_ms, t) ||
       attachmentPreviewText(message.attachment_type, message.attachment_name, t) ||
       message.body ||
       t('conversations.noMessagesYet')

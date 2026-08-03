@@ -51,6 +51,8 @@ export interface ReplyPreview {
   profiles: Profile;
 }
 
+export type CallStatus = 'missed' | 'declined' | 'completed';
+
 export interface Message {
   id: string;
   conversation_id: string;
@@ -61,6 +63,7 @@ export interface Message {
   attachment_name: string | null;
   attachment_mime_type: string | null;
   attachment_duration_ms: number | null;
+  call_status: CallStatus | null;
   created_at: string;
   edited_at: string | null;
   deleted_at: string | null;

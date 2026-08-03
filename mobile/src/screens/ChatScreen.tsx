@@ -51,7 +51,7 @@ import { FooterNav } from '../components/FooterNav';
 import { useCall } from '../calling/CallContext';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { usePresence } from '../presence/PresenceContext';
-import { attachmentPreviewText } from '../utils/messagePreview';
+import { attachmentPreviewText, callStatusPreviewText, formatDuration } from '../utils/messagePreview';
 import { radii, spacing, MAX_BUBBLE_WIDTH, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 import { ConversationParticipant, Message, MessageReaction, ReplyPreview } from '../types';
@@ -62,6 +62,7 @@ const QUICK_REACTIONS = ['❤️', '👍', '😂', '😮', '😢', '🙏'];
 const TYPING_BROADCAST_THROTTLE_MS = 2000;
 const TYPING_INDICATOR_TIMEOUT_MS = 3000;
 const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
+const SEARCH_DEBOUNCE_MS = 300;
 
 // Messages we've sent locally but haven't heard back from the server on
 // yet - shown immediately (dimmed) instead of waiting on a round-trip.
@@ -92,12 +93,6 @@ function summarizeReactions(
     }
   }
   return Array.from(byEmoji.values());
-}
-
-function formatDuration(totalSeconds: number): string {
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
 const WAVEFORM_BAR_COUNT = 24;
@@ -268,6 +263,25 @@ function AudioMessageBubble({
   );
 }
 
+function CallLogRow({ message, isMine }: { message: LocalMessage; isMine: boolean }) {
+  const { t } = useTranslation();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const label = callStatusPreviewText(message.call_status, message.attachment_duration_ms, t);
+
+  return (
+    <View style={styles.callLogRow}>
+      <FontAwesome6
+        name={message.call_status === 'completed' ? 'video' : 'video-slash'}
+        iconStyle="solid"
+        size={14}
+        color={isMine ? colors.white : colors.ink}
+      />
+      <Text style={isMine ? styles.bubbleTextMine : styles.bubbleTextTheirs}>{label}</Text>
+    </View>
+  );
+}
+
 function FileMessageBubble({ message, isMine }: { message: LocalMessage; isMine: boolean }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -310,6 +324,7 @@ interface MessageBubbleProps {
   reactions: MessageReaction[];
   userId: string | null;
   isPickerOpen: boolean;
+  isHighlighted: boolean;
   seenByName: string | null;
   seenByAvatarPath: string | null;
   bubbleMaxWidth: number;
@@ -330,6 +345,7 @@ function MessageBubble({
   reactions,
   userId,
   isPickerOpen,
+  isHighlighted,
   seenByName,
   seenByAvatarPath,
   bubbleMaxWidth,
@@ -362,11 +378,13 @@ function MessageBubble({
             message.attachment_type === 'image' ? styles.mediaBubble : styles.bubble,
             { maxWidth: bubbleMaxWidth },
             message._pending && styles.bubblePending,
+            isHighlighted && styles.bubbleHighlighted,
           ]}
         >
           {message.reply_to && (
             <ReplyQuote reply={message.reply_to} userId={userId} isMine={isMine} />
           )}
+          {message.call_status && <CallLogRow message={message} isMine={isMine} />}
           {message.attachment_type === 'image' && message.media_path && (
             <MediaImage path={message.media_path} />
           )}
@@ -547,10 +565,17 @@ export function ChatScreen({ route, navigation }: Props) {
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [playingMessageId, setPlayingMessageId] = useState<string | null>(null);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<conversationsData.MessageSearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
 
   const channelRef = useRef<RealtimeChannel | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTypingSentAtRef = useRef(0);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flatListRef = useRef<FlatList<LocalMessage>>(null);
   // Kept in sync with `participants` below and read from inside
   // upsertMessage instead of depending on `participants` directly - that
   // state updates asynchronously right after mount (once fetchConversation
@@ -847,6 +872,7 @@ export function ChatScreen({ route, navigation }: Props) {
       attachment_name: null,
       attachment_mime_type: null,
       attachment_duration_ms: null,
+      call_status: null,
       created_at: new Date().toISOString(),
       edited_at: null,
       deleted_at: null,
@@ -1090,6 +1116,66 @@ export function ChatScreen({ route, navigation }: Props) {
     [t],
   );
 
+  const onChangeSearchQuery = useCallback(
+    (text: string) => {
+      setSearchQuery(text);
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+      if (!text.trim()) {
+        setSearchResults([]);
+        setIsSearching(false);
+        return;
+      }
+      setIsSearching(true);
+      searchDebounceRef.current = setTimeout(() => {
+        conversationsData
+          .searchMessages(conversationId, text)
+          .then(setSearchResults)
+          .finally(() => setIsSearching(false));
+      }, SEARCH_DEBOUNCE_MS);
+    },
+    [conversationId],
+  );
+
+  const onCloseSearch = useCallback(() => {
+    setIsSearchOpen(false);
+    setSearchQuery('');
+    setSearchResults([]);
+    setIsSearching(false);
+  }, []);
+
+  // If the tapped result isn't in the ~50 messages already loaded (this
+  // screen doesn't paginate history otherwise), fetch a fresh window
+  // centered on it first - either way, highlighting + scrolling happens
+  // in the effect below once it's actually in `messages`.
+  const onSelectSearchResult = useCallback(
+    async (result: conversationsData.MessageSearchResult) => {
+      onCloseSearch();
+      const alreadyLoaded = messages.some((m) => m.id === result.id);
+      if (!alreadyLoaded) {
+        const around = await conversationsData.fetchMessagesAround(conversationId, result.id);
+        setMessages(around);
+      }
+      setHighlightedMessageId(result.id);
+    },
+    [conversationId, messages, onCloseSearch],
+  );
+
+  useEffect(() => {
+    if (!highlightedMessageId) return;
+    const item = messages.find((m) => m.id === highlightedMessageId);
+    if (!item) return;
+
+    const scrollTimeout = setTimeout(() => {
+      flatListRef.current?.scrollToItem({ item, animated: true, viewPosition: 0.5 });
+    }, 100);
+    const clearTimeout_ = setTimeout(() => setHighlightedMessageId(null), 2500);
+
+    return () => {
+      clearTimeout(scrollTimeout);
+      clearTimeout(clearTimeout_);
+    };
+  }, [highlightedMessageId, messages]);
+
   const otherParticipant = useMemo(
     () => participants.find((p) => p.user_id !== userId),
     [participants, userId],
@@ -1154,6 +1240,9 @@ export function ChatScreen({ route, navigation }: Props) {
               <Text style={styles.headerStatus}>{t('chat.online')}</Text>
             )}
         </View>
+        <TouchableOpacity style={styles.callButton} onPress={() => setIsSearchOpen(true)}>
+          <FontAwesome6 name="magnifying-glass" iconStyle="solid" size={16} color={colors.ink} />
+        </TouchableOpacity>
         {!isGroup && otherParticipant && (
           <TouchableOpacity
             style={styles.callButton}
@@ -1172,52 +1261,100 @@ export function ChatScreen({ route, navigation }: Props) {
         <AppLogo size={26} />
       </View>
 
-      <FlatList
-        style={styles.list}
-        data={messages}
-        keyExtractor={(item) => item.id}
-        inverted
-        ListHeaderComponent={otherTyping ? TypingBubble : null}
-        renderItem={({ item }) => (
-          <MessageBubble
-            message={item}
-            isMine={item.sender_id === userId}
-            senderName={
-              isGroup && item.sender_id !== userId
-                ? senderNames.get(item.sender_id) ?? null
-                : null
-            }
-            reactions={reactions.filter((r) => r.message_id === item.id)}
-            userId={userId}
-            isPickerOpen={pickerMessageId === item.id}
-            bubbleMaxWidth={bubbleMaxWidth}
-            isPlaying={playingMessageId === item.id}
-            seenByName={
-              item.id === lastSeenMineMessageId
-                ? otherParticipant?.profiles.display_name ||
-                  otherParticipant?.profiles.email ||
-                  null
-                : null
-            }
-            seenByAvatarPath={
-              item.id === lastSeenMineMessageId
-                ? otherParticipant?.profiles.avatar_path ?? null
-                : null
-            }
-            onLongPress={() =>
-              setPickerMessageId((current) =>
-                current === item.id ? null : item.id,
-              )
-            }
-            onDismissPicker={() => setPickerMessageId(null)}
-            onToggleReaction={(emoji) => void onToggleReaction(item.id, emoji)}
-            onEdit={() => onEditMessage(item)}
-            onDelete={() => onDeleteMessage(item.id)}
-            onReply={() => onReplyToMessage(item)}
-            onTogglePlay={() => void onTogglePlayback(item)}
+      {isSearchOpen && (
+        <View style={styles.searchBar}>
+          <FontAwesome6 name="magnifying-glass" iconStyle="solid" size={14} color={colors.smoke} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder={t('chat.searchPlaceholder')}
+            placeholderTextColor={colors.smoke}
+            value={searchQuery}
+            onChangeText={onChangeSearchQuery}
+            autoFocus
           />
-        )}
-      />
+          <TouchableOpacity onPress={onCloseSearch}>
+            <FontAwesome6 name="xmark" iconStyle="solid" size={16} color={colors.smoke} />
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {isSearchOpen ? (
+        <ScrollView style={styles.list} keyboardShouldPersistTaps="handled">
+          {isSearching && <ActivityIndicator color={colors.ember} style={styles.spinner} />}
+          {!isSearching && searchQuery.trim().length >= 2 && searchResults.length === 0 && (
+            <Text style={styles.searchEmptyText}>{t('chat.noSearchResults')}</Text>
+          )}
+          {searchResults.map((result) => (
+            <TouchableOpacity
+              key={result.id}
+              style={styles.searchResultRow}
+              onPress={() => void onSelectSearchResult(result)}
+            >
+              <Text style={styles.searchResultSender}>
+                {result.sender_id === userId ? t('chat.you') : displayTitle}
+              </Text>
+              <Text style={styles.searchResultSnippet} numberOfLines={1}>
+                {result.body}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      ) : (
+        <FlatList
+          ref={flatListRef}
+          style={styles.list}
+          data={messages}
+          keyExtractor={(item) => item.id}
+          inverted
+          ListHeaderComponent={otherTyping ? TypingBubble : null}
+          onScrollToIndexFailed={(info) => {
+            setTimeout(
+              () => flatListRef.current?.scrollToIndex({ index: info.index, animated: true }),
+              100,
+            );
+          }}
+          renderItem={({ item }) => (
+            <MessageBubble
+              message={item}
+              isMine={item.sender_id === userId}
+              senderName={
+                isGroup && item.sender_id !== userId
+                  ? senderNames.get(item.sender_id) ?? null
+                  : null
+              }
+              reactions={reactions.filter((r) => r.message_id === item.id)}
+              userId={userId}
+              isPickerOpen={pickerMessageId === item.id}
+              isHighlighted={item.id === highlightedMessageId}
+              bubbleMaxWidth={bubbleMaxWidth}
+              isPlaying={playingMessageId === item.id}
+              seenByName={
+                item.id === lastSeenMineMessageId
+                  ? otherParticipant?.profiles.display_name ||
+                    otherParticipant?.profiles.email ||
+                    null
+                  : null
+              }
+              seenByAvatarPath={
+                item.id === lastSeenMineMessageId
+                  ? otherParticipant?.profiles.avatar_path ?? null
+                  : null
+              }
+              onLongPress={() =>
+                setPickerMessageId((current) =>
+                  current === item.id ? null : item.id,
+                )
+              }
+              onDismissPicker={() => setPickerMessageId(null)}
+              onToggleReaction={(emoji) => void onToggleReaction(item.id, emoji)}
+              onEdit={() => onEditMessage(item)}
+              onDelete={() => onDeleteMessage(item.id)}
+              onReply={() => onReplyToMessage(item)}
+              onTogglePlay={() => void onTogglePlayback(item)}
+            />
+          )}
+        />
+      )}
       {editingMessageId && (
         <View style={styles.editingBar}>
           <Text style={styles.editingBarText}>{t('chat.editingMessage')}</Text>
@@ -1352,6 +1489,34 @@ const makeStyles = (colors: ThemeColors) =>
   callButton: { paddingHorizontal: 4, paddingVertical: 4 },
   headerName: { fontWeight: '700', fontSize: 15, color: colors.ink },
   headerStatus: { fontSize: 11.5, fontWeight: '600', color: colors.sage },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.sm,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    backgroundColor: colors.paper2,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  searchInput: { flex: 1, fontSize: 14.5, color: colors.ink, padding: 0 },
+  searchEmptyText: {
+    textAlign: 'center',
+    color: colors.smoke,
+    marginTop: spacing.xxl,
+    fontSize: 14,
+  },
+  searchResultRow: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.line,
+  },
+  searchResultSender: { fontWeight: '700', fontSize: 13.5, color: colors.ink, marginBottom: 2 },
+  searchResultSnippet: { fontSize: 13.5, color: colors.smoke },
   list: { flex: 1, paddingHorizontal: 12 },
   rowMine: { alignItems: 'flex-end', marginVertical: 4 },
   rowTheirs: { alignItems: 'flex-start', marginVertical: 4 },
@@ -1380,6 +1545,11 @@ const makeStyles = (colors: ThemeColors) =>
     gap: spacing.sm,
     minWidth: 200,
   },
+  callLogRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   waveform: {
     flex: 1,
     flexDirection: 'row',
@@ -1407,6 +1577,8 @@ const makeStyles = (colors: ThemeColors) =>
   iconCircleMine: { backgroundColor: colors.white },
   iconCircleTheirs: { backgroundColor: colors.ember },
   bubblePending: { opacity: 0.55 },
+  bubbleHighlighted: { borderWidth: 3, borderColor: colors.sage },
+  spinner: { marginTop: spacing.xl },
   senderLabel: {
     fontSize: 11.5,
     fontWeight: '700',

@@ -91,6 +91,8 @@
     "file": "File",
     "fileTooLargeTitle": "File too large",
     "fileTooLargeMessage": "Files can be up to 25 MB.",
+    "searchPlaceholder": "Search in this chat",
+    "noSearchResults": "No matching messages",
     "recordFailedTitle": "Recording failed",
     "recordFailedMessage": "Could not start recording. Check microphone permission and try again."
   },
@@ -123,6 +125,9 @@
   "call": {
     "incoming": "Incoming video call",
     "calling": "Calling...",
-    "connected": "Connected"
+    "connected": "Connected",
+    "missedCallPreview": "Missed video call",
+    "declinedCallPreview": "Declined video call",
+    "completedCallPreview": "Video call · {{duration}}"
   }
 }
