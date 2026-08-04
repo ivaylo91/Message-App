@@ -256,11 +256,9 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   // screen they're on.
   useEffect(() => {
     if (!userId) return;
-    console.log('[CallDebug] creating inbox channel for', userId);
     const channel = supabase.channel(`calls:${userId}`, { config: { private: true } });
 
     channel.on('broadcast', { event: 'call-offer' }, ({ payload }) => {
-      console.log('[CallDebug] call-offer received', payload);
       const offer = payload as OfferPayload;
       if (offer.from === userId) return;
 
@@ -296,9 +294,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     });
 
     attachSignalingHandlers(channel);
-    channel.subscribe((subStatus, err) => {
-      console.log('[CallDebug] inbox subscribe status', subStatus, err?.message);
-    });
+    channel.subscribe();
     inboxChannelRef.current = channel;
 
     // Mobile OSes kill idle sockets for backgrounded apps to save battery,
@@ -310,10 +306,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     const appStateSubscription = AppState.addEventListener('change', (nextState) => {
       if (nextState !== 'active') return;
       if (channel.state === 'joined' || channel.state === 'joining') return;
-      console.log('[CallDebug] app active, inbox channel state was', channel.state, '- resubscribing');
-      channel.subscribe((subStatus, err) => {
-        console.log('[CallDebug] inbox resubscribe status', subStatus, err?.message);
-      });
+      channel.subscribe();
     });
 
     return () => {
@@ -361,10 +354,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           config: { private: true },
         });
         attachSignalingHandlers(channel);
-        channel.subscribe((subStatus, err) => {
-          console.log('[CallDebug] outgoing call channel status', subStatus, err?.message);
+        channel.subscribe((subStatus) => {
           if (subStatus === 'SUBSCRIBED') {
-            console.log('[CallDebug] sending call-offer to', callPeer.peerUserId);
             channel.send({ type: 'broadcast', event: 'call-offer', payload: offerPayload });
 
             // Covers the callee's device being backgrounded/killed: the
@@ -394,10 +385,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           .invoke('send-call-notification', {
             body: { conversationId: callPeer.conversationId, calleeUserId: callPeer.peerUserId },
           })
-          .then((res) => console.log('[CallDebug] send-call-notification result', JSON.stringify(res)))
-          .catch((err) => console.log('[CallDebug] send-call-notification error', err?.message));
-      } catch (err) {
-        console.log('[CallDebug] startCall threw', (err as Error)?.message);
+          .catch(() => {});
+      } catch {
         // Nothing was ever signaled to the other person (callChannelRef
         // is still unset), so this cleans up locally without logging a
         // call - camera/mic access failing, or the profile fetch

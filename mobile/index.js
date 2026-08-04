@@ -26,15 +26,8 @@ import { name as appName } from './app.json';
 // so the app can show its own full-screen ringing UI via notifee instead
 // of a plain notification-shade entry.
 messaging().setBackgroundMessageHandler(async (remoteMessage) => {
-  console.log('[CallDebug] background message received', JSON.stringify(remoteMessage.data));
   if (remoteMessage.data?.type === 'call') {
-    console.log('[CallDebug] routing to displayIncomingCallNotification');
-    try {
-      await displayIncomingCallNotification(remoteMessage);
-      console.log('[CallDebug] displayIncomingCallNotification completed');
-    } catch (err) {
-      console.log('[CallDebug] displayIncomingCallNotification threw', err?.message);
-    }
+    await displayIncomingCallNotification(remoteMessage);
   }
 });
 
