@@ -39,14 +39,16 @@ export async function displayIncomingCallNotification(
   message: FirebaseMessagingTypes.RemoteMessage,
 ): Promise<void> {
   const data = message.data;
+  console.log('[CallDebug] displayIncomingCallNotification data', JSON.stringify(data));
   if (!data) return;
   await ensureCallChannel();
+  console.log('[CallDebug] call channel ensured');
 
   const conversationId = typeof data.conversationId === 'string' ? data.conversationId : undefined;
   const callerId = typeof data.callerId === 'string' ? data.callerId : undefined;
   const callerName = typeof data.callerName === 'string' ? data.callerName : 'Incoming call';
 
-  await notifee.displayNotification({
+  const notificationId = await notifee.displayNotification({
     title: callerName,
     body: 'Incoming video call',
     data: { ...(conversationId ? { conversationId } : {}), ...(callerId ? { callerId } : {}) },
@@ -63,6 +65,7 @@ export async function displayIncomingCallNotification(
       ],
     },
   });
+  console.log('[CallDebug] notifee.displayNotification returned id', notificationId);
 }
 
 // Lets the callee reject a call straight from the notification without

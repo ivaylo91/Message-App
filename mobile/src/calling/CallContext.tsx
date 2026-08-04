@@ -6,7 +6,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { PermissionsAndroid, Platform } from 'react-native';
+import { AppState, PermissionsAndroid, Platform } from 'react-native';
 import {
   MediaStream,
   RTCIceCandidate,
@@ -256,9 +256,11 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   // screen they're on.
   useEffect(() => {
     if (!userId) return;
+    console.log('[CallDebug] creating inbox channel for', userId);
     const channel = supabase.channel(`calls:${userId}`, { config: { private: true } });
 
     channel.on('broadcast', { event: 'call-offer' }, ({ payload }) => {
+      console.log('[CallDebug] call-offer received', payload);
       const offer = payload as OfferPayload;
       if (offer.from === userId) return;
 
@@ -294,10 +296,28 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     });
 
     attachSignalingHandlers(channel);
-    channel.subscribe();
+    channel.subscribe((subStatus, err) => {
+      console.log('[CallDebug] inbox subscribe status', subStatus, err?.message);
+    });
     inboxChannelRef.current = channel;
 
+    // Mobile OSes kill idle sockets for backgrounded apps to save battery,
+    // so this channel's websocket can silently die while the app isn't in
+    // the foreground - realtime-js's own reconnect backoff is a JS timer,
+    // which itself gets throttled while backgrounded and may not fire
+    // promptly on resume. Forcing a resubscribe the moment the app becomes
+    // active again closes that gap instead of waiting on it.
+    const appStateSubscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState !== 'active') return;
+      if (channel.state === 'joined' || channel.state === 'joining') return;
+      console.log('[CallDebug] app active, inbox channel state was', channel.state, '- resubscribing');
+      channel.subscribe((subStatus, err) => {
+        console.log('[CallDebug] inbox resubscribe status', subStatus, err?.message);
+      });
+    });
+
     return () => {
+      appStateSubscription.remove();
       void supabase.removeChannel(channel);
       inboxChannelRef.current = null;
     };
@@ -341,21 +361,28 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           config: { private: true },
         });
         attachSignalingHandlers(channel);
-        channel.subscribe((subStatus) => {
+        channel.subscribe((subStatus, err) => {
+          console.log('[CallDebug] outgoing call channel status', subStatus, err?.message);
           if (subStatus === 'SUBSCRIBED') {
+            console.log('[CallDebug] sending call-offer to', callPeer.peerUserId);
             channel.send({ type: 'broadcast', event: 'call-offer', payload: offerPayload });
 
             // Covers the callee's device being backgrounded/killed: the
             // push notification below wakes it and shows a ringing UI, but
-            // that takes a moment, and the very first broadcast may go out
-            // before the callee's inbox channel is subscribed again. A
-            // live callee's client just gets the same offer twice, which
-            // it handles fine (statusRef is no longer 'idle' the second
-            // time, so it's ignored).
+            // that takes a moment - a killed app needs to cold-start and
+            // reconnect its realtime channel before it can receive
+            // anything (observed to take several seconds by itself on a
+            // real device), on top of however long the person takes to
+            // notice the ring, unlock their phone, and tap Answer. 45s
+            // gives that whole chain realistic room, similar to how long a
+            // real phone call rings before giving up. A live callee's
+            // client just gets the same offer multiple times, which it
+            // handles fine (statusRef is no longer 'idle' after the
+            // first, so repeats are ignored).
             offerResendTimerRef.current = setInterval(() => {
               channel.send({ type: 'broadcast', event: 'call-offer', payload: offerPayload });
             }, 2500);
-            setTimeout(stopOfferResend, 25000);
+            setTimeout(stopOfferResend, 45000);
           }
         });
         callChannelRef.current = channel;
@@ -367,8 +394,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           .invoke('send-call-notification', {
             body: { conversationId: callPeer.conversationId, calleeUserId: callPeer.peerUserId },
           })
-          .catch(() => {});
-      } catch {
+          .then((res) => console.log('[CallDebug] send-call-notification result', JSON.stringify(res)))
+          .catch((err) => console.log('[CallDebug] send-call-notification error', err?.message));
+      } catch (err) {
+        console.log('[CallDebug] startCall threw', (err as Error)?.message);
         // Nothing was ever signaled to the other person (callChannelRef
         // is still unset), so this cleans up locally without logging a
         // call - camera/mic access failing, or the profile fetch
