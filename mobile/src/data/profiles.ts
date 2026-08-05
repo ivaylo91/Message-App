@@ -1,17 +1,13 @@
 import * as base64js from 'base64-js';
 import { supabase } from '../lib/supabase';
+import { getCachedSignedUrl } from '../lib/signedUrlCache';
 import { Profile, ProfileSearchResult } from '../types';
 
 const AVATAR_BUCKET = 'avatars';
-const AVATAR_SIGNED_URL_EXPIRY_SECONDS = 3600;
-
-// Avatars are now served from a private bucket via short-lived signed
-// URLs (see 20260807_make_avatars_bucket_private.sql), not permanent
-// public ones. Avatar renders happen a lot - the same path shows up in
-// headers, conversation rows, and chat bubbles at once - so this cache
-// avoids re-requesting a signed URL for a path that's already got a
-// still-valid one.
-const avatarUrlCache = new Map<string, { url: string; expiresAt: number }>();
+// Long-lived (vs. the old 1h) since the URL is now cached to disk, not
+// just in memory - see signedUrlCache.ts for why a stable URL across
+// app restarts is what lets FastImage's own cache actually hit.
+const AVATAR_SIGNED_URL_EXPIRY_SECONDS = 60 * 60 * 24;
 
 // Phone numbers are stored/matched digit-only (plus a leading +) so that
 // "+1 555-123-4567" and "5551234567" can find the same profile regardless
@@ -86,21 +82,12 @@ export async function uploadAvatar(
 }
 
 export async function getAvatarUrl(path: string): Promise<string> {
-  const cached = avatarUrlCache.get(path);
-  const now = Date.now();
-  if (cached && cached.expiresAt > now) return cached.url;
+  return getCachedSignedUrl(AVATAR_BUCKET, path, async () => {
+    const { data, error } = await supabase.storage
+      .from(AVATAR_BUCKET)
+      .createSignedUrl(path, AVATAR_SIGNED_URL_EXPIRY_SECONDS);
 
-  const { data, error } = await supabase.storage
-    .from(AVATAR_BUCKET)
-    .createSignedUrl(path, AVATAR_SIGNED_URL_EXPIRY_SECONDS);
-
-  if (error) throw error;
-
-  // Expire the cache entry a minute early so a render never hands out a
-  // URL that's about to be rejected mid-flight.
-  avatarUrlCache.set(path, {
-    url: data.signedUrl,
-    expiresAt: now + AVATAR_SIGNED_URL_EXPIRY_SECONDS * 1000 - 60_000,
+    if (error) throw error;
+    return { url: data.signedUrl, expirySeconds: AVATAR_SIGNED_URL_EXPIRY_SECONDS };
   });
-  return data.signedUrl;
 }

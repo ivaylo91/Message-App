@@ -1,7 +1,11 @@
 import { supabase } from '../lib/supabase';
+import { getCachedSignedUrl } from '../lib/signedUrlCache';
 
 const BUCKET = 'message-media';
-const SIGNED_URL_EXPIRY_SECONDS = 3600;
+// Long-lived and cached to disk (see signedUrlCache.ts) so the same URL
+// - and therefore FastImage's own cached bytes for it - survives an app
+// restart instead of every cold start re-downloading every attachment.
+const SIGNED_URL_EXPIRY_SECONDS = 60 * 60 * 24;
 
 export async function uploadMedia(
   conversationId: string,
@@ -33,10 +37,12 @@ export async function uploadMedia(
 }
 
 export async function getMediaSignedUrl(path: string): Promise<string> {
-  const { data, error } = await supabase.storage
-    .from(BUCKET)
-    .createSignedUrl(path, SIGNED_URL_EXPIRY_SECONDS);
+  return getCachedSignedUrl(BUCKET, path, async () => {
+    const { data, error } = await supabase.storage
+      .from(BUCKET)
+      .createSignedUrl(path, SIGNED_URL_EXPIRY_SECONDS);
 
-  if (error) throw error;
-  return data.signedUrl;
+    if (error) throw error;
+    return { url: data.signedUrl, expirySeconds: SIGNED_URL_EXPIRY_SECONDS };
+  });
 }

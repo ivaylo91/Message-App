@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import type { AppStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
+import { useUnread } from '../unread/UnreadContext';
 import { spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 
@@ -31,6 +32,7 @@ export function FooterNav({ active }: FooterNavProps) {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const { logout } = useAuth();
+  const { totalUnread } = useUnread();
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
@@ -39,6 +41,7 @@ export function FooterNav({ active }: FooterNavProps) {
     icon: SolidIconName;
     label: string;
     onPress: () => void;
+    badgeCount?: number;
   }> = [
     {
       key: 'notifications',
@@ -51,6 +54,7 @@ export function FooterNav({ active }: FooterNavProps) {
       icon: 'comment',
       label: t('footer.chats'),
       onPress: () => navigation.navigate('Conversations'),
+      badgeCount: totalUnread,
     },
     {
       key: 'group',
@@ -77,12 +81,21 @@ export function FooterNav({ active }: FooterNavProps) {
             onPress={item.onPress}
             activeOpacity={0.6}
           >
-            <FontAwesome6
-              name={item.icon}
-              iconStyle="solid"
-              size={19}
-              color={isActive ? colors.ember : colors.smoke}
-            />
+            <View style={styles.iconWrap}>
+              <FontAwesome6
+                name={item.icon}
+                iconStyle="solid"
+                size={19}
+                color={isActive ? colors.ember : colors.smoke}
+              />
+              {!!item.badgeCount && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText} numberOfLines={1}>
+                    {item.badgeCount > 99 ? '99+' : item.badgeCount}
+                  </Text>
+                </View>
+              )}
+            </View>
             <Text
               style={[styles.label, isActive && styles.labelActive]}
               numberOfLines={1}
@@ -106,6 +119,22 @@ const makeStyles = (colors: ThemeColors) =>
       paddingTop: spacing.sm,
     },
     item: { flex: 1, alignItems: 'center', gap: 3 },
+    iconWrap: { position: 'relative' },
+    badge: {
+      position: 'absolute',
+      top: -5,
+      right: -9,
+      minWidth: 16,
+      height: 16,
+      borderRadius: 8,
+      paddingHorizontal: 3,
+      backgroundColor: colors.ember,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1.5,
+      borderColor: colors.paper2,
+    },
+    badgeText: { color: colors.white, fontSize: 9.5, fontWeight: '700' },
     label: { fontSize: 10.5, fontWeight: '600', color: colors.smoke },
     labelActive: { color: colors.ember },
   });

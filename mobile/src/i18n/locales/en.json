@@ -84,6 +84,7 @@
     "uploadFailedMessage": "Could not send the image. Try again.",
     "sendFailedTitle": "Message not sent",
     "sendFailedMessage": "Could not send your message. Try again.",
+    "offlineBanner": "No internet connection - messages will send once you're back online",
     "reply": "Reply",
     "replyingTo": "Replying to {{name}}",
     "you": "You",

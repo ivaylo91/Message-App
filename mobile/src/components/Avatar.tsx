@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import FastImage from '@d11/react-native-fast-image';
 import { getAvatarUrl } from '../data/profiles';
 import { avatarColorFor, initialsFor, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
@@ -55,7 +56,7 @@ export function Avatar({ name, avatarPath, size = 48, online }: AvatarProps) {
         ]}
       >
         {avatarUrl ? (
-          <Image
+          <FastImage
             source={{ uri: avatarUrl }}
             style={{ width: size, height: size, borderRadius: size / 2 }}
           />

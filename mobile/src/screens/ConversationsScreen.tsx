@@ -10,7 +10,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import type { RealtimeChannel } from '@supabase/supabase-js';
 import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
@@ -28,6 +27,7 @@ import { AppLogo } from '../components/AppLogo';
 import { FooterNav } from '../components/FooterNav';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { usePresence } from '../presence/PresenceContext';
+import { useUnread } from '../unread/UnreadContext';
 import { attachmentPreviewText, callStatusPreviewText } from '../utils/messagePreview';
 import { radii, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
@@ -154,6 +154,7 @@ export function ConversationsScreen({ navigation }: Props) {
   const { t, i18n } = useTranslation();
   const { userId } = useAuth();
   const { isOnline } = usePresence();
+  const { unreadCounts, refresh: refreshUnreadCounts } = useUnread();
   const insets = useSafeAreaInsets();
   const { contentWidth } = useContentWidth();
   const { colors } = useTheme();
@@ -164,7 +165,6 @@ export function ConversationsScreen({ navigation }: Props) {
   const [typingConversationIds, setTypingConversationIds] = useState<Set<string>>(
     new Set(),
   );
-  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const [openRowId, setOpenRowId] = useState<string | null>(null);
 
   function previewText(message: Message | undefined): string {
@@ -181,16 +181,15 @@ export function ConversationsScreen({ navigation }: Props) {
     if (!userId) return;
     setIsRefreshing(true);
     try {
-      const [data, counts] = await Promise.all([
+      const [data] = await Promise.all([
         conversationsData.fetchConversations(userId),
-        conversationsData.fetchUnreadCounts(),
+        refreshUnreadCounts(),
       ]);
       setConversations(data);
-      setUnreadCounts(counts);
     } finally {
       setIsRefreshing(false);
     }
-  }, [userId]);
+  }, [userId, refreshUnreadCounts]);
 
   const onDeleteConversation = useCallback(
     (conversation: Conversation, title: string) => {
@@ -264,53 +263,6 @@ export function ConversationsScreen({ navigation }: Props) {
       for (const channel of channels) void supabase.removeChannel(channel);
     };
   }, [conversations, userId]);
-
-  // Bumps the unread badge live for any conversation the user is in (RLS
-  // scopes delivery to those, same as the messages table's select policy),
-  // so a new message shows up without waiting for a pull-to-refresh. The
-  // read side resets naturally: opening a chat calls markConversationRead,
-  // and coming back re-fetches counts via the useFocusEffect above.
-  useEffect(() => {
-    if (!userId) return;
-    let cancelled = false;
-    let channel: RealtimeChannel | null = null;
-
-    // Same fix as ChatScreen's per-conversation channel: supabase.channel()
-    // reuses any existing channel object already registered under this
-    // topic, and removeChannel() is async - if this effect re-runs (e.g.
-    // this screen regaining focus after being navigated back to) before a
-    // previous run's un-awaited removeChannel() finishes, the "new"
-    // channel() call hands back that same already-subscribed channel, and
-    // .on(...) throws "cannot add ... callbacks ... after subscribe()".
-    void (async () => {
-      const stale = supabase
-        .getChannels()
-        .find((c) => c.topic === 'realtime:unread-messages');
-      if (stale) await supabase.removeChannel(stale);
-      if (cancelled) return;
-
-      channel = supabase
-        .channel('unread-messages')
-        .on(
-          'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'messages' },
-          (payload) => {
-            const incoming = payload.new as Message;
-            if (incoming.sender_id === userId) return;
-            setUnreadCounts((current) => ({
-              ...current,
-              [incoming.conversation_id]: (current[incoming.conversation_id] ?? 0) + 1,
-            }));
-          },
-        )
-        .subscribe();
-    })();
-
-    return () => {
-      cancelled = true;
-      if (channel) void supabase.removeChannel(channel);
-    };
-  }, [userId]);
 
   const otherParticipantOf = (conversation: Conversation) =>
     conversation.conversation_participants.find((p) => p.user_id !== userId);

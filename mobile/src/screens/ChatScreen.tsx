@@ -10,7 +10,6 @@ import {
   Alert,
   Animated,
   FlatList,
-  Image,
   Keyboard,
   KeyboardAvoidingView,
   Linking,
@@ -25,6 +24,7 @@ import {
   View,
 } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
+import FastImage from '@d11/react-native-fast-image';
 import LinearGradient from 'react-native-linear-gradient';
 import {
   errorCodes,
@@ -51,6 +51,9 @@ import { FooterNav } from '../components/FooterNav';
 import { useCall } from '../calling/CallContext';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { usePresence } from '../presence/PresenceContext';
+import { useUnread } from '../unread/UnreadContext';
+import { useOutbox } from '../offline/OutboxContext';
+import { OutboxEntry } from '../offline/outboxStorage';
 import { attachmentPreviewText, callStatusPreviewText, formatDuration } from '../utils/messagePreview';
 import { radii, spacing, MAX_BUBBLE_WIDTH, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
@@ -67,6 +70,33 @@ const SEARCH_DEBOUNCE_MS = 300;
 // Messages we've sent locally but haven't heard back from the server on
 // yet - shown immediately (dimmed) instead of waiting on a round-trip.
 type LocalMessage = Message & { _pending?: boolean };
+
+// An outbox entry hasn't reached the server at all yet (still queued,
+// possibly offline) - rendered the same dimmed way as a fresher
+// in-flight send. Once it actually sends, the outbox drops the entry
+// and the real row arrives through the normal realtime INSERT
+// subscription, so this is never reconciled by id - it just stops being
+// in the list.
+function pendingToLocalMessage(entry: OutboxEntry, senderId: string): LocalMessage {
+  return {
+    id: entry.tempId,
+    conversation_id: entry.conversationId,
+    sender_id: senderId,
+    body: entry.body,
+    media_path: null,
+    attachment_type: null,
+    attachment_name: null,
+    attachment_mime_type: null,
+    attachment_duration_ms: null,
+    call_status: null,
+    created_at: entry.createdAt,
+    edited_at: null,
+    deleted_at: null,
+    reply_to_message_id: entry.replyToMessageId,
+    reply_to: entry.replyToPreview,
+    _pending: true,
+  };
+}
 
 interface ReactionSummary {
   emoji: string;
@@ -205,7 +235,13 @@ function MediaImage({ path }: { path: string }) {
     );
   }
 
-  return <Image source={{ uri: url }} style={styles.media} resizeMode="cover" />;
+  return (
+    <FastImage
+      source={{ uri: url }}
+      style={styles.media}
+      resizeMode={FastImage.resizeMode.cover}
+    />
+  );
 }
 
 function AudioMessageBubble({
@@ -541,6 +577,8 @@ export function ChatScreen({ route, navigation }: Props) {
   const { conversationId, title } = route.params;
   const { userId } = useAuth();
   const { isOnline } = usePresence();
+  const { markConversationRead } = useUnread();
+  const outbox = useOutbox();
   const { startCall } = useCall();
   const insets = useSafeAreaInsets();
   const { windowWidth, contentWidth } = useContentWidth();
@@ -651,10 +689,8 @@ export function ChatScreen({ route, navigation }: Props) {
 
   const markRead = useCallback(() => {
     if (!userId) return;
-    conversationsData.markConversationRead(conversationId, userId).catch(() => {
-      // best-effort - a missed read receipt isn't worth surfacing an error for
-    });
-  }, [conversationId, userId]);
+    markConversationRead(conversationId);
+  }, [conversationId, userId, markConversationRead]);
 
   const upsertMessage = useCallback(
     (incoming: Message) => {
@@ -861,42 +897,19 @@ export function ChatScreen({ route, navigation }: Props) {
     const replyToPreview = replyingTo;
     setReplyingTo(null);
 
+    // Queued rather than sent directly - the outbox shows it immediately
+    // (dimmed, via displayMessages) and takes care of retrying if this
+    // fails or the device is offline, instead of the send just erroring
+    // out. See OutboxContext for the retry/persistence behavior.
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    const optimisticMessage: LocalMessage = {
-      id: tempId,
-      conversation_id: conversationId,
-      sender_id: userId,
+    outbox.queueMessage({
+      conversationId,
+      tempId,
       body,
-      media_path: null,
-      attachment_type: null,
-      attachment_name: null,
-      attachment_mime_type: null,
-      attachment_duration_ms: null,
-      call_status: null,
-      created_at: new Date().toISOString(),
-      edited_at: null,
-      deleted_at: null,
-      reply_to_message_id: replyToMessageId,
-      reply_to: replyToPreview,
-      _pending: true,
-    };
-    setMessages((current) => [optimisticMessage, ...current]);
-
-    try {
-      const message = await conversationsData.sendMessage(
-        conversationId,
-        userId,
-        body,
-        replyToMessageId,
-      );
-      setMessages((current) =>
-        current.map((m) => (m.id === tempId ? message : m)),
-      );
-      markRead();
-    } catch {
-      setMessages((current) => current.filter((m) => m.id !== tempId));
-      Alert.alert(t('chat.sendFailedTitle'), t('chat.sendFailedMessage'));
-    }
+      replyToMessageId,
+      replyToPreview,
+    });
+    markRead();
   };
 
   const onPickImage = async () => {
@@ -1181,6 +1194,19 @@ export function ChatScreen({ route, navigation }: Props) {
     [participants, userId],
   );
 
+  // Newest-first, matching `messages` (see fetchMessages) - queued
+  // entries are stored oldest-first so they're reversed before being
+  // stacked on top of the confirmed, server-fetched messages.
+  const displayMessages = useMemo(() => {
+    if (!userId) return messages;
+    const pending = outbox.pendingByConversation[conversationId] ?? [];
+    if (pending.length === 0) return messages;
+    const pendingNewestFirst = [...pending]
+      .reverse()
+      .map((entry) => pendingToLocalMessage(entry, userId));
+    return [...pendingNewestFirst, ...messages];
+  }, [messages, outbox.pendingByConversation, conversationId, userId]);
+
   const senderNames = useMemo(() => {
     const map = new Map<string, string>();
     for (const p of participants) {
@@ -1261,6 +1287,12 @@ export function ChatScreen({ route, navigation }: Props) {
         <AppLogo size={26} />
       </View>
 
+      {!outbox.isOnline && (
+        <View style={styles.offlineBanner}>
+          <Text style={styles.offlineBannerText}>{t('chat.offlineBanner')}</Text>
+        </View>
+      )}
+
       {isSearchOpen && (
         <View style={styles.searchBar}>
           <FontAwesome6 name="magnifying-glass" iconStyle="solid" size={14} color={colors.smoke} />
@@ -1303,7 +1335,7 @@ export function ChatScreen({ route, navigation }: Props) {
         <FlatList
           ref={flatListRef}
           style={styles.list}
-          data={messages}
+          data={displayMessages}
           keyExtractor={(item) => item.id}
           inverted
           ListHeaderComponent={otherTyping ? TypingBubble : null}
@@ -1489,6 +1521,15 @@ const makeStyles = (colors: ThemeColors) =>
   callButton: { paddingHorizontal: 4, paddingVertical: 4 },
   headerName: { fontWeight: '700', fontSize: 15, color: colors.ink },
   headerStatus: { fontSize: 11.5, fontWeight: '600', color: colors.sage },
+  offlineBanner: {
+    marginHorizontal: spacing.md,
+    marginTop: spacing.sm,
+    paddingVertical: 6,
+    borderRadius: radii.md,
+    backgroundColor: colors.danger,
+    alignItems: 'center',
+  },
+  offlineBannerText: { color: colors.white, fontSize: 12, fontWeight: '700' },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
