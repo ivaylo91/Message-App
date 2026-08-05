@@ -130,5 +130,12 @@
     "missedCallPreview": "Missed video call",
     "declinedCallPreview": "Declined video call",
     "completedCallPreview": "Video call · {{duration}}"
+  },
+  "mediaGallery": {
+    "photosTab": "Photos",
+    "filesTab": "Files",
+    "noPhotos": "No photos shared yet",
+    "noFiles": "No files shared yet",
+    "voiceMessage": "Voice message"
   }
 }

@@ -130,5 +130,12 @@
     "missedCallPreview": "Пропуснато видеообаждане",
     "declinedCallPreview": "Отхвърлено видеообаждане",
     "completedCallPreview": "Видеообаждане · {{duration}}"
+  },
+  "mediaGallery": {
+    "photosTab": "Снимки",
+    "filesTab": "Файлове",
+    "noPhotos": "Все още няма споделени снимки",
+    "noFiles": "Все още няма споделени файлове",
+    "voiceMessage": "Гласово съобщение"
   }
 }

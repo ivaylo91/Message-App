@@ -21,6 +21,30 @@ export function attachmentPreviewText(
   }
 }
 
+export type FileIconName =
+  | 'file'
+  | 'file-pdf'
+  | 'file-word'
+  | 'file-zipper'
+  | 'file-image'
+  | 'file-audio'
+  | 'file-video'
+  | 'file-lines';
+
+// Shared between the chat's file bubble and the media gallery's files
+// tab - both need the same mime-type-to-icon mapping.
+export function fileIconName(mimeType: string | null | undefined): FileIconName {
+  if (!mimeType) return 'file';
+  if (mimeType === 'application/pdf') return 'file-pdf';
+  if (mimeType.includes('word')) return 'file-word';
+  if (mimeType.includes('zip') || mimeType.includes('compressed')) return 'file-zipper';
+  if (mimeType.startsWith('image/')) return 'file-image';
+  if (mimeType.startsWith('audio/')) return 'file-audio';
+  if (mimeType.startsWith('video/')) return 'file-video';
+  if (mimeType.startsWith('text/')) return 'file-lines';
+  return 'file';
+}
+
 export function formatDuration(totalSeconds: number): string {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;

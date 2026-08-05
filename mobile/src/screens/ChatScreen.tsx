@@ -54,7 +54,12 @@ import { usePresence } from '../presence/PresenceContext';
 import { useUnread } from '../unread/UnreadContext';
 import { useOutbox } from '../offline/OutboxContext';
 import { OutboxEntry } from '../offline/outboxStorage';
-import { attachmentPreviewText, callStatusPreviewText, formatDuration } from '../utils/messagePreview';
+import {
+  attachmentPreviewText,
+  callStatusPreviewText,
+  fileIconName,
+  formatDuration,
+} from '../utils/messagePreview';
 import { radii, spacing, MAX_BUBBLE_WIDTH, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 import { ConversationParticipant, Message, MessageReaction, ReplyPreview } from '../types';
@@ -145,28 +150,6 @@ function waveformHeights(seed: string, count: number): number[] {
     heights.push(WAVEFORM_MIN_HEIGHT + t * (WAVEFORM_MAX_HEIGHT - WAVEFORM_MIN_HEIGHT));
   }
   return heights;
-}
-
-type FileIconName =
-  | 'file'
-  | 'file-pdf'
-  | 'file-word'
-  | 'file-zipper'
-  | 'file-image'
-  | 'file-audio'
-  | 'file-video'
-  | 'file-lines';
-
-function fileIconName(mimeType: string | null): FileIconName {
-  if (!mimeType) return 'file';
-  if (mimeType === 'application/pdf') return 'file-pdf';
-  if (mimeType.includes('word')) return 'file-word';
-  if (mimeType.includes('zip') || mimeType.includes('compressed')) return 'file-zipper';
-  if (mimeType.startsWith('image/')) return 'file-image';
-  if (mimeType.startsWith('audio/')) return 'file-audio';
-  if (mimeType.startsWith('video/')) return 'file-video';
-  if (mimeType.startsWith('text/')) return 'file-lines';
-  return 'file';
 }
 
 function replySenderLabel(
@@ -1280,6 +1263,12 @@ export function ChatScreen({ route, navigation }: Props) {
         </View>
         <TouchableOpacity style={styles.callButton} onPress={() => setIsSearchOpen(true)}>
           <FontAwesome6 name="magnifying-glass" iconStyle="solid" size={16} color={colors.ink} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.callButton}
+          onPress={() => navigation.navigate('MediaGallery', { conversationId, title: displayTitle })}
+        >
+          <FontAwesome6 name="images" iconStyle="solid" size={16} color={colors.ink} />
         </TouchableOpacity>
         {!isGroup && otherParticipant && (
           <TouchableOpacity

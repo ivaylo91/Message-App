@@ -21,6 +21,7 @@ import { NewChatScreen } from '../screens/NewChatScreen';
 import { NewGroupScreen } from '../screens/NewGroupScreen';
 import { ChatScreen } from '../screens/ChatScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
+import { MediaGalleryScreen } from '../screens/MediaGalleryScreen';
 
 export type AuthStackParamList = {
   Welcome: undefined;
@@ -34,6 +35,7 @@ export type AppStackParamList = {
   NewGroup: undefined;
   Profile: undefined;
   Chat: { conversationId: string; title: string };
+  MediaGallery: { conversationId: string; title: string };
 };
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -85,6 +87,7 @@ function AppNavigator() {
         options={{ presentation: 'modal' }}
       />
       <AppStack.Screen name="Chat" component={ChatScreen} />
+      <AppStack.Screen name="MediaGallery" component={MediaGalleryScreen} />
     </AppStack.Navigator>
   );
 }

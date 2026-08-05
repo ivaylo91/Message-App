@@ -140,6 +140,54 @@ export async function searchMessages(
   return data as MessageSearchResult[];
 }
 
+export interface MediaMessage {
+  id: string;
+  media_path: string;
+  attachment_type: AttachmentType;
+  attachment_name: string | null;
+  attachment_mime_type: string | null;
+  attachment_duration_ms: number | null;
+  created_at: string;
+}
+
+const MEDIA_PAGE_SIZE = 30;
+
+// Backs the media gallery (MediaGalleryScreen) - a dedicated view of
+// everything ever shared in a conversation, independent of the ~50
+// most-recent-messages window ChatScreen normally keeps loaded. Cursor-
+// paginated on created_at (pass the last item's created_at back in as
+// `cursor` for the next page), matching fetchMessagesAround's approach
+// rather than offset-based .range(), since offsets shift under
+// concurrent inserts.
+export async function fetchMediaMessages(
+  conversationId: string,
+  kind: 'photos' | 'files',
+  cursor?: string,
+): Promise<MediaMessage[]> {
+  let query = supabase
+    .from('messages')
+    .select(
+      'id, media_path, attachment_type, attachment_name, attachment_mime_type, attachment_duration_ms, created_at',
+    )
+    .eq('conversation_id', conversationId)
+    .is('deleted_at', null)
+    .not('media_path', 'is', null);
+
+  query =
+    kind === 'photos'
+      ? query.eq('attachment_type', 'image')
+      : query.in('attachment_type', ['file', 'audio']);
+
+  if (cursor) query = query.lt('created_at', cursor);
+
+  const { data, error } = await query
+    .order('created_at', { ascending: false })
+    .limit(MEDIA_PAGE_SIZE);
+
+  if (error) throw error;
+  return data as MediaMessage[];
+}
+
 // Loads a fresh window of messages centered on a specific message (a
 // search result the user tapped), for when it's further back than the
 // most recent 50 messages ChatScreen normally keeps loaded - the app
