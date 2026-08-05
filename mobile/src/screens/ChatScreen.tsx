@@ -361,8 +361,7 @@ interface MessageBubbleProps {
   userId: string | null;
   isPickerOpen: boolean;
   isHighlighted: boolean;
-  seenByName: string | null;
-  seenByAvatarPath: string | null;
+  seenBy: { name: string; avatarPath: string | null }[];
   bubbleMaxWidth: number;
   isPlaying: boolean;
   onLongPress: () => void;
@@ -382,8 +381,7 @@ function MessageBubble({
   userId,
   isPickerOpen,
   isHighlighted,
-  seenByName,
-  seenByAvatarPath,
+  seenBy,
   bubbleMaxWidth,
   isPlaying,
   onLongPress,
@@ -496,9 +494,11 @@ function MessageBubble({
         </ScrollView>
       )}
 
-      {seenByName && (
+      {seenBy.length > 0 && (
         <View style={styles.seenAvatar}>
-          <Avatar name={seenByName} avatarPath={seenByAvatarPath} size={16} />
+          {seenBy.map((person) => (
+            <Avatar key={person.name} name={person.name} avatarPath={person.avatarPath} size={16} />
+          ))}
         </View>
       )}
     </View>
@@ -1222,19 +1222,31 @@ export function ChatScreen({ route, navigation }: Props) {
       : otherParticipant?.profiles.display_name || otherParticipant?.profiles.email) ||
     '…';
 
-  // Read receipts only make sense 1:1 for now - "seen" in a group would
-  // need to say *who* has seen it, not just a single yes/no. Messenger-
-  // style: the small avatar sits under the newest message of mine that's
-  // at or before the other person's last_read_at, and moves down (to a
-  // newer message) as that timestamp advances in real time.
-  const lastSeenMineMessageId = useMemo(() => {
-    if (isGroup || !otherParticipant?.last_read_at) return null;
-    const readAt = new Date(otherParticipant.last_read_at).getTime();
-    const seen = messages.find(
-      (m) => m.sender_id === userId && new Date(m.created_at).getTime() <= readAt,
-    );
-    return seen?.id ?? null;
-  }, [isGroup, otherParticipant, messages, userId]);
+  // Messenger-style read receipts: for each other participant, the
+  // newest message of mine at or before *their* last_read_at is where
+  // their avatar sits, moving down as that timestamp advances in real
+  // time. The same per-participant logic covers both 1:1 (one avatar)
+  // and groups (participants who've read different amounts each land
+  // under their own newest-seen message, stacking together when several
+  // people happen to have read up to the same point).
+  const seenAvatarsByMessageId = useMemo(() => {
+    const result = new Map<string, { name: string; avatarPath: string | null }[]>();
+    for (const participant of participants) {
+      if (participant.user_id === userId || !participant.last_read_at) continue;
+      const readAt = new Date(participant.last_read_at).getTime();
+      const seen = messages.find(
+        (m) => m.sender_id === userId && new Date(m.created_at).getTime() <= readAt,
+      );
+      if (!seen) continue;
+      const list = result.get(seen.id) ?? [];
+      list.push({
+        name: participant.profiles.display_name || participant.profiles.email,
+        avatarPath: participant.profiles.avatar_path,
+      });
+      result.set(seen.id, list);
+    }
+    return result;
+  }, [participants, messages, userId]);
 
   return (
     <KeyboardAvoidingView
@@ -1360,18 +1372,7 @@ export function ChatScreen({ route, navigation }: Props) {
               isHighlighted={item.id === highlightedMessageId}
               bubbleMaxWidth={bubbleMaxWidth}
               isPlaying={playingMessageId === item.id}
-              seenByName={
-                item.id === lastSeenMineMessageId
-                  ? otherParticipant?.profiles.display_name ||
-                    otherParticipant?.profiles.email ||
-                    null
-                  : null
-              }
-              seenByAvatarPath={
-                item.id === lastSeenMineMessageId
-                  ? otherParticipant?.profiles.avatar_path ?? null
-                  : null
-              }
+              seenBy={seenAvatarsByMessageId.get(item.id) ?? []}
               onLongPress={() =>
                 setPickerMessageId((current) =>
                   current === item.id ? null : item.id,
@@ -1676,7 +1677,7 @@ const makeStyles = (colors: ThemeColors) =>
   pickerEmojiText: { fontSize: 22 },
   pickerActionText: { fontSize: 14, color: colors.ember, fontWeight: '600' },
   pickerDeleteText: { color: colors.danger },
-  seenAvatar: { marginTop: 4 },
+  seenAvatar: { marginTop: 4, flexDirection: 'row', gap: 2 },
   typingBubble: {
     flexDirection: 'row',
     alignItems: 'center',
