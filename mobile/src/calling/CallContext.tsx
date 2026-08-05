@@ -30,6 +30,12 @@ const ICE_SERVERS = [
   { urls: 'stun:stun1.l.google.com:19302' },
 ];
 
+// How long an outgoing call keeps ringing before giving up on its own -
+// matches the offer-resend window below, since there's no point ringing
+// past the point where the callee could still receive the offer. Mirrors
+// how long a real phone call rings before giving up.
+const RING_TIMEOUT_MS = 45000;
+
 export type CallStatus = 'idle' | 'outgoing' | 'incoming' | 'connected';
 
 export interface CallPeer {
@@ -115,11 +121,22 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   // offer for a few seconds covers that without needing to embed the SDP
   // in the push payload itself.
   const offerResendTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Auto-hangs-up an outgoing call that never gets answered - without
+  // this, "Calling..." would sit there forever until the caller manually
+  // cancels, since nothing else ever transitions it out of that state.
+  const callTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function stopOfferResend() {
     if (offerResendTimerRef.current) {
       clearInterval(offerResendTimerRef.current);
       offerResendTimerRef.current = null;
+    }
+  }
+
+  function stopCallTimeout() {
+    if (callTimeoutRef.current) {
+      clearTimeout(callTimeoutRef.current);
+      callTimeoutRef.current = null;
     }
   }
 
@@ -149,6 +166,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     const connectedAt = connectedAtRef.current;
 
     stopOfferResend();
+    stopCallTimeout();
     pcRef.current?.close();
     pcRef.current = null;
     localStreamRef.current?.getTracks().forEach((track) => track.stop());
@@ -211,6 +229,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       }
       const pc = pcRef.current;
       stopOfferResend();
+      stopCallTimeout();
       void pc
         .setRemoteDescription(new RTCSessionDescription({ type: 'answer', sdp: payload.sdp }))
         .then(() => {
@@ -373,7 +392,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
             offerResendTimerRef.current = setInterval(() => {
               channel.send({ type: 'broadcast', event: 'call-offer', payload: offerPayload });
             }, 2500);
-            setTimeout(stopOfferResend, 45000);
+            setTimeout(stopOfferResend, RING_TIMEOUT_MS);
+            callTimeoutRef.current = setTimeout(() => {
+              if (statusRef.current === 'outgoing') endCall();
+            }, RING_TIMEOUT_MS);
           }
         });
         callChannelRef.current = channel;
