@@ -5,6 +5,7 @@ import notifee, { AndroidCategory, AndroidImportance, EventType } from '@notifee
 import { supabase } from '../lib/supabase';
 import * as pushTokensData from '../data/pushTokens';
 import { navigateToChat } from '../navigation/navigationRef';
+import { requestAutoAnswer } from '../calling/autoAnswerFlag';
 
 const MESSAGE_CHANNEL_ID = 'messages';
 const CALL_CHANNEL_ID = 'calls';
@@ -59,7 +60,7 @@ export async function displayIncomingCallNotification(
       fullScreenAction: { id: 'default', launchActivity: 'default' },
       actions: [
         { title: 'Decline', pressAction: { id: 'decline' } },
-        { title: 'Answer', pressAction: { id: 'default', launchActivity: 'default' } },
+        { title: 'Answer', pressAction: { id: 'answer', launchActivity: 'default' } },
       ],
     },
   });
@@ -163,6 +164,17 @@ export function attachNotificationListeners(): () => void {
     });
 
   const unsubscribeNotifeeForeground = notifee.onForegroundEvent(({ type, detail }) => {
+    if (type === EventType.ACTION_PRESS && detail.pressAction?.id === 'answer') {
+      const callerId = detail.notification?.data?.callerId;
+      if (typeof callerId === 'string') void requestAutoAnswer(callerId);
+      return;
+    }
+    if (type === EventType.ACTION_PRESS && detail.pressAction?.id === 'decline') {
+      const callerId = detail.notification?.data?.callerId;
+      if (typeof callerId === 'string') void declineIncomingCallFromNotification(callerId);
+      if (detail.notification?.id) void notifee.cancelNotification(detail.notification.id);
+      return;
+    }
     if (type !== EventType.PRESS) return;
     const conversationId = detail.notification?.data?.conversationId;
     if (typeof conversationId === 'string') navigateToChat(conversationId);

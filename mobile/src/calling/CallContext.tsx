@@ -19,6 +19,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../auth/AuthContext';
 import * as profilesData from '../data/profiles';
 import * as conversationsData from '../data/conversations';
+import { consumeAutoAnswer } from './autoAnswerFlag';
 import type { CallStatus as CallLogStatus } from '../types';
 
 // STUN only (no TURN) - free, no account needed, and enough for most
@@ -310,6 +311,14 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       });
       statusRef.current = 'incoming';
       setStatus('incoming');
+
+      // Picks up a tap on the notification's "Answer" action (see
+      // autoAnswerFlag.ts) - that action can only launch the app, not
+      // answer directly, since answering needs this real offer and a
+      // live PeerConnection that don't exist until now.
+      void consumeAutoAnswer(offer.from).then((shouldAutoAnswer) => {
+        if (shouldAutoAnswer) void answerCall();
+      });
     });
 
     attachSignalingHandlers(channel);

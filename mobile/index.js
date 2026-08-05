@@ -16,6 +16,7 @@ import {
   declineIncomingCallFromNotification,
   displayIncomingCallNotification,
 } from './src/notifications';
+import { requestAutoAnswer } from './src/calling/autoAnswerFlag';
 import App from './App';
 import { name as appName } from './app.json';
 
@@ -31,16 +32,28 @@ messaging().setBackgroundMessageHandler(async (remoteMessage) => {
   }
 });
 
-// Handles the notification's "Decline" action button being pressed while
-// the app is backgrounded or fully killed - notifee runs this via a
-// headless task in that case, so it can't touch CallContext/React state
-// directly, only send the decline signal itself (see
-// declineIncomingCallFromNotification).
+// Handles the notification's "Decline"/"Answer" action buttons being
+// pressed while the app is backgrounded or fully killed - notifee runs
+// this via a headless task in that case, so it can't touch
+// CallContext/React state directly. Decline can be fully handled here
+// (just send the decline signal). Answer can't - actually answering
+// needs the real WebRTC offer and a live PeerConnection, which only
+// exist once the app's own CallContext is running - so this just leaves
+// a flag (see autoAnswerFlag.ts) for CallContext to pick up the moment
+// it receives the real call-offer after the tap launches the app.
 notifee.onBackgroundEvent(async ({ type, detail }) => {
-  if (type !== EventType.ACTION_PRESS || detail.pressAction?.id !== 'decline') return;
+  if (type !== EventType.ACTION_PRESS) return;
   const callerId = detail.notification?.data?.callerId;
-  if (typeof callerId === 'string') {
-    await declineIncomingCallFromNotification(callerId);
+  if (detail.pressAction?.id === 'decline') {
+    if (typeof callerId === 'string') {
+      await declineIncomingCallFromNotification(callerId);
+    }
+  } else if (detail.pressAction?.id === 'answer') {
+    if (typeof callerId === 'string') {
+      await requestAutoAnswer(callerId);
+    }
+  } else {
+    return;
   }
   if (detail.notification?.id) {
     await notifee.cancelNotification(detail.notification.id);
