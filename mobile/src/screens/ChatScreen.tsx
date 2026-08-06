@@ -1296,7 +1296,27 @@ export function ChatScreen({ route, navigation }: Props) {
     if (!userId) return messages;
     const pending = outbox.pendingByConversation[conversationId] ?? [];
     if (pending.length === 0) return messages;
-    const pendingNewestFirst = [...pending]
+    // A pending (optimistic) entry and the real message it becomes can
+    // briefly both be visible: the real one can arrive over the realtime
+    // channel - raw columns only, no joins (see upsertMessage) - before
+    // sendMessage()'s own insert+select response comes back, since that
+    // select is the heavier one (it joins in reply_to). The outbox only
+    // clears the pending entry once *its* response returns, so realtime
+    // winning that race left both on screen at once. Matching on content
+    // here drops the pending copy the moment its real counterpart has
+    // actually landed, instead of waiting on the slower response too.
+    const stillPending = pending.filter(
+      (entry) =>
+        !messages.some(
+          (m) =>
+            m.sender_id === userId &&
+            m.body === entry.body &&
+            m.reply_to_message_id === entry.replyToMessageId &&
+            new Date(m.created_at).getTime() >= new Date(entry.createdAt).getTime(),
+        ),
+    );
+    if (stillPending.length === 0) return messages;
+    const pendingNewestFirst = [...stillPending]
       .reverse()
       .map((entry) => pendingToLocalMessage(entry, userId));
     return [...pendingNewestFirst, ...messages];
