@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { escapeLikePattern } from '../utils/likePattern';
 import { AttachmentType, CallStatus, Conversation, Message } from '../types';
 
 const CONVERSATION_SELECT = '*, conversation_participants(*, profiles(*))';
@@ -118,7 +119,9 @@ export interface MessageSearchResult {
 // pattern as a bound parameter (unlike the old .or() filter string this
 // codebase used to build for profile search - see
 // 20260806_add_secure_search_profiles_rpc.sql), so this isn't the same
-// filter-injection shape.
+// filter-injection shape - escapeLikePattern here is only about % and _
+// in the search text itself being treated as literal characters rather
+// than wildcards, not about injection.
 export async function searchMessages(
   conversationId: string,
   query: string,
@@ -132,7 +135,7 @@ export async function searchMessages(
     .eq('conversation_id', conversationId)
     .is('deleted_at', null)
     .not('body', 'is', null)
-    .ilike('body', `%${trimmed}%`)
+    .ilike('body', `%${escapeLikePattern(trimmed)}%`)
     .order('created_at', { ascending: false })
     .limit(30);
 
