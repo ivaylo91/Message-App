@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   Linking,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -207,6 +208,12 @@ export function ProfileScreen({ navigation }: Props) {
           </TouchableOpacity>
         </View>
 
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={{ paddingBottom: insets.bottom + spacing.xxl }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
         <View style={styles.avatarSection}>
           <TouchableOpacity onPress={() => void onChangePhoto()} disabled={isUploadingPhoto}>
             <Avatar
@@ -355,6 +362,7 @@ export function ProfileScreen({ navigation }: Props) {
             </View>
           </TouchableOpacity>
         </View>
+        </ScrollView>
       </View>
     </View>
   );
@@ -363,7 +371,8 @@ export function ProfileScreen({ navigation }: Props) {
 const makeStyles = (colors: ThemeColors) =>
   StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.paper },
-  content: { width: '100%', alignSelf: 'center' },
+  content: { flex: 1, width: '100%', alignSelf: 'center' },
+  scroll: { flex: 1 },
   header: {
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.md,
