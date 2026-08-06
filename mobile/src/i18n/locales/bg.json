@@ -2,7 +2,8 @@
   "welcome": {
     "tagline": "Където се събират твоите хора.",
     "getStarted": "Начало",
-    "haveAccount": "Вече имам акаунт"
+    "haveAccount": "Вече имам акаунт",
+    "copyright": "© 2026 Ivaylo Penev"
   },
   "auth": {
     "login": {

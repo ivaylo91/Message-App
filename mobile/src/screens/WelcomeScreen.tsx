@@ -51,6 +51,9 @@ export function WelcomeScreen({ navigation }: Props) {
           </TouchableOpacity>
         </View>
       </View>
+      <Text style={[styles.footer, { bottom: insets.bottom + spacing.lg }]}>
+        {t('welcome.copyright')}
+      </Text>
     </View>
   );
 }
@@ -128,5 +131,13 @@ const makeStyles = (colors: ThemeColors) =>
       fontSize: 14.5,
       fontWeight: '600',
       opacity: 0.7,
+    },
+    footer: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      textAlign: 'center',
+      color: colors.smoke,
+      fontSize: 12,
     },
   });

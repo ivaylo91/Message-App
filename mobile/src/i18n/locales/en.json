@@ -2,7 +2,8 @@
   "welcome": {
     "tagline": "Where your people gather.",
     "getStarted": "Get started",
-    "haveAccount": "I already have an account"
+    "haveAccount": "I already have an account",
+    "copyright": "© 2026 Ivaylo Penev"
   },
   "auth": {
     "login": {
