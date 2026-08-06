@@ -145,6 +145,15 @@
     "phoneInvalidError": "Enter a valid phone number.",
     "phoneTakenError": "That phone number is already in use.",
     "saveFailedError": "Couldn't save your profile. Try again.",
+    "bubbleColorLabel": "Chat bubble color",
+    "bubbleColorNames": {
+      "ember": "Ember",
+      "ocean": "Ocean",
+      "sunset": "Sunset",
+      "forest": "Forest",
+      "berry": "Berry",
+      "midnight": "Midnight"
+    },
     "privacyPolicy": "Privacy Policy",
     "dangerZoneTitle": "Danger zone",
     "exportData": "Export my data",

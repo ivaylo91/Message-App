@@ -55,21 +55,60 @@ export const darkColors: ThemeColors = {
 
 export type ThemeScheme = 'light' | 'dark';
 
-// The rose->purple message-bubble gradient, in both directions of the
-// conversation. "theirs" is a soft pastel tint in light mode (dark ink
-// text reads fine on it) and a deep muted tint in dark mode (so it still
-// needs light ink text) - see bubbleTextTheirs in ChatScreen, which just
-// uses colors.ink and gets the right contrast in both cases for free.
-export const gradients: Record<ThemeScheme, { mine: readonly [string, string]; theirs: readonly [string, string] }> = {
-  light: {
-    mine: ['#FB4B84', '#7C3AED'],
-    theirs: ['#FCE0EC', '#E4DCFB'],
+export interface BubbleGradientPair {
+  mine: readonly [string, string];
+  theirs: readonly [string, string];
+}
+
+export interface BubbleGradientPreset {
+  id: string;
+  light: BubbleGradientPair;
+  dark: BubbleGradientPair;
+}
+
+// Each preset pairs a vivid "mine" gradient with a soft pastel "theirs"
+// tint in the same hue family, in both light/dark forms - "theirs" is a
+// soft pastel in light mode (dark ink text reads fine on it) and a deep
+// muted tint in dark mode (so it still needs light ink text; see
+// bubbleTextTheirs in ChatScreen, which just uses colors.ink and gets
+// the right contrast in both cases for free). "mine" has to stay dark/
+// saturated enough for the fixed white bubbleTextMine to read on it.
+// The first entry ("ember") is the original, and stays the default -
+// see ThemeContext for how the user's chosen preset is applied.
+export const BUBBLE_GRADIENT_PRESETS: BubbleGradientPreset[] = [
+  {
+    id: 'ember',
+    light: { mine: ['#FB4B84', '#7C3AED'], theirs: ['#FCE0EC', '#E4DCFB'] },
+    dark: { mine: ['#FF6F9C', '#9D6FFF'], theirs: ['#4A2338', '#382558'] },
   },
-  dark: {
-    mine: ['#FF6F9C', '#9D6FFF'],
-    theirs: ['#4A2338', '#382558'],
+  {
+    id: 'ocean',
+    light: { mine: ['#38B6E8', '#1E5FBF'], theirs: ['#DDF1FC', '#DCE7FB'] },
+    dark: { mine: ['#5FCBEF', '#4A7FE0'], theirs: ['#1E3A4A', '#22345C'] },
   },
-};
+  {
+    id: 'sunset',
+    light: { mine: ['#FF9142', '#F0447D'], theirs: ['#FFEBDD', '#FCE0EC'] },
+    dark: { mine: ['#FFAA5C', '#FF6F9C'], theirs: ['#4A2E1E', '#4A2338'] },
+  },
+  {
+    id: 'forest',
+    light: { mine: ['#4FB878', '#1F7A52'], theirs: ['#E1F5E9', '#DCEFE2'] },
+    dark: { mine: ['#6ED89A', '#3FA372'], theirs: ['#1E3B2B', '#1C3324'] },
+  },
+  {
+    id: 'berry',
+    light: { mine: ['#D6409F', '#7C2D9E'], theirs: ['#FBE1F1', '#F0DCF7'] },
+    dark: { mine: ['#F06BC4', '#A34FD1'], theirs: ['#442038', '#3A2350'] },
+  },
+  {
+    id: 'midnight',
+    light: { mine: ['#6E7B94', '#2C3550'], theirs: ['#E5E8EF', '#DEE1EB'] },
+    dark: { mine: ['#8C9AC0', '#4A5578'], theirs: ['#262B3A', '#20263A'] },
+  },
+];
+
+export const DEFAULT_BUBBLE_GRADIENT_ID = BUBBLE_GRADIENT_PRESETS[0].id;
 
 export function avatarColorFor(seed: string, colors: ThemeColors): string {
   const avatarPalette = [colors.clay, colors.sage, colors.dusk];

@@ -145,6 +145,15 @@
     "phoneInvalidError": "Въведете валиден телефонен номер.",
     "phoneTakenError": "Този телефонен номер вече се използва.",
     "saveFailedError": "Профилът не можа да бъде запазен. Опитайте отново.",
+    "bubbleColorLabel": "Цвят на балончетата",
+    "bubbleColorNames": {
+      "ember": "Жар",
+      "ocean": "Океан",
+      "sunset": "Залез",
+      "forest": "Гора",
+      "berry": "Къпина",
+      "midnight": "Полунощ"
+    },
     "privacyPolicy": "Политика за поверителност",
     "dangerZoneTitle": "Опасна зона",
     "exportData": "Изтегли моите данни",

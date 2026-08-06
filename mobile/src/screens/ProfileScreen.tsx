@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
+import LinearGradient from 'react-native-linear-gradient';
 import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -23,7 +24,7 @@ import { Avatar } from '../components/Avatar';
 import { AppWallpaper } from '../components/AppWallpaper';
 import { useToast } from '../components/Toast';
 import { useContentWidth } from '../hooks/useContentWidth';
-import { radii, spacing, ThemeColors } from '../theme/tokens';
+import { BUBBLE_GRADIENT_PRESETS, radii, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 import { Profile } from '../types';
 
@@ -41,7 +42,7 @@ export function ProfileScreen({ navigation }: Props) {
   const { showToast } = useToast();
   const insets = useSafeAreaInsets();
   const { contentWidth } = useContentWidth();
-  const { colors } = useTheme();
+  const { colors, scheme, bubbleGradientId, setBubbleGradientId } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [displayName, setDisplayName] = useState('');
@@ -259,6 +260,36 @@ export function ProfileScreen({ navigation }: Props) {
           />
         </View>
 
+        <View style={styles.field}>
+          <Text style={styles.label}>{t('profile.bubbleColorLabel')}</Text>
+          <View style={styles.bubbleSwatchRow}>
+            {BUBBLE_GRADIENT_PRESETS.map((preset) => {
+              const isSelected = preset.id === bubbleGradientId;
+              return (
+                <TouchableOpacity
+                  key={preset.id}
+                  onPress={() => setBubbleGradientId(preset.id)}
+                  style={[styles.bubbleSwatchWrap, isSelected && styles.bubbleSwatchWrapSelected]}
+                  accessibilityRole="button"
+                  accessibilityLabel={t(`profile.bubbleColorNames.${preset.id}`)}
+                  accessibilityState={{ selected: isSelected }}
+                >
+                  <LinearGradient
+                    colors={[...preset[scheme].mine]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.bubbleSwatch}
+                  >
+                    {isSelected && (
+                      <FontAwesome6 name="check" iconStyle="solid" size={14} color={colors.white} />
+                    )}
+                  </LinearGradient>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
         {error && <Text style={styles.error}>{error}</Text>}
 
         <View style={styles.legalSection}>
@@ -389,6 +420,26 @@ const makeStyles = (colors: ThemeColors) =>
   },
   changePhotoHint: { fontSize: 12.5, color: colors.smoke, marginTop: spacing.sm },
   field: { paddingHorizontal: spacing.lg, marginBottom: spacing.lg },
+  bubbleSwatchRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  bubbleSwatchWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    padding: 2,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  bubbleSwatchWrapSelected: { borderColor: colors.ink },
+  bubbleSwatch: {
+    flex: 1,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   label: {
     fontSize: 12,
     fontWeight: '700',
