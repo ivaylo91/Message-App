@@ -14,7 +14,17 @@
       "submit": "Sign in",
       "successToast": "Welcome back!",
       "error": "Login failed. Check your email and password.",
-      "switchToRegister": "New to Hearth? Create an account"
+      "switchToRegister": "New to Hearth? Create an account",
+      "forgotPassword": "Forgot password?"
+    },
+    "forgotPassword": {
+      "title": "Reset your password",
+      "subtitle": "Enter your email and we'll send you a link to set a new one.",
+      "emailLabel": "Email",
+      "submit": "Send reset link",
+      "sentInfo": "If that email has a Hearth account, a reset link is on its way. Check your inbox.",
+      "error": "Couldn't send the reset link. Try again.",
+      "backToLogin": "Back to sign in"
     },
     "register": {
       "title": "Create your account",

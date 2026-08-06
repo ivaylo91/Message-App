@@ -48,6 +48,16 @@ export const makeAuthStyles = (colors: ThemeColors) =>
       marginTop: -spacing.lg + 4,
       marginBottom: spacing.md,
     },
+    forgotPasswordLink: {
+      alignSelf: 'flex-end',
+      marginTop: -spacing.sm,
+      marginBottom: spacing.md,
+    },
+    forgotPasswordText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.ember,
+    },
     error: { color: colors.danger, marginBottom: spacing.md },
     info: { color: colors.sage, marginBottom: spacing.md },
     spinner: { marginTop: spacing.sm },

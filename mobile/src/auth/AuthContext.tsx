@@ -8,6 +8,7 @@ import React, {
 } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
+import { RESET_PASSWORD_URL } from '../config/env';
 import { unregisterCurrentDeviceToken } from '../notifications';
 
 interface AuthContextValue {
@@ -20,6 +21,7 @@ interface AuthContextValue {
     password: string,
     displayName: string,
   ) => Promise<{ needsEmailConfirmation: boolean }>;
+  requestPasswordReset: (email: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -68,6 +70,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
+  // Deliberately doesn't reveal whether the email actually matches an
+  // account - Supabase itself returns success either way for this
+  // endpoint, which avoids letting this screen be used to check which
+  // emails are registered.
+  const requestPasswordReset = useCallback(async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: RESET_PASSWORD_URL,
+    });
+    if (error) throw error;
+  }, []);
+
   const logout = useCallback(async () => {
     // Best-effort, and must happen before signOut() - once the session
     // is gone, this device is no longer authenticated as this user and
@@ -84,9 +97,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       isLoading,
       login,
       register,
+      requestPasswordReset,
       logout,
     }),
-    [session, isLoading, login, register, logout],
+    [session, isLoading, login, register, requestPasswordReset, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
