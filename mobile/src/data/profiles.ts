@@ -58,6 +58,22 @@ export async function updateProfile(
   return data as Profile;
 }
 
+// A heartbeat, not a one-off - see PresenceContext, which calls this
+// periodically while the app is active (and once more on backgrounding)
+// so the timestamp stays close to someone's actual last-active moment
+// even if the app is killed ungracefully rather than backgrounded
+// cleanly. Best-effort by design: callers swallow failures here rather
+// than surfacing them, since a missed heartbeat just means a slightly
+// stale "last seen" for other people, not a broken feature.
+export async function updateLastSeen(userId: string): Promise<void> {
+  const { error } = await supabase
+    .from('profiles')
+    .update({ last_seen_at: new Date().toISOString() })
+    .eq('id', userId);
+
+  if (error) throw error;
+}
+
 export async function uploadAvatar(
   userId: string,
   base64Data: string,

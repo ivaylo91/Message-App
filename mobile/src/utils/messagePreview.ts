@@ -45,6 +45,27 @@ export function fileIconName(mimeType: string | null | undefined): FileIconName 
   return 'file';
 }
 
+// Tiered rather than raw minutes throughout, so someone offline for a
+// few days reads as "3d ago" instead of an absurd "4320m ago". null
+// means we've never recorded a last-seen moment for them at all (e.g.
+// an account that predates this feature and hasn't reconnected since) -
+// falls back to a bare "Offline" rather than a fabricated duration.
+export function formatLastSeen(lastSeenAt: string | null, t: TFunction): string {
+  if (!lastSeenAt) return t('chat.offline');
+
+  const elapsedMs = Date.now() - new Date(lastSeenAt).getTime();
+  const minutes = Math.floor(elapsedMs / 60_000);
+
+  if (minutes < 1) return t('chat.lastSeenJustNow');
+  if (minutes < 60) return t('chat.lastSeenMinutesAgo', { count: minutes });
+
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return t('chat.lastSeenHoursAgo', { count: hours });
+
+  const days = Math.floor(hours / 24);
+  return t('chat.lastSeenDaysAgo', { count: days });
+}
+
 export function formatDuration(totalSeconds: number): string {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;

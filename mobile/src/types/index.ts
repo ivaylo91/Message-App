@@ -5,6 +5,7 @@ export interface Profile {
   avatar_path: string | null;
   username: string | null;
   phone: string | null;
+  last_seen_at: string | null;
 }
 
 // What search_profiles() returns - deliberately narrower than Profile.

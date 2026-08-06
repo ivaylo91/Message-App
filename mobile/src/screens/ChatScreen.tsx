@@ -62,6 +62,7 @@ import {
   callStatusPreviewText,
   fileIconName,
   formatDuration,
+  formatLastSeen,
 } from '../utils/messagePreview';
 import { radii, spacing, MAX_BUBBLE_WIDTH, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
@@ -705,7 +706,7 @@ export function ChatScreen({ route, navigation }: Props) {
           if (replied) {
             const profile = participantsRef.current.find(
               (p) => p.user_id === replied.sender_id,
-            )?.profiles ?? { id: replied.sender_id, email: '', display_name: '', avatar_path: null, username: null, phone: null };
+            )?.profiles ?? { id: replied.sender_id, email: '', display_name: '', avatar_path: null, username: null, phone: null, last_seen_at: null };
             enriched = {
               ...incoming,
               reply_to: {
@@ -1097,7 +1098,7 @@ export function ChatScreen({ route, navigation }: Props) {
       setEditingMessageId(null);
       const profile = participants.find(
         (p) => p.user_id === message.sender_id,
-      )?.profiles ?? { id: message.sender_id, email: '', display_name: '', avatar_path: null, username: null, phone: null };
+      )?.profiles ?? { id: message.sender_id, email: '', display_name: '', avatar_path: null, username: null, phone: null, last_seen_at: null };
       setReplyingTo({
         id: message.id,
         body: message.body,
@@ -1403,12 +1404,15 @@ export function ChatScreen({ route, navigation }: Props) {
         />
         <View style={styles.headerNameBlock}>
           <Text style={styles.headerName}>{displayTitle}</Text>
-          {!otherTyping &&
-            !isGroup &&
-            otherParticipant &&
-            isOnline(otherParticipant.user_id) && (
+          {!otherTyping && !isGroup && otherParticipant && (
+            isOnline(otherParticipant.user_id) ? (
               <Text style={styles.headerStatus}>{t('chat.online')}</Text>
-            )}
+            ) : (
+              <Text style={styles.headerStatusOffline}>
+                {formatLastSeen(otherParticipant.profiles.last_seen_at, t)}
+              </Text>
+            )
+          )}
         </View>
         <TouchableOpacity style={styles.callButton} onPress={() => setIsSearchOpen(true)}>
           <FontAwesome6 name="magnifying-glass" iconStyle="solid" size={16} color={colors.ink} />
@@ -1669,6 +1673,7 @@ const makeStyles = (colors: ThemeColors) =>
   callButton: { paddingHorizontal: 4, paddingVertical: 4 },
   headerName: { fontWeight: '700', fontSize: 15, color: colors.ink },
   headerStatus: { fontSize: 11.5, fontWeight: '600', color: colors.sage },
+  headerStatusOffline: { fontSize: 11.5, fontWeight: '600', color: colors.smoke },
   offlineBanner: {
     marginHorizontal: spacing.md,
     marginTop: spacing.sm,
