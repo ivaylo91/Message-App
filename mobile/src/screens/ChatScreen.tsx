@@ -73,6 +73,7 @@ const QUICK_REACTIONS = ['❤️', '👍', '😂', '😮', '😢', '🙏'];
 const TYPING_BROADCAST_THROTTLE_MS = 2000;
 const TYPING_INDICATOR_TIMEOUT_MS = 3000;
 const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
+const MAX_IMAGE_SELECTION = 10;
 const SEARCH_DEBOUNCE_MS = 300;
 
 // Messages we've sent locally but haven't heard back from the server on
@@ -914,20 +915,28 @@ export function ChatScreen({ route, navigation }: Props) {
     const result = await launchImageLibrary({
       mediaType: 'photo',
       quality: 0.7,
+      selectionLimit: MAX_IMAGE_SELECTION,
     });
-    const asset = result.assets?.[0];
-    if (!asset?.uri) return;
+    const assets = result.assets ?? [];
+    if (assets.length === 0) return;
 
     setIsUploadingAttachment(true);
     try {
-      const mimeType = asset.type ?? 'image/jpeg';
-      const path = await mediaData.uploadMedia(conversationId, asset.uri, mimeType);
-      const message = await conversationsData.sendAttachmentMessage(conversationId, userId, {
-        path,
-        type: 'image',
-        mimeType,
-      });
-      upsertMessage(message);
+      // Sequential, not concurrent - keeps the sent order matching
+      // selection order and avoids firing a burst of large uploads at
+      // once (each one already going through mediaData.uploadMedia's
+      // own network round trip).
+      for (const asset of assets) {
+        if (!asset.uri) continue;
+        const mimeType = asset.type ?? 'image/jpeg';
+        const path = await mediaData.uploadMedia(conversationId, asset.uri, mimeType);
+        const message = await conversationsData.sendAttachmentMessage(conversationId, userId, {
+          path,
+          type: 'image',
+          mimeType,
+        });
+        upsertMessage(message);
+      }
     } catch {
       Alert.alert(t('chat.uploadFailedTitle'), t('chat.uploadFailedMessage'));
     } finally {
