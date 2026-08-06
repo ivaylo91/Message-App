@@ -81,6 +81,16 @@ export async function uploadAvatar(
   return path;
 }
 
+// Client can't delete an auth.users row itself (needs the service role),
+// so this just invokes the edge function that does - see
+// supabase/functions/delete-account/index.ts for what it actually does
+// server-side. Caller is responsible for clearing the local session
+// afterwards; the account is gone but this device's stored tokens aren't.
+export async function deleteAccount(): Promise<void> {
+  const { error } = await supabase.functions.invoke('delete-account');
+  if (error) throw error;
+}
+
 export async function getAvatarUrl(path: string): Promise<string> {
   return getCachedSignedUrl(AVATAR_BUCKET, path, async () => {
     const { data, error } = await supabase.storage

@@ -7,6 +7,7 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -166,6 +167,7 @@ export function ConversationsScreen({ navigation }: Props) {
     new Set(),
   );
   const [openRowId, setOpenRowId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   function previewText(message: Message | undefined): string {
     if (!message) return t('conversations.noMessagesYet');
@@ -278,6 +280,19 @@ export function ConversationsScreen({ navigation }: Props) {
     );
   };
 
+  // Plain client-side filter over the already-loaded list, matched
+  // against both the row's title and its last-message preview - the same
+  // two things ConversationRow renders, so a match always makes sense to
+  // the person reading the results.
+  const trimmedSearchQuery = searchQuery.trim().toLowerCase();
+  const filteredConversations = trimmedSearchQuery
+    ? conversations.filter((conversation) => {
+        const title = conversationTitle(conversation).toLowerCase();
+        const preview = previewText(conversation.messages?.[0]).toLowerCase();
+        return title.includes(trimmedSearchQuery) || preview.includes(trimmedSearchQuery);
+      })
+    : conversations;
+
   return (
     <View style={[styles.container, { paddingTop: insets.top + spacing.lg }]}>
       <AppWallpaper />
@@ -324,8 +339,25 @@ export function ConversationsScreen({ navigation }: Props) {
         </View>
       </View>
 
+      <View style={styles.searchBar}>
+        <FontAwesome6 name="magnifying-glass" iconStyle="solid" size={13} color={colors.smoke} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder={t('conversations.searchPlaceholder')}
+          placeholderTextColor={colors.smoke}
+          autoCapitalize="none"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <FontAwesome6 name="xmark" iconStyle="solid" size={13} color={colors.smoke} />
+          </TouchableOpacity>
+        )}
+      </View>
+
       <FlatList
-        data={conversations}
+        data={filteredConversations}
         keyExtractor={(item) => item.id}
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={load} />
@@ -355,8 +387,14 @@ export function ConversationsScreen({ navigation }: Props) {
         }}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>{t('conversations.noConversationsYet')}</Text>
-            <Text style={styles.emptyHint}>{t('conversations.startConversationHint')}</Text>
+            {trimmedSearchQuery ? (
+              <Text style={styles.emptyTitle}>{t('conversations.noSearchResults')}</Text>
+            ) : (
+              <>
+                <Text style={styles.emptyTitle}>{t('conversations.noConversationsYet')}</Text>
+                <Text style={styles.emptyHint}>{t('conversations.startConversationHint')}</Text>
+              </>
+            )}
           </View>
         }
       />
@@ -400,6 +438,19 @@ const makeStyles = (colors: ThemeColors) =>
     borderWidth: 1,
     borderColor: colors.line,
   },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+    paddingHorizontal: 12,
+    backgroundColor: colors.paper2,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  searchInput: { flex: 1, paddingVertical: 9, fontSize: 14.5, color: colors.ink },
   rowContainer: { position: 'relative', overflow: 'hidden', width: '100%' },
   deleteAction: {
     position: 'absolute',

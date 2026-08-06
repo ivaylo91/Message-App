@@ -44,6 +44,7 @@
     "directMessage": "Direct message",
     "noConversationsYet": "No conversations yet.",
     "startConversationHint": "Tap the + to start one.",
+    "noSearchResults": "No conversations match your search.",
     "logout": "Log out",
     "delete": "Delete",
     "deleteConfirmTitle": "Delete chat?",
@@ -112,7 +113,19 @@
     "phonePlaceholder": "+1 555 123 4567",
     "phoneInvalidError": "Enter a valid phone number.",
     "phoneTakenError": "That phone number is already in use.",
-    "saveFailedError": "Couldn't save your profile. Try again."
+    "saveFailedError": "Couldn't save your profile. Try again.",
+    "dangerZoneTitle": "Danger zone",
+    "exportData": "Export my data",
+    "exportDataHint": "Download a copy of your profile and messages as a JSON file.",
+    "exportSuccessToast": "Export ready to save or send.",
+    "exportFailedTitle": "Export failed",
+    "exportFailedMessage": "Couldn't put together your data export. Try again.",
+    "deleteAccount": "Delete account",
+    "deleteAccountHint": "Permanently delete your account and all your data.",
+    "deleteAccountConfirmTitle": "Delete your account?",
+    "deleteAccountConfirmMessage": "This permanently deletes your account, profile, and messages. This cannot be undone.",
+    "deleteAccountFailedTitle": "Couldn't delete account",
+    "deleteAccountFailedMessage": "Something went wrong deleting your account. Try again."
   },
   "common": {
     "language": "Language"

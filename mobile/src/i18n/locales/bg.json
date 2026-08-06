@@ -44,6 +44,7 @@
     "directMessage": "Лично съобщение",
     "noConversationsYet": "Все още няма разговори.",
     "startConversationHint": "Докоснете +, за да започнете.",
+    "noSearchResults": "Няма разговори, отговарящи на търсенето.",
     "logout": "Изход",
     "delete": "Изтрий",
     "deleteConfirmTitle": "Изтриване на разговора?",
@@ -112,7 +113,19 @@
     "phonePlaceholder": "+359 88 123 4567",
     "phoneInvalidError": "Въведете валиден телефонен номер.",
     "phoneTakenError": "Този телефонен номер вече се използва.",
-    "saveFailedError": "Профилът не можа да бъде запазен. Опитайте отново."
+    "saveFailedError": "Профилът не можа да бъде запазен. Опитайте отново.",
+    "dangerZoneTitle": "Опасна зона",
+    "exportData": "Изтегли моите данни",
+    "exportDataHint": "Изтеглете копие на профила и съобщенията си като JSON файл.",
+    "exportSuccessToast": "Изтеглянето е готово за запазване или изпращане.",
+    "exportFailedTitle": "Неуспешно изтегляне",
+    "exportFailedMessage": "Данните не можаха да бъдат подготвени. Опитайте отново.",
+    "deleteAccount": "Изтрий акаунта",
+    "deleteAccountHint": "Трайно изтрива акаунта ви и всички ваши данни.",
+    "deleteAccountConfirmTitle": "Изтриване на акаунта?",
+    "deleteAccountConfirmMessage": "Това трайно изтрива акаунта, профила и съобщенията ви. Действието не може да бъде отменено.",
+    "deleteAccountFailedTitle": "Акаунтът не можа да бъде изтрит",
+    "deleteAccountFailedMessage": "Възникна грешка при изтриването на акаунта. Опитайте отново."
   },
   "common": {
     "language": "Език"

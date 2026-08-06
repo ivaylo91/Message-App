@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   StyleSheet,
   Text,
   TextInput,
@@ -14,9 +15,12 @@ import { useTranslation } from 'react-i18next';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
+import { supabase } from '../lib/supabase';
 import * as profilesData from '../data/profiles';
+import { exportAccountData } from '../data/export';
 import { Avatar } from '../components/Avatar';
 import { AppWallpaper } from '../components/AppWallpaper';
+import { useToast } from '../components/Toast';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { radii, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
@@ -30,6 +34,7 @@ const PHONE_PATTERN = /^\+?[0-9]{7,15}$/;
 export function ProfileScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const { userId } = useAuth();
+  const { showToast } = useToast();
   const insets = useSafeAreaInsets();
   const { contentWidth } = useContentWidth();
   const { colors } = useTheme();
@@ -41,6 +46,8 @@ export function ProfileScreen({ navigation }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   useEffect(() => {
     if (!userId) return;
@@ -73,6 +80,53 @@ export function ProfileScreen({ navigation }: Props) {
       setProfile(updated);
     } finally {
       setIsUploadingPhoto(false);
+    }
+  };
+
+  const onExportData = async () => {
+    if (!userId || isExporting) return;
+    setIsExporting(true);
+    try {
+      await exportAccountData(userId);
+      showToast(t('profile.exportSuccessToast'));
+    } catch {
+      Alert.alert(t('profile.exportFailedTitle'), t('profile.exportFailedMessage'));
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const onDeleteAccount = () => {
+    if (isDeletingAccount) return;
+    Alert.alert(
+      t('profile.deleteAccountConfirmTitle'),
+      t('profile.deleteAccountConfirmMessage'),
+      [
+        { text: t('profile.cancel'), style: 'cancel' },
+        {
+          text: t('profile.deleteAccount'),
+          style: 'destructive',
+          onPress: () => void confirmDeleteAccount(),
+        },
+      ],
+    );
+  };
+
+  const confirmDeleteAccount = async () => {
+    setIsDeletingAccount(true);
+    try {
+      await profilesData.deleteAccount();
+      // The account (and its session) is already gone server-side at this
+      // point - a local-only signOut just clears the on-device session so
+      // RootNavigator's auth listener drops back to the auth stack,
+      // without round-tripping to revoke a session that's already invalid.
+      await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+    } catch {
+      setIsDeletingAccount(false);
+      Alert.alert(
+        t('profile.deleteAccountFailedTitle'),
+        t('profile.deleteAccountFailedMessage'),
+      );
     }
   };
 
@@ -126,7 +180,7 @@ export function ProfileScreen({ navigation }: Props) {
           </TouchableOpacity>
           <Text style={styles.title}>{t('profile.title')}</Text>
           <TouchableOpacity
-            style={styles.saveButton}
+            style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
             onPress={() => void onSave()}
             disabled={isSaving || !canSave}
           >
@@ -202,6 +256,56 @@ export function ProfileScreen({ navigation }: Props) {
         </View>
 
         {error && <Text style={styles.error}>{error}</Text>}
+
+        <View style={styles.dangerZone}>
+          <Text style={styles.dangerZoneTitle}>{t('profile.dangerZoneTitle')}</Text>
+
+          <TouchableOpacity
+            style={styles.dangerRow}
+            onPress={() => void onExportData()}
+            disabled={isExporting}
+          >
+            {isExporting ? (
+              <ActivityIndicator size="small" color={colors.ink} />
+            ) : (
+              <FontAwesome6
+                name="file-export"
+                iconStyle="solid"
+                size={15}
+                color={colors.ink}
+                style={styles.dangerRowIcon}
+              />
+            )}
+            <View style={styles.dangerRowText}>
+              <Text style={styles.dangerRowTitle}>{t('profile.exportData')}</Text>
+              <Text style={styles.dangerRowHint}>{t('profile.exportDataHint')}</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.dangerRow}
+            onPress={onDeleteAccount}
+            disabled={isDeletingAccount}
+          >
+            {isDeletingAccount ? (
+              <ActivityIndicator size="small" color={colors.danger} />
+            ) : (
+              <FontAwesome6
+                name="trash"
+                iconStyle="solid"
+                size={15}
+                color={colors.danger}
+                style={styles.dangerRowIcon}
+              />
+            )}
+            <View style={styles.dangerRowText}>
+              <Text style={[styles.dangerRowTitle, styles.dangerRowTitleDestructive]}>
+                {t('profile.deleteAccount')}
+              </Text>
+              <Text style={styles.dangerRowHint}>{t('profile.deleteAccountHint')}</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -225,8 +329,12 @@ const makeStyles = (colors: ThemeColors) =>
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: radii.pill,
+    backgroundColor: `${colors.danger}1F`,
   },
-  cancelText: { color: colors.danger, fontSize: 15, fontWeight: '600' },
+  cancelText: { color: colors.danger, fontSize: 15, fontWeight: '800' },
   title: { fontSize: 17, fontWeight: '700', color: colors.ink },
   saveButton: {
     position: 'absolute',
@@ -235,9 +343,14 @@ const makeStyles = (colors: ThemeColors) =>
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: radii.pill,
+    backgroundColor: `${colors.sage}1F`,
   },
-  saveText: { color: colors.sage, fontSize: 15, fontWeight: '700' },
+  saveText: { color: colors.sage, fontSize: 15, fontWeight: '800' },
   saveTextDisabled: { color: colors.smoke },
+  saveButtonDisabled: { backgroundColor: `${colors.smoke}1F` },
   avatarSection: {
     alignItems: 'center',
     marginTop: spacing.xl,
@@ -276,4 +389,31 @@ const makeStyles = (colors: ThemeColors) =>
     color: colors.ink,
   },
   error: { color: colors.danger, paddingHorizontal: spacing.lg, fontSize: 13 },
+  dangerZone: {
+    marginTop: spacing.xxl,
+    paddingHorizontal: spacing.lg,
+  },
+  dangerZoneTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    color: colors.smoke,
+    marginBottom: spacing.sm,
+  },
+  dangerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.paper2,
+    borderRadius: radii.md,
+    padding: 13,
+    marginBottom: spacing.sm,
+  },
+  dangerRowIcon: { width: 22, textAlign: 'center' },
+  dangerRowText: { flex: 1, marginLeft: spacing.sm },
+  dangerRowTitle: { fontSize: 15, fontWeight: '600', color: colors.ink },
+  dangerRowTitleDestructive: { color: colors.danger },
+  dangerRowHint: { fontSize: 12.5, color: colors.smoke, marginTop: 2 },
 });
