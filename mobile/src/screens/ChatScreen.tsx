@@ -44,10 +44,13 @@ import { supabase } from '../lib/supabase';
 import * as conversationsData from '../data/conversations';
 import * as reactionsData from '../data/reactions';
 import * as mediaData from '../data/media';
+import * as moderationData from '../data/moderation';
+import type { ReportReason } from '../data/moderation';
 import { Avatar } from '../components/Avatar';
 import { AppWallpaper } from '../components/AppWallpaper';
 import { AppLogo } from '../components/AppLogo';
 import { FooterNav } from '../components/FooterNav';
+import { useToast } from '../components/Toast';
 import { useCall } from '../calling/CallContext';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { usePresence } from '../presence/PresenceContext';
@@ -353,6 +356,7 @@ interface MessageBubbleProps {
   onEdit: () => void;
   onDelete: () => void;
   onReply: () => void;
+  onReport: () => void;
   onTogglePlay: () => void;
 }
 
@@ -373,6 +377,7 @@ function MessageBubble({
   onEdit,
   onDelete,
   onReply,
+  onReport,
   onTogglePlay,
 }: MessageBubbleProps) {
   const { t } = useTranslation();
@@ -474,6 +479,13 @@ function MessageBubble({
               </Text>
             </TouchableOpacity>
           )}
+          {!isMine && !message._pending && (
+            <TouchableOpacity onPress={onReport} style={styles.pickerEmoji}>
+              <Text style={[styles.pickerActionText, styles.pickerDeleteText]}>
+                {t('chat.reportTitle')}
+              </Text>
+            </TouchableOpacity>
+          )}
         </ScrollView>
       )}
 
@@ -559,6 +571,7 @@ export function ChatScreen({ route, navigation }: Props) {
   const { t } = useTranslation();
   const { conversationId, title } = route.params;
   const { userId } = useAuth();
+  const { showToast } = useToast();
   const { isOnline } = usePresence();
   const { markConversationRead } = useUnread();
   const outbox = useOutbox();
@@ -591,6 +604,7 @@ export function ChatScreen({ route, navigation }: Props) {
   const [searchResults, setSearchResults] = useState<conversationsData.MessageSearchResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
+  const [isOtherBlocked, setIsOtherBlocked] = useState(false);
 
   const channelRef = useRef<RealtimeChannel | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1177,6 +1191,104 @@ export function ChatScreen({ route, navigation }: Props) {
     [participants, userId],
   );
 
+  useEffect(() => {
+    if (!userId || !otherParticipant) return;
+    let cancelled = false;
+    void moderationData.fetchBlockedUserIds(userId).then((blocked) => {
+      if (!cancelled) setIsOtherBlocked(blocked.has(otherParticipant.user_id));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, otherParticipant]);
+
+  const onToggleBlockOther = useCallback(() => {
+    if (!userId || !otherParticipant) return;
+    const otherName = otherParticipant.profiles.display_name || otherParticipant.profiles.email;
+    const otherId = otherParticipant.user_id;
+
+    if (isOtherBlocked) {
+      Alert.alert(t('chat.unblockConfirmTitle'), t('chat.unblockConfirmMessage', { name: otherName }), [
+        { text: t('chat.cancel'), style: 'cancel' },
+        {
+          text: t('chat.unblock'),
+          onPress: () => {
+            void moderationData
+              .unblockUser(userId, otherId)
+              .then(() => {
+                setIsOtherBlocked(false);
+                showToast(t('chat.unblockSuccessToast'));
+              })
+              .catch(() => Alert.alert(t('chat.blockFailedTitle'), t('chat.blockFailedMessage')));
+          },
+        },
+      ]);
+      return;
+    }
+
+    Alert.alert(t('chat.blockConfirmTitle'), t('chat.blockConfirmMessage', { name: otherName }), [
+      { text: t('chat.cancel'), style: 'cancel' },
+      {
+        text: t('chat.block'),
+        style: 'destructive',
+        onPress: () => {
+          void moderationData
+            .blockUser(userId, otherId)
+            .then(() => {
+              setIsOtherBlocked(true);
+              showToast(t('chat.blockSuccessToast'));
+            })
+            .catch(() => Alert.alert(t('chat.blockFailedTitle'), t('chat.blockFailedMessage')));
+        },
+      },
+    ]);
+  }, [userId, otherParticipant, isOtherBlocked, t, showToast]);
+
+  const onReportUser = useCallback(
+    (reportedUserId: string, messageId?: string) => {
+      if (!userId) return;
+      const reasons: { key: ReportReason; label: string }[] = [
+        { key: 'spam', label: t('chat.reportReasonSpam') },
+        { key: 'harassment', label: t('chat.reportReasonHarassment') },
+        { key: 'inappropriate_content', label: t('chat.reportReasonInappropriate') },
+        { key: 'other', label: t('chat.reportReasonOther') },
+      ];
+      Alert.alert(
+        t('chat.reportTitle'),
+        t('chat.reportMessage'),
+        [
+          ...reasons.map((reason) => ({
+            text: reason.label,
+            onPress: () => {
+              void moderationData
+                .reportUser(userId, reportedUserId, reason.key, { messageId })
+                .then(() => showToast(t('chat.reportSuccessToast')))
+                .catch(() => Alert.alert(t('chat.reportFailedTitle'), t('chat.reportFailedMessage')));
+            },
+          })),
+          { text: t('chat.cancel'), style: 'cancel' },
+        ],
+      );
+    },
+    [userId, t, showToast],
+  );
+
+  const onOpenChatMenu = useCallback(() => {
+    if (!otherParticipant) return;
+    Alert.alert(t('chat.menuTitle'), undefined, [
+      {
+        text: isOtherBlocked ? t('chat.unblock') : t('chat.block'),
+        style: isOtherBlocked ? 'default' : 'destructive',
+        onPress: onToggleBlockOther,
+      },
+      {
+        text: t('chat.reportTitle'),
+        onPress: () => onReportUser(otherParticipant.user_id),
+      },
+      { text: t('chat.cancel'), style: 'cancel' },
+    ]);
+  }, [otherParticipant, isOtherBlocked, onToggleBlockOther, onReportUser, t]);
+
   // Newest-first, matching `messages` (see fetchMessages) - queued
   // entries are stored oldest-first so they're reversed before being
   // stacked on top of the confirmed, server-fetched messages.
@@ -1285,6 +1397,11 @@ export function ChatScreen({ route, navigation }: Props) {
             <FontAwesome6 name="video" iconStyle="solid" size={17} color={colors.ember} />
           </TouchableOpacity>
         )}
+        {!isGroup && otherParticipant && (
+          <TouchableOpacity style={styles.callButton} onPress={onOpenChatMenu}>
+            <FontAwesome6 name="ellipsis-vertical" iconStyle="solid" size={16} color={colors.ink} />
+          </TouchableOpacity>
+        )}
         <AppLogo size={26} />
       </View>
 
@@ -1372,6 +1489,10 @@ export function ChatScreen({ route, navigation }: Props) {
               onEdit={() => onEditMessage(item)}
               onDelete={() => onDeleteMessage(item.id)}
               onReply={() => onReplyToMessage(item)}
+              onReport={() => {
+                setPickerMessageId(null);
+                onReportUser(item.sender_id, item.id);
+              }}
               onTogglePlay={() => void onTogglePlayback(item)}
             />
           )}

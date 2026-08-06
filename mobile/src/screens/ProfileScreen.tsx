@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Linking,
   StyleSheet,
   Text,
   TextInput,
@@ -29,6 +30,9 @@ import { Profile } from '../types';
 type Props = NativeStackScreenProps<AppStackParamList, 'Profile'>;
 
 const USERNAME_PATTERN = /^[a-zA-Z0-9_]{3,20}$/;
+// Hosted from docs/privacy-policy.html - requires GitHub Pages enabled on
+// this repo (Settings > Pages > Deploy from a branch > main > /docs).
+const PRIVACY_POLICY_URL = 'https://ivaylo91.github.io/Message-App/privacy-policy.html';
 const PHONE_PATTERN = /^\+?[0-9]{7,15}$/;
 
 export function ProfileScreen({ navigation }: Props) {
@@ -257,6 +261,20 @@ export function ProfileScreen({ navigation }: Props) {
 
         {error && <Text style={styles.error}>{error}</Text>}
 
+        <View style={styles.legalSection}>
+          <TouchableOpacity style={styles.legalRow} onPress={() => void Linking.openURL(PRIVACY_POLICY_URL)}>
+            <FontAwesome6
+              name="shield-halved"
+              iconStyle="solid"
+              size={13}
+              color={colors.smoke}
+              style={styles.dangerRowIcon}
+            />
+            <Text style={styles.legalRowText}>{t('profile.privacyPolicy')}</Text>
+            <FontAwesome6 name="arrow-up-right-from-square" iconStyle="solid" size={11} color={colors.smoke} />
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.dangerZone}>
           <Text style={styles.dangerZoneTitle}>{t('profile.dangerZoneTitle')}</Text>
 
@@ -389,6 +407,17 @@ const makeStyles = (colors: ThemeColors) =>
     color: colors.ink,
   },
   error: { color: colors.danger, paddingHorizontal: spacing.lg, fontSize: 13 },
+  legalSection: {
+    marginTop: spacing.xl,
+    paddingHorizontal: spacing.lg,
+  },
+  legalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: 10,
+  },
+  legalRowText: { flex: 1, fontSize: 14, color: colors.smoke, fontWeight: '600' },
   dangerZone: {
     marginTop: spacing.xxl,
     paddingHorizontal: spacing.lg,

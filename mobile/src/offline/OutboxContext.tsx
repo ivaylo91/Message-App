@@ -13,6 +13,19 @@ import * as conversationsData from '../data/conversations';
 import { loadOutbox, saveOutbox, OutboxEntry } from './outboxStorage';
 import { ReplyPreview } from '../types';
 
+// Row-level security rejections come back from PostgREST as code 42501
+// (insufficient_privilege) - distinguishing these from ordinary network
+// errors (which have no such code) is what lets flush() give up on a
+// single un-sendable message instead of retrying it forever.
+function isPermanentSendError(err: unknown): boolean {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    'code' in err &&
+    (err as { code?: string }).code === '42501'
+  );
+}
+
 interface QueueMessageInput {
   conversationId: string;
   tempId: string;
@@ -78,7 +91,21 @@ export function OutboxProvider({ children }: { children: React.ReactNode }) {
             next.replyToMessageId,
           );
           setEntries((current) => current.filter((e) => e.tempId !== next.tempId));
-        } catch {
+        } catch (err) {
+          // A row-level-security rejection (e.g. the recipient has
+          // blocked this sender - see the "blocked users cannot message
+          // each other" policy) will never succeed no matter how many
+          // times it's retried. Unlike a network failure, leaving it at
+          // the front of the queue would jam every other pending message
+          // - including ones to unrelated conversations - behind it
+          // forever, so it's dropped instead and the rest of the queue
+          // keeps moving. Silently, rather than surfacing "you've been
+          // blocked" as an error: that would out the block to the very
+          // person the block is meant to keep from finding out.
+          if (isPermanentSendError(err)) {
+            setEntries((current) => current.filter((e) => e.tempId !== next.tempId));
+            continue;
+          }
           break;
         }
       }
