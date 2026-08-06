@@ -1314,14 +1314,22 @@ export function ChatScreen({ route, navigation }: Props) {
     // winning that race left both on screen at once. Matching on content
     // here drops the pending copy the moment its real counterpart has
     // actually landed, instead of waiting on the slower response too.
+    //
+    // Deliberately not also comparing timestamps to only match messages
+    // sent *after* the pending entry was queued: m.created_at is a
+    // server timestamp and entry.createdAt is stamped from the device's
+    // own clock, and any clock skew between the two (common enough on
+    // real devices) could make a real match fail that check, leaving
+    // the pending copy stuck on screen permanently instead of just
+    // briefly - a persistent duplicate is worse than the rare cosmetic
+    // cost of a same-text repeat send hiding its own "sending..." dot.
     const stillPending = pending.filter(
       (entry) =>
         !messages.some(
           (m) =>
             m.sender_id === userId &&
             m.body === entry.body &&
-            m.reply_to_message_id === entry.replyToMessageId &&
-            new Date(m.created_at).getTime() >= new Date(entry.createdAt).getTime(),
+            m.reply_to_message_id === entry.replyToMessageId,
         ),
     );
     if (stillPending.length === 0) return messages;
