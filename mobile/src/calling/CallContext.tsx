@@ -22,14 +22,37 @@ import * as conversationsData from '../data/conversations';
 import { consumeAutoAnswer } from './autoAnswerFlag';
 import type { CallStatus as CallLogStatus } from '../types';
 
-// STUN only (no TURN) - free, no account needed, and enough for most
-// home/office networks. Some restrictive networks (symmetric NAT, some
-// carriers) won't be able to connect; adding a TURN server later is a
-// config-only change here, not a rewrite.
-const ICE_SERVERS = [
+// Free, no-account STUN - enough for most home/office networks, but
+// restrictive ones (symmetric NAT, some carriers) can't complete a
+// direct peer connection through it and need a relay. getIceServers()
+// below adds Cloudflare TURN servers on top of this when configured
+// (see supabase/functions/get-turn-credentials) - this list alone is
+// just the always-available fallback.
+const STUN_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
   { urls: 'stun:stun1.l.google.com:19302' },
 ];
+
+// Fetches short-lived Cloudflare TURN credentials for this call and adds
+// them to the STUN baseline. Best-effort: if the edge function isn't
+// deployed, isn't configured with Cloudflare secrets yet, or the request
+// just fails, this falls back to STUN-only - the same behavior as
+// before TURN existed - rather than blocking the call.
+async function getIceServers(): Promise<
+  { urls: string | string[]; username?: string; credential?: string }[]
+> {
+  try {
+    const { data, error } = await supabase.functions.invoke('get-turn-credentials');
+    // Cloudflare's generate-ice-servers response is itself an array of
+    // entries (one STUN, one TURN) - spread it in rather than nesting it
+    // as a single array-valued entry, which RTCPeerConnection would
+    // reject/ignore.
+    if (error || !Array.isArray(data?.iceServers)) return STUN_SERVERS;
+    return [...STUN_SERVERS, ...data.iceServers];
+  } catch {
+    return STUN_SERVERS;
+  }
+}
 
 // How long an outgoing call keeps ringing before giving up on its own -
 // matches the offer-resend window below, since there's no point ringing
@@ -199,8 +222,10 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  function createPeerConnection(): RTCPeerConnection {
-    const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+  function createPeerConnection(
+    iceServers: { urls: string | string[]; username?: string; credential?: string }[],
+  ): RTCPeerConnection {
+    const pc = new RTCPeerConnection({ iceServers });
 
     // react-native-webrtc's on* setters are typed against a generic
     // Event<string>, not the specific RTCIceCandidateEvent/RTCTrackEvent
@@ -356,14 +381,15 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       setStatus('outgoing');
 
       try {
-        const [ownProfile, stream] = await Promise.all([
+        const [ownProfile, stream, iceServers] = await Promise.all([
           profilesData.fetchProfile(userId),
           mediaDevices.getUserMedia({ audio: true, video: { facingMode: 'user' } }),
+          getIceServers(),
         ]);
         localStreamRef.current = stream;
         setLocalStream(stream);
 
-        const pc = createPeerConnection();
+        const pc = createPeerConnection(iceServers);
         pcRef.current = pc;
         stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
@@ -438,11 +464,14 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const stream = await mediaDevices.getUserMedia({ audio: true, video: { facingMode: 'user' } });
+    const [stream, iceServers] = await Promise.all([
+      mediaDevices.getUserMedia({ audio: true, video: { facingMode: 'user' } }),
+      getIceServers(),
+    ]);
     localStreamRef.current = stream;
     setLocalStream(stream);
 
-    const pc = createPeerConnection();
+    const pc = createPeerConnection(iceServers);
     pcRef.current = pc;
     stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
