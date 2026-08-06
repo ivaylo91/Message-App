@@ -13,6 +13,8 @@ import {
   attachNotificationListeners,
   requestPermissionAndRegisterToken,
 } from '../notifications';
+import { useUpdateGate } from '../updateGate/useUpdateGate';
+import { UpdateRequiredScreen } from '../screens/UpdateRequiredScreen';
 import { WelcomeScreen } from '../screens/WelcomeScreen';
 import { LoginScreen } from '../screens/LoginScreen';
 import { RegisterScreen } from '../screens/RegisterScreen';
@@ -98,6 +100,7 @@ function AppNavigator() {
 export function RootNavigator() {
   const { session, userId, isLoading } = useAuth();
   const { colors, scheme } = useTheme();
+  const { isChecking: isCheckingUpdate, updateRequired } = useUpdateGate();
 
   useEffect(() => attachNotificationListeners(), []);
 
@@ -108,7 +111,7 @@ export function RootNavigator() {
     });
   }, [userId]);
 
-  if (isLoading) {
+  if (isLoading || isCheckingUpdate) {
     return (
       <View
         style={{
@@ -121,6 +124,13 @@ export function RootNavigator() {
         <ActivityIndicator color={colors.ember} />
       </View>
     );
+  }
+
+  // Blocks the entire app, auth stack included - there's no session to
+  // check yet at this point, and even a signed-out person on a version
+  // this old shouldn't be let into Login/Register.
+  if (updateRequired) {
+    return <UpdateRequiredScreen />;
   }
 
   const navTheme = {

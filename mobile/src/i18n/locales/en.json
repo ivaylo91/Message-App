@@ -191,5 +191,10 @@
     "noPhotos": "No photos shared yet",
     "noFiles": "No files shared yet",
     "voiceMessage": "Voice message"
+  },
+  "updateRequired": {
+    "title": "Update required",
+    "subtitle": "A new version of Hearth is available and required to continue. Please update to keep using the app.",
+    "action": "Update now"
   }
 }
