@@ -74,6 +74,23 @@ export function OutboxProvider({ children }: { children: React.ReactNode }) {
     void saveOutbox(entries);
   }, [entries]);
 
+  // Removes an entry from both the ref and the React state that mirrors
+  // it, synchronously and in that order. This matters because flush()'s
+  // loop re-checks entriesRef.current on its very next iteration with no
+  // await in between - entriesRef.current = entries above only runs on
+  // this component's *next render*, which React schedules asynchronously
+  // and hasn't happened yet at that point. Without updating the ref here
+  // directly, the loop would see the just-sent entry still sitting in
+  // the stale ref and send it again - which is exactly what was
+  // happening: every message got sent twice, about a second apart (the
+  // time it took the *second* send's own network round trip to give a
+  // render a chance to happen and catch the ref up), confirmed against
+  // real duplicate rows in the messages table.
+  function removeFromQueue(tempId: string) {
+    entriesRef.current = entriesRef.current.filter((e) => e.tempId !== tempId);
+    setEntries(entriesRef.current);
+  }
+
   const flush = useCallback(async () => {
     if (flushingRef.current || !userId) return;
     flushingRef.current = true;
@@ -90,7 +107,7 @@ export function OutboxProvider({ children }: { children: React.ReactNode }) {
             next.body,
             next.replyToMessageId,
           );
-          setEntries((current) => current.filter((e) => e.tempId !== next.tempId));
+          removeFromQueue(next.tempId);
         } catch (err) {
           // A row-level-security rejection (e.g. the recipient has
           // blocked this sender - see the "blocked users cannot message
@@ -103,7 +120,7 @@ export function OutboxProvider({ children }: { children: React.ReactNode }) {
           // blocked" as an error: that would out the block to the very
           // person the block is meant to keep from finding out.
           if (isPermanentSendError(err)) {
-            setEntries((current) => current.filter((e) => e.tempId !== next.tempId));
+            removeFromQueue(next.tempId);
             continue;
           }
           break;
@@ -125,7 +142,16 @@ export function OutboxProvider({ children }: { children: React.ReactNode }) {
 
   const queueMessage = useCallback(
     (input: QueueMessageInput) => {
-      setEntries((current) => [...current, { ...input, createdAt: new Date().toISOString() }]);
+      // Same reasoning as removeFromQueue: flush() is about to read
+      // entriesRef.current immediately (no render in between), so the
+      // new entry has to be there synchronously rather than waiting on
+      // the next render to update the ref - otherwise flush() can start
+      // its loop seeing the entry not yet added at all and return
+      // without sending anything, leaving the message stuck pending
+      // until some unrelated later trigger (e.g. a network state
+      // change) calls flush() again.
+      entriesRef.current = [...entriesRef.current, { ...input, createdAt: new Date().toISOString() }];
+      setEntries(entriesRef.current);
       void flush();
     },
     [flush],
