@@ -9,9 +9,10 @@ interface AvatarProps {
   name: string;
   avatarPath?: string | null;
   size?: number;
-  // Undefined hides the dot entirely (e.g. group avatars, where there's
-  // no single person's presence to show); true/false renders it green
-  // or grey.
+  // Only true shows the dot (green, "online now"); undefined/false show
+  // nothing - offline is communicated via last-seen text elsewhere
+  // instead of a dot, since a permanently-present grey dot reads as a
+  // status rather than an absence of one.
   online?: boolean;
 }
 
@@ -66,7 +67,7 @@ export function Avatar({ name, avatarPath, size = 48, online }: AvatarProps) {
           </Text>
         )}
       </View>
-      {online !== undefined && (
+      {online && (
         <View
           style={[
             styles.statusDot,
@@ -75,7 +76,7 @@ export function Avatar({ name, avatarPath, size = 48, online }: AvatarProps) {
               height: dotSize,
               borderRadius: dotSize / 2,
               borderWidth: Math.max(2, size * 0.045),
-              backgroundColor: online ? colors.sage : colors.smoke,
+              backgroundColor: colors.sage,
             },
           ]}
         />

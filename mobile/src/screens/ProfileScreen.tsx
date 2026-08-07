@@ -20,10 +20,8 @@ import type { AppStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
 import { supabase } from '../lib/supabase';
 import * as profilesData from '../data/profiles';
-import { exportAccountData } from '../data/export';
 import { Avatar } from '../components/Avatar';
 import { AppWallpaper } from '../components/AppWallpaper';
-import { useToast } from '../components/Toast';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { BUBBLE_GRADIENT_PRESETS, radii, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
@@ -40,7 +38,6 @@ const PHONE_PATTERN = /^\+?[0-9]{7,15}$/;
 export function ProfileScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const { userId } = useAuth();
-  const { showToast } = useToast();
   const insets = useSafeAreaInsets();
   const { contentWidth } = useContentWidth();
   const { colors, scheme, bubbleGradientId, setBubbleGradientId } = useTheme();
@@ -52,7 +49,6 @@ export function ProfileScreen({ navigation }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   useEffect(() => {
@@ -86,19 +82,6 @@ export function ProfileScreen({ navigation }: Props) {
       setProfile(updated);
     } finally {
       setIsUploadingPhoto(false);
-    }
-  };
-
-  const onExportData = async () => {
-    if (!userId || isExporting) return;
-    setIsExporting(true);
-    try {
-      await exportAccountData(userId);
-      showToast(t('profile.exportSuccessToast'));
-    } catch {
-      Alert.alert(t('profile.exportFailedTitle'), t('profile.exportFailedMessage'));
-    } finally {
-      setIsExporting(false);
     }
   };
 
@@ -315,28 +298,6 @@ export function ProfileScreen({ navigation }: Props) {
 
         <View style={styles.dangerZone}>
           <Text style={styles.dangerZoneTitle}>{t('profile.dangerZoneTitle')}</Text>
-
-          <TouchableOpacity
-            style={styles.dangerRow}
-            onPress={() => void onExportData()}
-            disabled={isExporting}
-          >
-            {isExporting ? (
-              <ActivityIndicator size="small" color={colors.ink} />
-            ) : (
-              <FontAwesome6
-                name="file-export"
-                iconStyle="solid"
-                size={15}
-                color={colors.ink}
-                style={styles.dangerRowIcon}
-              />
-            )}
-            <View style={styles.dangerRowText}>
-              <Text style={styles.dangerRowTitle}>{t('profile.exportData')}</Text>
-              <Text style={styles.dangerRowHint}>{t('profile.exportDataHint')}</Text>
-            </View>
-          </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.dangerRow}
