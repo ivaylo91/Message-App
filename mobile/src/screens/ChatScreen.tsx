@@ -183,19 +183,22 @@ function ReplyQuote({
     : reply.body || attachmentPreviewText(reply.attachment_type, reply.attachment_name, t) || '';
 
   return (
-    <View style={styles.replyQuote}>
-      <Text
-        style={isMine ? styles.replyQuoteSenderMine : styles.replyQuoteSenderTheirs}
-        numberOfLines={1}
-      >
-        {replySenderLabel(reply, userId, t)}
-      </Text>
-      <Text
-        style={isMine ? styles.replyQuoteTextMine : styles.replyQuoteTextTheirs}
-        numberOfLines={1}
-      >
-        {snippet}
-      </Text>
+    <View style={[styles.replyQuote, isMine ? styles.replyQuoteMine : styles.replyQuoteTheirs]}>
+      <View style={[styles.replyQuoteBar, isMine ? styles.replyQuoteBarMine : styles.replyQuoteBarTheirs]} />
+      <View style={styles.replyQuoteContent}>
+        <Text
+          style={isMine ? styles.replyQuoteSenderMine : styles.replyQuoteSenderTheirs}
+          numberOfLines={1}
+        >
+          {replySenderLabel(reply, userId, t)}
+        </Text>
+        <Text
+          style={isMine ? styles.replyQuoteTextMine : styles.replyQuoteTextTheirs}
+          numberOfLines={1}
+        >
+          {snippet}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -1784,10 +1787,21 @@ const makeStyles = (colors: ThemeColors) =>
   bubbleTextTheirs: { color: colors.ink, fontSize: 14.5, lineHeight: 20 },
   editedTag: { fontSize: 10, color: colors.smoke, marginTop: 2 },
   replyQuote: {
-    paddingHorizontal: 2,
-    paddingVertical: 2,
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: 7,
+    paddingVertical: 5,
+    paddingRight: 8,
     marginBottom: 6,
+    borderRadius: 8,
+    overflow: 'hidden',
   },
+  replyQuoteMine: { backgroundColor: 'rgba(255, 255, 255, 0.16)' },
+  replyQuoteTheirs: { backgroundColor: colors.line },
+  replyQuoteBar: { width: 3, borderRadius: 2 },
+  replyQuoteBarMine: { backgroundColor: 'rgba(255, 255, 255, 0.7)' },
+  replyQuoteBarTheirs: { backgroundColor: colors.ember },
+  replyQuoteContent: { flex: 1 },
   replyQuoteSenderMine: { fontSize: 12, fontWeight: '700', color: colors.white },
   replyQuoteSenderTheirs: { fontSize: 12, fontWeight: '700', color: colors.ember },
   replyQuoteTextMine: { fontSize: 12.5, color: 'rgba(255, 255, 255, 0.85)' },
