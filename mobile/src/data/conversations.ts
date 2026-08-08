@@ -91,16 +91,29 @@ export async function createConversation(
 const MESSAGE_SELECT =
   '*, reply_to:reply_to_message_id(id, body, media_path, attachment_type, attachment_name, sender_id, deleted_at, profiles(*))';
 
+// ChatScreen's page size for both the initial load and each older page it
+// fetches as the user scrolls up - see loadMoreMessages there.
+export const MESSAGE_PAGE_SIZE = 50;
+
+// `before` pages in older history: pass the created_at of the oldest
+// message currently loaded to get the next 50 before it. Cursor-based
+// (like fetchMediaMessages) rather than offset-based, so it stays correct
+// under concurrent inserts.
 export async function fetchMessages(
   conversationId: string,
+  before?: string,
 ): Promise<Message[]> {
-  const { data, error } = await supabase
+  let query = supabase
     .from('messages')
     .select(MESSAGE_SELECT)
     .eq('conversation_id', conversationId)
-    .is('deleted_at', null)
+    .is('deleted_at', null);
+
+  if (before) query = query.lt('created_at', before);
+
+  const { data, error } = await query
     .order('created_at', { ascending: false })
-    .limit(50);
+    .limit(MESSAGE_PAGE_SIZE);
 
   if (error) throw error;
   return data as unknown as Message[];
@@ -192,10 +205,10 @@ export async function fetchMediaMessages(
 }
 
 // Loads a fresh window of messages centered on a specific message (a
-// search result the user tapped), for when it's further back than the
-// most recent 50 messages ChatScreen normally keeps loaded - the app
-// doesn't paginate history otherwise, so this is the one place a jump
-// to an arbitrary point in the conversation needs to fetch around it.
+// search result the user tapped) that's further back than what's
+// currently loaded - jumping straight there and fetching around it is
+// far cheaper than scrolling ChatScreen's normal page-by-page history
+// loading all the way back to it.
 export async function fetchMessagesAround(
   conversationId: string,
   anchorMessageId: string,

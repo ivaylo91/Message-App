@@ -587,6 +587,8 @@ export function ChatScreen({ route, navigation }: Props) {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const bubbleMaxWidth = Math.min(windowWidth * 0.8, MAX_BUBBLE_WIDTH);
   const [messages, setMessages] = useState<LocalMessage[]>([]);
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  const [isLoadingMoreMessages, setIsLoadingMoreMessages] = useState(false);
   const [reactions, setReactions] = useState<MessageReaction[]>([]);
   const [participants, setParticipants] = useState<ConversationParticipant[]>(
     [],
@@ -734,15 +736,34 @@ export function ChatScreen({ route, navigation }: Props) {
 
   useFocusEffect(
     useCallback(() => {
-      void conversationsData
-        .fetchMessages(conversationId)
-        .then((fetched) => setMessages(fetched));
+      setHasMoreMessages(true);
+      void conversationsData.fetchMessages(conversationId).then((fetched) => {
+        setMessages(fetched);
+        setHasMoreMessages(fetched.length === conversationsData.MESSAGE_PAGE_SIZE);
+      });
       void reactionsData
         .fetchReactions(conversationId)
         .then((fetched) => setReactions(fetched));
       markRead();
     }, [conversationId, markRead]),
   );
+
+  // Inverted FlatList's onEndReached fires when the user scrolls up to
+  // the oldest end of what's currently loaded - fetch the next page
+  // before it and append (messages is newest-first, so older history
+  // goes at the end of the array).
+  const loadMoreMessages = useCallback(async () => {
+    if (isLoadingMoreMessages || !hasMoreMessages || messages.length === 0) return;
+    setIsLoadingMoreMessages(true);
+    try {
+      const oldest = messages[messages.length - 1];
+      const older = await conversationsData.fetchMessages(conversationId, oldest.created_at);
+      setMessages((current) => [...current, ...older]);
+      if (older.length < conversationsData.MESSAGE_PAGE_SIZE) setHasMoreMessages(false);
+    } finally {
+      setIsLoadingMoreMessages(false);
+    }
+  }, [conversationId, hasMoreMessages, isLoadingMoreMessages, messages]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1501,6 +1522,13 @@ export function ChatScreen({ route, navigation }: Props) {
           keyExtractor={(item) => item.id}
           inverted
           ListHeaderComponent={otherTyping ? TypingBubble : null}
+          onEndReached={() => void loadMoreMessages()}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={
+            isLoadingMoreMessages ? (
+              <ActivityIndicator style={styles.historyLoading} color={colors.smoke} />
+            ) : null
+          }
           onScrollToIndexFailed={(info) => {
             setTimeout(
               () => flatListRef.current?.scrollToIndex({ index: info.index, animated: true }),
@@ -1776,6 +1804,7 @@ const makeStyles = (colors: ThemeColors) =>
   bubblePending: { opacity: 0.55 },
   bubbleHighlighted: { borderWidth: 3, borderColor: colors.sage },
   spinner: { marginTop: spacing.xl },
+  historyLoading: { marginVertical: spacing.md },
   senderLabel: {
     fontSize: 11.5,
     fontWeight: '700',
@@ -1801,7 +1830,14 @@ const makeStyles = (colors: ThemeColors) =>
   replyQuoteBar: { width: 3, borderRadius: 2 },
   replyQuoteBarMine: { backgroundColor: 'rgba(255, 255, 255, 0.7)' },
   replyQuoteBarTheirs: { backgroundColor: colors.ember },
-  replyQuoteContent: { flex: 1 },
+  // Deliberately not flex:1 - this sits in a shrink-to-fit bubble (sized
+  // to its widest content, capped by bubbleMaxWidth), and a flex:1 child
+  // of a row whose own container isn't already a resolved width collapses
+  // to ~0 rather than sharing the row's space, which was truncating the
+  // quoted snippet down to just an ellipsis. Letting it size naturally
+  // (like bubbleTextMine/Theirs below already do) lets the outer
+  // maxWidth cap do the truncating only when actually necessary.
+  replyQuoteContent: {},
   replyQuoteSenderMine: { fontSize: 12, fontWeight: '700', color: colors.white },
   replyQuoteSenderTheirs: { fontSize: 12, fontWeight: '700', color: colors.ember },
   replyQuoteTextMine: { fontSize: 12.5, color: 'rgba(255, 255, 255, 0.85)' },
