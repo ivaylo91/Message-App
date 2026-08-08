@@ -24,7 +24,6 @@ WHAT YOU CAN DO
 • Switch between light and dark themes, and between English and Bulgarian
 
 YOUR DATA, YOUR CALL
-• Download a full copy of your profile and message history any time
 • Permanently delete your account and everything tied to it, whenever you want — no waiting period
 • Block or report anyone who's bothering you, right from the conversation
 
