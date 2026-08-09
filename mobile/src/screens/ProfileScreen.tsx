@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   Linking,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -22,6 +23,7 @@ import { supabase } from '../lib/supabase';
 import * as profilesData from '../data/profiles';
 import { Avatar } from '../components/Avatar';
 import { AppWallpaper } from '../components/AppWallpaper';
+import { PasswordField } from '../components/PasswordField';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { BUBBLE_GRADIENT_PRESETS, radii, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
@@ -50,6 +52,9 @@ export function ProfileScreen({ navigation }: Props) {
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [isPasswordPromptVisible, setIsPasswordPromptVisible] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deletePasswordError, setDeletePasswordError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!userId) return;
@@ -95,15 +100,41 @@ export function ProfileScreen({ navigation }: Props) {
         {
           text: t('profile.deleteAccount'),
           style: 'destructive',
-          onPress: () => void confirmDeleteAccount(),
+          // Deletion is irreversible, so it's gated behind re-entering the
+          // password rather than firing straight off this confirm tap - a
+          // stolen/left-unlocked device shouldn't be enough on its own.
+          onPress: () => setIsPasswordPromptVisible(true),
         },
       ],
     );
   };
 
-  const confirmDeleteAccount = async () => {
+  const onCancelPasswordPrompt = () => {
+    if (isDeletingAccount) return;
+    setIsPasswordPromptVisible(false);
+    setDeletePassword('');
+    setDeletePasswordError(null);
+  };
+
+  const onSubmitDeletePassword = async () => {
+    if (!profile?.email || isDeletingAccount || !deletePassword) return;
+    setDeletePasswordError(null);
     setIsDeletingAccount(true);
     try {
+      // Re-authenticating (rather than checking the password some other
+      // way) is the step-up check itself - it fails the same way a normal
+      // login would if the password's wrong, and refreshes this device's
+      // session as a side effect if it's right.
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email: profile.email,
+        password: deletePassword,
+      });
+      if (authError) {
+        setDeletePasswordError(t('profile.deleteAccountWrongPassword'));
+        setIsDeletingAccount(false);
+        return;
+      }
+
       await profilesData.deleteAccount();
       // The account (and its session) is already gone server-side at this
       // point - a local-only signOut just clears the on-device session so
@@ -112,6 +143,8 @@ export function ProfileScreen({ navigation }: Props) {
       await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
     } catch {
       setIsDeletingAccount(false);
+      setIsPasswordPromptVisible(false);
+      setDeletePassword('');
       Alert.alert(
         t('profile.deleteAccountFailedTitle'),
         t('profile.deleteAccountFailedMessage'),
@@ -325,6 +358,52 @@ export function ProfileScreen({ navigation }: Props) {
         </View>
         </ScrollView>
       </View>
+
+      <Modal
+        visible={isPasswordPromptVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={onCancelPasswordPrompt}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>{t('profile.deleteAccountPasswordTitle')}</Text>
+            <Text style={styles.modalMessage}>{t('profile.deleteAccountPasswordMessage')}</Text>
+            <PasswordField
+              label={t('auth.login.passwordLabel')}
+              value={deletePassword}
+              onChangeText={(text) => {
+                setDeletePassword(text);
+                setDeletePasswordError(null);
+              }}
+            />
+            {deletePasswordError && <Text style={styles.error}>{deletePasswordError}</Text>}
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={onCancelPasswordPrompt}
+                disabled={isDeletingAccount}
+              >
+                <Text style={styles.modalCancelText}>{t('profile.cancel')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalDeleteButton,
+                  !deletePassword && styles.modalDeleteButtonDisabled,
+                ]}
+                onPress={() => void onSubmitDeletePassword()}
+                disabled={isDeletingAccount || !deletePassword}
+              >
+                {isDeletingAccount ? (
+                  <ActivityIndicator size="small" color={colors.white} />
+                ) : (
+                  <Text style={styles.modalDeleteText}>{t('profile.deleteAccount')}</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -466,4 +545,42 @@ const makeStyles = (colors: ThemeColors) =>
   dangerRowTitle: { fontSize: 15, fontWeight: '600', color: colors.ink },
   dangerRowTitleDestructive: { color: colors.danger },
   dangerRowHint: { fontSize: 12.5, color: colors.smoke, marginTop: 2 },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.lg,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 400,
+    backgroundColor: colors.paper,
+    borderRadius: radii.lg,
+    padding: spacing.lg,
+  },
+  modalTitle: { fontSize: 17, fontWeight: '700', color: colors.ink, marginBottom: 6 },
+  modalMessage: { fontSize: 13.5, color: colors.smoke, marginBottom: spacing.lg, lineHeight: 19 },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  modalCancelButton: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 12,
+    borderRadius: radii.md,
+  },
+  modalCancelText: { color: colors.smoke, fontSize: 15, fontWeight: '700' },
+  modalDeleteButton: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 12,
+    borderRadius: radii.md,
+    backgroundColor: colors.danger,
+    minWidth: 96,
+    alignItems: 'center',
+  },
+  modalDeleteButtonDisabled: { opacity: 0.5 },
+  modalDeleteText: { color: colors.white, fontSize: 15, fontWeight: '700' },
 });

@@ -165,6 +165,9 @@
     "deleteAccountHint": "Permanently delete your account and all your data.",
     "deleteAccountConfirmTitle": "Delete your account?",
     "deleteAccountConfirmMessage": "This permanently deletes your account, profile, and messages. This cannot be undone.",
+    "deleteAccountPasswordTitle": "Confirm your password",
+    "deleteAccountPasswordMessage": "For your security, enter your password to permanently delete your account.",
+    "deleteAccountWrongPassword": "Incorrect password. Try again.",
     "deleteAccountFailedTitle": "Couldn't delete account",
     "deleteAccountFailedMessage": "Something went wrong deleting your account. Try again."
   },

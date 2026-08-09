@@ -165,6 +165,9 @@
     "deleteAccountHint": "Трайно изтрива акаунта ви и всички ваши данни.",
     "deleteAccountConfirmTitle": "Изтриване на акаунта?",
     "deleteAccountConfirmMessage": "Това трайно изтрива акаунта, профила и съобщенията ви. Действието не може да бъде отменено.",
+    "deleteAccountPasswordTitle": "Потвърдете паролата си",
+    "deleteAccountPasswordMessage": "За сигурност въведете паролата си, за да изтриете трайно акаунта си.",
+    "deleteAccountWrongPassword": "Грешна парола. Опитайте отново.",
     "deleteAccountFailedTitle": "Акаунтът не можа да бъде изтрит",
     "deleteAccountFailedMessage": "Възникна грешка при изтриването на акаунта. Опитайте отново."
   },
