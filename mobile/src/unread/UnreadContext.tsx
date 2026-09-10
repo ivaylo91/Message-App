@@ -9,10 +9,16 @@ import React, {
 import { useAuth } from '../auth/AuthContext';
 import { useMessageStream } from '../messages/MessageStreamContext';
 import * as conversationsData from '../data/conversations';
+import { summarizeUnread } from '../utils/unread';
 
 interface UnreadContextValue {
   unreadCounts: Record<string, number>;
+  // Unread messages in total - the number on the footer's bell.
   totalUnread: number;
+  // How many conversations have anything unread - the number on the
+  // footer's chats tab. Kept distinct so the two badges aren't just the
+  // same figure printed twice.
+  unreadConversationCount: number;
   markConversationRead: (conversationId: string) => void;
   refresh: () => Promise<void>;
 }
@@ -20,6 +26,7 @@ interface UnreadContextValue {
 const UnreadContext = createContext<UnreadContextValue>({
   unreadCounts: {},
   totalUnread: 0,
+  unreadConversationCount: 0,
   markConversationRead: () => {},
   refresh: async () => {},
 });
@@ -77,14 +84,20 @@ export function UnreadProvider({ children }: { children: React.ReactNode }) {
     [userId],
   );
 
-  const totalUnread = useMemo(
-    () => Object.values(unreadCounts).reduce((sum, count) => sum + count, 0),
+  const { totalMessages, conversationsWithUnread } = useMemo(
+    () => summarizeUnread(unreadCounts),
     [unreadCounts],
   );
 
   const value = useMemo<UnreadContextValue>(
-    () => ({ unreadCounts, totalUnread, markConversationRead, refresh }),
-    [unreadCounts, totalUnread, markConversationRead, refresh],
+    () => ({
+      unreadCounts,
+      totalUnread: totalMessages,
+      unreadConversationCount: conversationsWithUnread,
+      markConversationRead,
+      refresh,
+    }),
+    [unreadCounts, totalMessages, conversationsWithUnread, markConversationRead, refresh],
   );
 
   return <UnreadContext.Provider value={value}>{children}</UnreadContext.Provider>;

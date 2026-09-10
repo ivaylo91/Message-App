@@ -245,6 +245,7 @@
     "logoutConfirmTitle": "Изход от профила?",
     "logoutConfirmMessage": "Ще трябва да влезете отново, за да четете съобщенията си.",
     "logoutConfirm": "Изход",
+    "a11yUnread": "{{label}}, {{count}} непрочетени",
     "cancel": "Отказ"
   },
   "call": {

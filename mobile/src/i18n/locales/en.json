@@ -245,6 +245,7 @@
     "logoutConfirmTitle": "Log out?",
     "logoutConfirmMessage": "You'll need to sign in again to read your messages.",
     "logoutConfirm": "Log out",
+    "a11yUnread": "{{label}}, {{count}} unread",
     "cancel": "Cancel"
   },
   "call": {

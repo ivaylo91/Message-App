@@ -32,7 +32,7 @@ export function FooterNav({ active }: FooterNavProps) {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const { logout } = useAuth();
-  const { totalUnread } = useUnread();
+  const { totalUnread, unreadConversationCount } = useUnread();
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
@@ -48,13 +48,18 @@ export function FooterNav({ active }: FooterNavProps) {
       icon: 'bell',
       label: t('footer.notifications'),
       onPress: () => navigation.navigate('Conversations'),
+      // Unread *messages*, so the bell answers "how much is waiting for
+      // me" the way Messenger's does.
+      badgeCount: totalUnread,
     },
     {
       key: 'chats',
       icon: 'comment',
       label: t('footer.chats'),
       onPress: () => navigation.navigate('Conversations'),
-      badgeCount: totalUnread,
+      // Unread *conversations*, not messages - otherwise this would be
+      // the identical number to the bell, printed twice, side by side.
+      badgeCount: unreadConversationCount,
     },
     {
       key: 'group',
@@ -88,7 +93,13 @@ export function FooterNav({ active }: FooterNavProps) {
             onPress={item.onPress}
             activeOpacity={0.6}
             accessibilityRole="button"
-            accessibilityLabel={item.label}
+            // Without the count folded in, a screen reader announces
+            // "Notifications" and says nothing about the 12 sitting on it.
+            accessibilityLabel={
+              item.badgeCount
+                ? t('footer.a11yUnread', { label: item.label, count: item.badgeCount })
+                : item.label
+            }
             accessibilityState={{ selected: isActive }}
           >
             <View style={styles.iconWrap}>
