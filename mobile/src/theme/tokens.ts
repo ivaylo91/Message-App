@@ -53,6 +53,11 @@ export const darkColors: ThemeColors = {
   danger: '#FF6B60',
 };
 
+// 'system' defers to the OS setting, which is what this app did
+// exclusively before the override existed - and remains the default, so
+// an existing install behaves exactly as it did.
+export type ThemePreference = 'system' | 'light' | 'dark';
+
 export type ThemeScheme = 'light' | 'dark';
 
 export interface BubbleGradientPair {

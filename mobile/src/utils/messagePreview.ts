@@ -92,3 +92,80 @@ export function callStatusPreviewText(
       return null;
   }
 }
+
+// True when both timestamps fall on the same local calendar day - what
+// decides whether a message starts a new day in the chat and needs a
+// divider above it.
+export function isSameDay(isoA: string, isoB: string): boolean {
+  const a = new Date(isoA);
+  const b = new Date(isoB);
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+// Wall-clock time for a message bubble. Goes through Intl so 12h/24h
+// follows the reader's locale (3:45 PM vs 15:45) rather than being
+// hardcoded to one of them - Hermes bundles Intl on both platforms for
+// this React Native version. The fallback is a plain 24h clock, so a
+// runtime without Intl degrades instead of throwing inside every bubble.
+export function formatMessageTime(isoDate: string, locale?: string): string {
+  const date = new Date(isoDate);
+  try {
+    return new Intl.DateTimeFormat(locale, {
+      hour: 'numeric',
+      minute: '2-digit',
+    }).format(date);
+  } catch {
+    return `${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
+  }
+}
+
+// Label for a day divider: "Today"/"Yesterday" for the two most recent
+// days, otherwise the date - with the year included only when it isn't
+// the current one, which is how people actually write dates.
+export function formatMessageDay(
+  isoDate: string,
+  t: TFunction,
+  locale?: string,
+  now: Date = new Date(),
+): string {
+  const date = new Date(isoDate);
+  const startOfDay = (d: Date) =>
+    new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const daysAgo = Math.round((startOfDay(now) - startOfDay(date)) / 86_400_000);
+
+  if (daysAgo === 0) return t('chat.today');
+  if (daysAgo === 1) return t('chat.yesterday');
+
+  try {
+    return new Intl.DateTimeFormat(locale, {
+      day: 'numeric',
+      month: 'long',
+      ...(date.getFullYear() === now.getFullYear() ? {} : { year: 'numeric' }),
+    }).format(date);
+  } catch {
+    return isoDate.slice(0, 10);
+  }
+}
+
+// Which messages open a new calendar day, and so need a divider above
+// them. Takes the list newest-first, the order ChatScreen's inverted
+// FlatList holds - so the message rendered *above* index i is i + 1, and
+// a message opens a day when that older neighbour fell on a different
+// one. The oldest loaded message always opens a day, so scrolled-back
+// history never begins mid-day with no header.
+export function messageIdsStartingADay(
+  newestFirst: { id: string; created_at: string }[],
+): Set<string> {
+  const ids = new Set<string>();
+  for (let i = 0; i < newestFirst.length; i++) {
+    const older = newestFirst[i + 1];
+    if (!older || !isSameDay(newestFirst[i].created_at, older.created_at)) {
+      ids.add(newestFirst[i].id);
+    }
+  }
+  return ids;
+}

@@ -19,6 +19,13 @@ export async function fetchConversations(userId: string): Promise<Conversation[]
     .select(
       `${CONVERSATION_SELECT}, messages(id, body, media_path, attachment_type, attachment_name, attachment_duration_ms, call_status, created_at, sender_id)`,
     )
+    // Filters the embedded messages, not the conversations themselves
+    // (that would need !inner) - so a conversation whose only messages
+    // are deleted still appears, just with an empty preview. Without
+    // this, deleting the newest message left the list previewing it:
+    // the embedded select takes the single most recent row regardless of
+    // deleted_at, unlike fetchMessages which has always filtered.
+    .is('messages.deleted_at', null)
     .order('updated_at', { ascending: false })
     .order('created_at', { ascending: false, referencedTable: 'messages' })
     .limit(1, { referencedTable: 'messages' });
@@ -362,6 +369,54 @@ export async function deleteMessage(messageId: string): Promise<void> {
     .from('messages')
     .update({ deleted_at: new Date().toISOString() })
     .eq('id', messageId);
+
+  if (error) throw error;
+}
+
+// Group management goes through SECURITY DEFINER RPCs rather than direct
+// table writes, for the same reason create_conversation does: whether
+// this user may rename a group, or add/remove somebody else, depends on
+// their role in a *different* row, which simple per-row RLS can't check.
+// See 20260910_add_group_management.sql - the RPCs enforce that only an
+// admin can rename or add, that anyone may remove themselves (leaving),
+// and that a group is never left without an admin.
+
+export async function renameConversation(
+  conversationId: string,
+  name: string,
+): Promise<void> {
+  const { error } = await supabase.rpc('rename_conversation', {
+    p_conversation_id: conversationId,
+    p_name: name,
+  });
+
+  if (error) throw error;
+}
+
+export async function addConversationParticipants(
+  conversationId: string,
+  userIds: string[],
+): Promise<void> {
+  if (userIds.length === 0) return;
+
+  const { error } = await supabase.rpc('add_conversation_participants', {
+    p_conversation_id: conversationId,
+    p_user_ids: userIds,
+  });
+
+  if (error) throw error;
+}
+
+// Also the "leave group" path - pass your own id. The RPC allows that
+// unconditionally and only requires admin for removing somebody else.
+export async function removeConversationParticipant(
+  conversationId: string,
+  userId: string,
+): Promise<void> {
+  const { error } = await supabase.rpc('remove_conversation_participant', {
+    p_conversation_id: conversationId,
+    p_user_id: userId,
+  });
 
   if (error) throw error;
 }

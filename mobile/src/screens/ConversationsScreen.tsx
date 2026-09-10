@@ -18,10 +18,8 @@ import { useTranslation } from 'react-i18next';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
-import { supabase } from '../lib/supabase';
 import * as conversationsData from '../data/conversations';
 import * as profilesData from '../data/profiles';
-import { setLanguage, SUPPORTED_LANGUAGES, SupportedLanguage } from '../i18n';
 import { Avatar } from '../components/Avatar';
 import { AppWallpaper } from '../components/AppWallpaper';
 import { AppLogo } from '../components/AppLogo';
@@ -29,14 +27,16 @@ import { FooterNav } from '../components/FooterNav';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { usePresence } from '../presence/PresenceContext';
 import { useUnread } from '../unread/UnreadContext';
+import { useTyping } from '../typing/TypingContext';
+import { useMessageStream } from '../messages/MessageStreamContext';
 import { attachmentPreviewText, callStatusPreviewText } from '../utils/messagePreview';
+import { applyIncomingMessage } from '../utils/conversationList';
 import { radii, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 import { Conversation, Message, Profile } from '../types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Conversations'>;
 
-const TYPING_INDICATOR_TIMEOUT_MS = 3000;
 const SWIPE_DELETE_WIDTH = 84;
 const SWIPE_OPEN_THRESHOLD = -40;
 
@@ -72,6 +72,7 @@ function ConversationRow({
   onPress,
   onDelete,
 }: ConversationRowProps) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const translateX = useRef(new Animated.Value(0)).current;
@@ -116,7 +117,12 @@ function ConversationRow({
 
   return (
     <View style={styles.rowContainer}>
-      <TouchableOpacity style={styles.deleteAction} onPress={onDelete}>
+      <TouchableOpacity
+        style={styles.deleteAction}
+        onPress={onDelete}
+        accessibilityRole="button"
+        accessibilityLabel={t('conversations.a11yDelete')}
+      >
         <FontAwesome6 name="trash" iconStyle="solid" size={18} color={colors.white} />
       </TouchableOpacity>
       <Animated.View
@@ -152,21 +158,29 @@ function ConversationRow({
 }
 
 export function ConversationsScreen({ navigation }: Props) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { userId } = useAuth();
   const { isOnline } = usePresence();
   const { unreadCounts, refresh: refreshUnreadCounts } = useUnread();
+  const { typingConversationIds, watch: watchTyping } = useTyping();
+  const { subscribe: subscribeToMessages } = useMessageStream();
   const insets = useSafeAreaInsets();
   const { contentWidth } = useContentWidth();
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  // Read synchronously by the realtime handler below, which can fire
+  // several times before React re-renders - same reason (and same
+  // pattern) as entriesRef in OutboxContext.
+  const conversationsRef = useRef<Conversation[]>([]);
+  conversationsRef.current = conversations;
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [ownProfile, setOwnProfile] = useState<Profile | null>(null);
-  const [typingConversationIds, setTypingConversationIds] = useState<Set<string>>(
-    new Set(),
-  );
   const [openRowId, setOpenRowId] = useState<string | null>(null);
+  // Guards against a burst of messages for unknown conversations firing
+  // overlapping refetches.
+  const isLoadingRef = useRef(false);
+  const pendingReloadRef = useRef(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   function previewText(message: Message | undefined): string {
@@ -181,17 +195,60 @@ export function ConversationsScreen({ navigation }: Props) {
 
   const load = useCallback(async () => {
     if (!userId) return;
+    // Collapse overlapping loads (a burst of messages for conversations
+    // this list doesn't know about would otherwise fire one refetch
+    // each), but don't simply drop them: a request that arrives while a
+    // fetch is already in flight may concern a row that fetch's query
+    // ran too early to see, so it's remembered and re-run once.
+    if (isLoadingRef.current) {
+      pendingReloadRef.current = true;
+      return;
+    }
+    isLoadingRef.current = true;
     setIsRefreshing(true);
     try {
-      const [data] = await Promise.all([
-        conversationsData.fetchConversations(userId),
-        refreshUnreadCounts(),
-      ]);
-      setConversations(data);
+      do {
+        pendingReloadRef.current = false;
+        const [data] = await Promise.all([
+          conversationsData.fetchConversations(userId),
+          refreshUnreadCounts(),
+        ]);
+        conversationsRef.current = data;
+        setConversations(data);
+      } while (pendingReloadRef.current);
     } finally {
+      isLoadingRef.current = false;
+      pendingReloadRef.current = false;
       setIsRefreshing(false);
     }
   }, [userId, refreshUnreadCounts]);
+
+  // Keeps the list current while it's on screen: a new message refreshes
+  // that row's preview and moves it to the top, instead of the row
+  // sitting there with stale text until the next focus or pull-to-
+  // refresh. Unread badges were already live (UnreadContext), which made
+  // the staleness especially visible - a badge would appear next to a
+  // preview of the previous message.
+  useEffect(
+    () =>
+      subscribeToMessages((incoming) => {
+        const { conversations: next, needsRefetch } = applyIncomingMessage(
+          conversationsRef.current,
+          incoming,
+        );
+        // A conversation the list has never seen - someone started a new
+        // one, or a message just un-hid one this user had deleted. Only a
+        // refetch can fill in participants and profiles.
+        if (needsRefetch) {
+          void load();
+          return;
+        }
+        if (next === conversationsRef.current) return;
+        conversationsRef.current = next;
+        setConversations(next);
+      }),
+    [subscribeToMessages, load],
+  );
 
   const onDeleteConversation = useCallback(
     (conversation: Conversation, title: string) => {
@@ -230,41 +287,20 @@ export function ConversationsScreen({ navigation }: Props) {
     }, [userId]),
   );
 
-  // Listen for the same per-conversation typing broadcast ChatScreen sends
-  // (see ChatScreen.tsx), so "typing..." can show in the list before a
-  // chat is even opened - one lightweight channel per visible conversation,
-  // broadcast-only (no postgres_changes).
-  useEffect(() => {
-    if (!userId || conversations.length === 0) return;
-    const timeouts = new Map<string, ReturnType<typeof setTimeout>>();
+  // Shows "Typing..." in the list before a chat is even opened. The
+  // channels themselves belong to TypingProvider rather than this screen:
+  // this screen and ChatScreen are both mounted at once (the list stays
+  // in the stack underneath the open chat) and would otherwise be fighting
+  // over the same realtime topic - see TypingContext.tsx.
+  const watchedConversationIds = useMemo(
+    () => conversations.map((conversation) => conversation.id),
+    [conversations],
+  );
 
-    const channels = conversations.map((conversation) =>
-      supabase
-        .channel(`messages:${conversation.id}`, { config: { private: true } })
-        .on('broadcast', { event: 'typing' }, ({ payload }) => {
-          if (payload.userId === userId) return;
-          setTypingConversationIds((current) => new Set(current).add(conversation.id));
-          const existing = timeouts.get(conversation.id);
-          if (existing) clearTimeout(existing);
-          timeouts.set(
-            conversation.id,
-            setTimeout(() => {
-              setTypingConversationIds((current) => {
-                const next = new Set(current);
-                next.delete(conversation.id);
-                return next;
-              });
-            }, TYPING_INDICATOR_TIMEOUT_MS),
-          );
-        })
-        .subscribe(),
-    );
-
-    return () => {
-      for (const timeout of timeouts.values()) clearTimeout(timeout);
-      for (const channel of channels) void supabase.removeChannel(channel);
-    };
-  }, [conversations, userId]);
+  useEffect(
+    () => watchTyping(watchedConversationIds),
+    [watchTyping, watchedConversationIds],
+  );
 
   const otherParticipantOf = (conversation: Conversation) =>
     conversation.conversation_participants.find((p) => p.user_id !== userId);
@@ -299,7 +335,11 @@ export function ConversationsScreen({ navigation }: Props) {
       <View style={[styles.content, { maxWidth: contentWidth }]}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <TouchableOpacity onPress={() => navigation.navigate('Profile')}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Profile')}
+            accessibilityRole="button"
+            accessibilityLabel={t('conversations.a11yProfile')}
+          >
             <Avatar
               name={ownProfile?.display_name || ownProfile?.email || '?'}
               avatarPath={ownProfile?.avatar_path}
@@ -310,29 +350,16 @@ export function ConversationsScreen({ navigation }: Props) {
           <Text style={styles.headerTitle}>{t('conversations.title')}</Text>
           <AppLogo size={26} />
         </View>
+        {/* The EN/BG chips that used to sit here moved to ProfileScreen,
+            alongside the theme and bubble-colour choices - a setting
+            changed once shouldn't hold the most valuable space in the
+            header of the screen people open most. */}
         <View style={styles.headerActions}>
-          {SUPPORTED_LANGUAGES.map((lang: SupportedLanguage) => (
-            <TouchableOpacity
-              key={lang}
-              style={[
-                styles.languageChip,
-                i18n.language === lang && styles.languageChipActive,
-              ]}
-              onPress={() => void setLanguage(lang)}
-            >
-              <Text
-                style={[
-                  styles.languageChipText,
-                  i18n.language === lang && styles.languageChipTextActive,
-                ]}
-              >
-                {lang.toUpperCase()}
-              </Text>
-            </TouchableOpacity>
-          ))}
           <TouchableOpacity
             style={styles.iconButton}
             onPress={() => navigation.navigate('NewChat')}
+            accessibilityRole="button"
+            accessibilityLabel={t('conversations.a11yNewChat')}
           >
             <FontAwesome6 name="pen-to-square" iconStyle="solid" size={15} color={colors.ink} />
           </TouchableOpacity>
@@ -350,7 +377,11 @@ export function ConversationsScreen({ navigation }: Props) {
           onChangeText={setSearchQuery}
         />
         {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery('')}>
+          <TouchableOpacity
+            onPress={() => setSearchQuery('')}
+            accessibilityRole="button"
+            accessibilityLabel={t('conversations.a11yClearSearch')}
+          >
             <FontAwesome6 name="xmark" iconStyle="solid" size={13} color={colors.smoke} />
           </TouchableOpacity>
         )}
@@ -418,16 +449,6 @@ const makeStyles = (colors: ThemeColors) =>
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   headerTitle: { fontSize: 28, fontWeight: '800', letterSpacing: -0.3, color: colors.ink },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  languageChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: colors.line,
-  },
-  languageChipActive: { backgroundColor: colors.ember, borderColor: colors.ember },
-  languageChipText: { fontSize: 11, fontWeight: '700', color: colors.smoke },
-  languageChipTextActive: { color: colors.white },
   iconButton: {
     width: 34,
     height: 34,

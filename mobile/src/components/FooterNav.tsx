@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -66,7 +66,14 @@ export function FooterNav({ active }: FooterNavProps) {
       key: 'exit',
       icon: 'right-from-bracket',
       label: t('footer.exit'),
-      onPress: () => void logout(),
+      // Confirmed rather than immediate: this sits in a bar that's on
+      // screen the whole time, one thumb-width from the tab people tap
+      // most, and logging out drops them all the way back to sign-in.
+      onPress: () =>
+        Alert.alert(t('footer.logoutConfirmTitle'), t('footer.logoutConfirmMessage'), [
+          { text: t('footer.cancel'), style: 'cancel' },
+          { text: t('footer.logoutConfirm'), style: 'destructive', onPress: () => void logout() },
+        ]),
     },
   ];
 
@@ -80,6 +87,9 @@ export function FooterNav({ active }: FooterNavProps) {
             style={styles.item}
             onPress={item.onPress}
             activeOpacity={0.6}
+            accessibilityRole="button"
+            accessibilityLabel={item.label}
+            accessibilityState={{ selected: isActive }}
           >
             <View style={styles.iconWrap}>
               <FontAwesome6

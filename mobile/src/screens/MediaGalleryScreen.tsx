@@ -18,6 +18,7 @@ import * as conversationsData from '../data/conversations';
 import type { MediaMessage } from '../data/conversations';
 import * as mediaData from '../data/media';
 import { AppWallpaper } from '../components/AppWallpaper';
+import { MediaViewer } from '../components/MediaViewer';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { radii, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
@@ -29,7 +30,15 @@ type Tab = 'photos' | 'files';
 const GRID_COLUMNS = 3;
 const GRID_GAP = 2;
 
-function PhotoThumbnail({ path, size }: { path: string; size: number }) {
+function PhotoThumbnail({
+  path,
+  size,
+  onOpen,
+}: {
+  path: string;
+  size: number;
+  onOpen: (path: string) => void;
+}) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [url, setUrl] = useState<string | null>(null);
@@ -47,7 +56,7 @@ function PhotoThumbnail({ path, size }: { path: string; size: number }) {
   return (
     <TouchableOpacity
       style={[styles.thumbnail, { width: size, height: size }]}
-      onPress={() => url && void Linking.openURL(url)}
+      onPress={() => onOpen(path)}
       disabled={!url}
     >
       {url ? (
@@ -115,6 +124,11 @@ export function MediaGalleryScreen({ route, navigation }: Props) {
   const [items, setItems] = useState<MediaMessage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [viewerPath, setViewerPath] = useState<string | null>(null);
+  const photoPaths = useMemo(
+    () => (tab === 'photos' ? items.map((item) => item.media_path) : []),
+    [tab, items],
+  );
   const [hasMore, setHasMore] = useState(true);
 
   const loadInitial = useCallback((activeTab: Tab) => {
@@ -198,7 +212,11 @@ export function MediaGalleryScreen({ route, navigation }: Props) {
             columnWrapperStyle={styles.gridRow}
             contentContainerStyle={styles.gridContent}
             renderItem={({ item }) => (
-              <PhotoThumbnail path={item.media_path} size={thumbnailSize} />
+              <PhotoThumbnail
+                path={item.media_path}
+                size={thumbnailSize}
+                onOpen={setViewerPath}
+              />
             )}
             onEndReached={onLoadMore}
             onEndReachedThreshold={0.5}
@@ -216,6 +234,12 @@ export function MediaGalleryScreen({ route, navigation }: Props) {
           />
         )}
       </View>
+
+      <MediaViewer
+        paths={photoPaths}
+        initialPath={viewerPath}
+        onClose={() => setViewerPath(null)}
+      />
     </View>
   );
 }

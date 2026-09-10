@@ -16,6 +16,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
+import { setLanguage, SUPPORTED_LANGUAGES, SupportedLanguage } from '../i18n';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
@@ -25,11 +26,24 @@ import { Avatar } from '../components/Avatar';
 import { AppWallpaper } from '../components/AppWallpaper';
 import { PasswordField } from '../components/PasswordField';
 import { useContentWidth } from '../hooks/useContentWidth';
-import { BUBBLE_GRADIENT_PRESETS, radii, spacing, ThemeColors } from '../theme/tokens';
+import {
+  BUBBLE_GRADIENT_PRESETS,
+  radii,
+  spacing,
+  ThemeColors,
+  ThemePreference,
+} from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 import { Profile } from '../types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Profile'>;
+
+const THEME_PREFERENCES: ThemePreference[] = ['system', 'light', 'dark'];
+const THEME_PREFERENCE_LABEL_KEYS: Record<ThemePreference, string> = {
+  system: 'profile.themeSystem',
+  light: 'profile.themeLight',
+  dark: 'profile.themeDark',
+};
 
 const USERNAME_PATTERN = /^[a-zA-Z0-9_]{3,20}$/;
 // Hosted from docs/privacy-policy.html - requires GitHub Pages enabled on
@@ -38,11 +52,18 @@ const PRIVACY_POLICY_URL = 'https://ivaylo91.github.io/Message-App/privacy-polic
 const PHONE_PATTERN = /^\+?[0-9]{7,15}$/;
 
 export function ProfileScreen({ navigation }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { userId } = useAuth();
   const insets = useSafeAreaInsets();
   const { contentWidth } = useContentWidth();
-  const { colors, scheme, bubbleGradientId, setBubbleGradientId } = useTheme();
+  const {
+    colors,
+    scheme,
+    bubbleGradientId,
+    setBubbleGradientId,
+    themePreference,
+    setThemePreference,
+  } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [displayName, setDisplayName] = useState('');
@@ -284,6 +305,50 @@ export function ProfileScreen({ navigation }: Props) {
         </View>
 
         <View style={styles.field}>
+          <Text style={styles.label}>{t('profile.appearance')}</Text>
+          <View style={styles.choiceRow}>
+            {THEME_PREFERENCES.map((preference) => {
+              const isSelected = preference === themePreference;
+              return (
+                <TouchableOpacity
+                  key={preference}
+                  style={[styles.choiceChip, isSelected && styles.choiceChipActive]}
+                  onPress={() => setThemePreference(preference)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isSelected }}
+                >
+                  <Text style={[styles.choiceText, isSelected && styles.choiceTextActive]}>
+                    {t(THEME_PREFERENCE_LABEL_KEYS[preference])}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>{t('profile.language')}</Text>
+          <View style={styles.choiceRow}>
+            {SUPPORTED_LANGUAGES.map((lang: SupportedLanguage) => {
+              const isSelected = i18n.language === lang;
+              return (
+                <TouchableOpacity
+                  key={lang}
+                  style={[styles.choiceChip, isSelected && styles.choiceChipActive]}
+                  onPress={() => void setLanguage(lang)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: isSelected }}
+                >
+                  <Text style={[styles.choiceText, isSelected && styles.choiceTextActive]}>
+                    {lang.toUpperCase()}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        <View style={styles.field}>
           <Text style={styles.label}>{t('profile.bubbleColorLabel')}</Text>
           <View style={styles.bubbleSwatchRow}>
             {BUBBLE_GRADIENT_PRESETS.map((preset) => {
@@ -469,6 +534,18 @@ const makeStyles = (colors: ThemeColors) =>
   },
   changePhotoHint: { fontSize: 12.5, color: colors.smoke, marginTop: spacing.sm },
   field: { paddingHorizontal: spacing.lg, marginBottom: spacing.lg },
+  choiceRow: { flexDirection: 'row', gap: spacing.sm, marginTop: 6 },
+  choiceChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.paper2,
+  },
+  choiceChipActive: { backgroundColor: colors.ember, borderColor: colors.ember },
+  choiceText: { fontSize: 13, fontWeight: '700', color: colors.smoke },
+  choiceTextActive: { color: colors.white },
   bubbleSwatchRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',

@@ -6,11 +6,9 @@ import React, {
   useMemo,
   useState,
 } from 'react';
-import type { RealtimeChannel } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
 import { useAuth } from '../auth/AuthContext';
+import { useMessageStream } from '../messages/MessageStreamContext';
 import * as conversationsData from '../data/conversations';
-import { Message } from '../types';
 
 interface UnreadContextValue {
   unreadCounts: Record<string, number>;
@@ -32,6 +30,7 @@ const UnreadContext = createContext<UnreadContextValue>({
 // own copy, which meant the footer had no way to know the total.
 export function UnreadProvider({ children }: { children: React.ReactNode }) {
   const { userId } = useAuth();
+  const { subscribe } = useMessageStream();
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
 
   const refresh = useCallback(async () => {
@@ -47,48 +46,20 @@ export function UnreadProvider({ children }: { children: React.ReactNode }) {
     void refresh();
   }, [refresh]);
 
-  // Bumps counts live for any conversation the user is in (RLS scopes
-  // delivery to those, same as the messages table's select policy). See
-  // ConversationsScreen/ChatScreen for the same stale-channel guard
-  // pattern this is copied from - supabase.channel() reuses an existing
-  // channel object still registered under this topic, and
-  // removeChannel() is async, so a fast re-run of this effect (e.g. auth
-  // state settling) could otherwise try to .on() an already-subscribed
-  // channel and throw.
+  // Bumps counts live for any conversation the user is in - the channel
+  // itself belongs to MessageStreamProvider, which is also what feeds
+  // the conversation list's previews, so a message crosses the wire once
+  // rather than once per feature that wants it.
   useEffect(() => {
     if (!userId) return;
-    let cancelled = false;
-    let channel: RealtimeChannel | null = null;
-
-    void (async () => {
-      const stale = supabase
-        .getChannels()
-        .find((c) => c.topic === 'realtime:unread-messages');
-      if (stale) await supabase.removeChannel(stale);
-      if (cancelled) return;
-
-      channel = supabase
-        .channel('unread-messages')
-        .on(
-          'postgres_changes',
-          { event: 'INSERT', schema: 'public', table: 'messages' },
-          (payload) => {
-            const incoming = payload.new as Message;
-            if (incoming.sender_id === userId) return;
-            setUnreadCounts((current) => ({
-              ...current,
-              [incoming.conversation_id]: (current[incoming.conversation_id] ?? 0) + 1,
-            }));
-          },
-        )
-        .subscribe();
-    })();
-
-    return () => {
-      cancelled = true;
-      if (channel) void supabase.removeChannel(channel);
-    };
-  }, [userId]);
+    return subscribe((incoming) => {
+      if (incoming.sender_id === userId) return;
+      setUnreadCounts((current) => ({
+        ...current,
+        [incoming.conversation_id]: (current[incoming.conversation_id] ?? 0) + 1,
+      }));
+    });
+  }, [userId, subscribe]);
 
   const markConversationRead = useCallback(
     (conversationId: string) => {

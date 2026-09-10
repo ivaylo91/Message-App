@@ -1,10 +1,12 @@
 import React, {
+  memo,
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
 } from 'react';
+import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import {
   ActivityIndicator,
   Alert,
@@ -12,6 +14,7 @@ import {
   FlatList,
   Keyboard,
   KeyboardAvoidingView,
+  Modal,
   Linking,
   PermissionsAndroid,
   Platform,
@@ -43,11 +46,13 @@ import { useAuth } from '../auth/AuthContext';
 import { supabase } from '../lib/supabase';
 import * as conversationsData from '../data/conversations';
 import * as reactionsData from '../data/reactions';
+import { mergeReactions } from '../utils/reactions';
 import * as mediaData from '../data/media';
 import * as moderationData from '../data/moderation';
 import type { ReportReason } from '../data/moderation';
 import { Avatar } from '../components/Avatar';
 import { AppWallpaper } from '../components/AppWallpaper';
+import { MediaViewer } from '../components/MediaViewer';
 import { AppLogo } from '../components/AppLogo';
 import { FooterNav } from '../components/FooterNav';
 import { useToast } from '../components/Toast';
@@ -56,6 +61,7 @@ import { useContentWidth } from '../hooks/useContentWidth';
 import { usePresence } from '../presence/PresenceContext';
 import { useUnread } from '../unread/UnreadContext';
 import { useOutbox } from '../offline/OutboxContext';
+import { useTyping } from '../typing/TypingContext';
 import { OutboxEntry } from '../offline/outboxStorage';
 import {
   attachmentPreviewText,
@@ -63,7 +69,12 @@ import {
   fileIconName,
   formatDuration,
   formatLastSeen,
+  formatMessageDay,
+  formatMessageTime,
+  messageIdsStartingADay,
 } from '../utils/messagePreview';
+import { hasLink, linkifyText } from '../utils/linkify';
+import * as draftStorage from '../drafts/draftStorage';
 import { radii, spacing, MAX_BUBBLE_WIDTH, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 import { ConversationParticipant, Message, MessageReaction, ReplyPreview } from '../types';
@@ -71,11 +82,24 @@ import { ConversationParticipant, Message, MessageReaction, ReplyPreview } from 
 type Props = NativeStackScreenProps<AppStackParamList, 'Chat'>;
 
 const QUICK_REACTIONS = ['❤️', '👍', '😂', '😮', '😢', '🙏'];
-const TYPING_BROADCAST_THROTTLE_MS = 2000;
-const TYPING_INDICATOR_TIMEOUT_MS = 3000;
+const REPORT_REASONS: ReportReason[] = [
+  'spam',
+  'harassment',
+  'inappropriate_content',
+  'other',
+];
+const REPORT_REASON_LABEL_KEYS: Record<ReportReason, string> = {
+  spam: 'chat.reportReasonSpam',
+  harassment: 'chat.reportReasonHarassment',
+  inappropriate_content: 'chat.reportReasonInappropriate',
+  other: 'chat.reportReasonOther',
+};
 const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
 const MAX_IMAGE_SELECTION = 10;
 const SEARCH_DEBOUNCE_MS = 300;
+// Roughly a screenful of history before the jump-to-latest button is
+// worth offering.
+const SCROLL_TO_BOTTOM_THRESHOLD = 400;
 
 // Messages we've sent locally but haven't heard back from the server on
 // yet - shown immediately (dimmed) instead of waiting on a round-trip.
@@ -344,6 +368,18 @@ function FileMessageBubble({ message, isMine }: { message: LocalMessage; isMine:
   );
 }
 
+type SeenBy = { name: string; avatarPath: string | null }[];
+
+// Shared empties so a message with no reactions / nobody having seen it
+// gets the *same* array every render - `?? []` would mint a new one each
+// time and defeat the memo comparison below.
+const NO_REACTIONS: MessageReaction[] = [];
+const NO_SEEN_BY: SeenBy = [];
+
+// Every handler takes the message (or its id) rather than being a closure
+// bound to one, so the parent can hand down callbacks that keep the same
+// identity across renders. Binding happens inside the memoized component
+// instead, where a fresh closure per render costs nothing.
 interface MessageBubbleProps {
   message: LocalMessage;
   isMine: boolean;
@@ -352,20 +388,25 @@ interface MessageBubbleProps {
   userId: string | null;
   isPickerOpen: boolean;
   isHighlighted: boolean;
-  seenBy: { name: string; avatarPath: string | null }[];
+  seenBy: SeenBy;
   bubbleMaxWidth: number;
   isPlaying: boolean;
-  onLongPress: () => void;
+  // Set only on a message that opens a new calendar day, so it renders
+  // a divider above itself. A string rather than a date, so it stays
+  // comparable by value and the memo below still holds.
+  dayLabel: string | null;
+  onLongPress: (messageId: string) => void;
   onDismissPicker: () => void;
-  onToggleReaction: (emoji: string) => void;
-  onEdit: () => void;
-  onDelete: () => void;
-  onReply: () => void;
-  onReport: () => void;
-  onTogglePlay: () => void;
+  onToggleReaction: (messageId: string, emoji: string) => void;
+  onEdit: (message: LocalMessage) => void;
+  onDelete: (messageId: string) => void;
+  onReply: (message: LocalMessage) => void;
+  onReport: (message: LocalMessage) => void;
+  onTogglePlay: (message: LocalMessage) => void;
+  onOpenImage: (path: string) => void;
 }
 
-function MessageBubble({
+function MessageBubbleComponent({
   message,
   isMine,
   senderName,
@@ -376,6 +417,7 @@ function MessageBubble({
   seenBy,
   bubbleMaxWidth,
   isPlaying,
+  dayLabel,
   onLongPress,
   onDismissPicker,
   onToggleReaction,
@@ -384,8 +426,9 @@ function MessageBubble({
   onReply,
   onReport,
   onTogglePlay,
+  onOpenImage,
 }: MessageBubbleProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { colors, gradients } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const summary = useMemo(
@@ -394,9 +437,19 @@ function MessageBubble({
   );
 
   return (
-    <View style={isMine ? styles.rowMine : styles.rowTheirs}>
+    <>
+      {dayLabel && (
+        <View style={styles.dayDivider}>
+          <Text style={styles.dayDividerText}>{dayLabel}</Text>
+        </View>
+      )}
+      <View style={isMine ? styles.rowMine : styles.rowTheirs}>
       {senderName && <Text style={styles.senderLabel}>{senderName}</Text>}
-      <TouchableOpacity onLongPress={onLongPress} onPress={onDismissPicker} activeOpacity={0.8}>
+      <TouchableOpacity
+        onLongPress={() => onLongPress(message.id)}
+        onPress={onDismissPicker}
+        activeOpacity={0.8}
+      >
         <LinearGradient
           colors={isMine ? [...gradients.mine] : [...gradients.theirs]}
           start={{ x: 0, y: 0 }}
@@ -413,14 +466,25 @@ function MessageBubble({
           )}
           {message.call_status && <CallLogRow message={message} isMine={isMine} />}
           {message.attachment_type === 'image' && message.media_path && (
-            <MediaImage path={message.media_path} />
+            <TouchableOpacity
+              // Long-press still has to reach the bubble's own handler,
+              // or photos would be the one message type you can't react
+              // to, reply to or delete.
+              onPress={() => onOpenImage(message.media_path as string)}
+              onLongPress={() => onLongPress(message.id)}
+              disabled={message._pending}
+              accessibilityRole="imagebutton"
+              accessibilityLabel={t('chat.a11yOpenPhoto')}
+            >
+              <MediaImage path={message.media_path} />
+            </TouchableOpacity>
           )}
           {message.attachment_type === 'audio' && (
             <AudioMessageBubble
               message={message}
               isMine={isMine}
               isPlaying={isPlaying}
-              onTogglePlay={onTogglePlay}
+              onTogglePlay={() => onTogglePlay(message)}
             />
           )}
           {message.attachment_type === 'file' && (
@@ -428,10 +492,36 @@ function MessageBubble({
           )}
           {message.body && (
             <Text style={isMine ? styles.bubbleTextMine : styles.bubbleTextTheirs}>
-              {message.body}
+              {hasLink(message.body)
+                ? linkifyText(message.body).map((segment, i) =>
+                    segment.url ? (
+                      <Text
+                        key={i}
+                        style={styles.linkText}
+                        onPress={() => {
+                          const url = segment.url;
+                          if (url) void Linking.openURL(url).catch(() => {});
+                        }}
+                      >
+                        {segment.text}
+                      </Text>
+                    ) : (
+                      segment.text
+                    ),
+                  )
+                : message.body}
             </Text>
           )}
-          {message.edited_at && <Text style={styles.editedTag}>{t('chat.edited')}</Text>}
+          <View style={styles.metaRow}>
+            {message.edited_at && (
+              <Text style={isMine ? styles.metaTextMine : styles.metaTextTheirs}>
+                {t('chat.edited')}
+              </Text>
+            )}
+            <Text style={isMine ? styles.metaTextMine : styles.metaTextTheirs}>
+              {formatMessageTime(message.created_at, i18n.language)}
+            </Text>
+          </View>
         </LinearGradient>
       </TouchableOpacity>
 
@@ -441,7 +531,7 @@ function MessageBubble({
             <TouchableOpacity
               key={r.emoji}
               style={[styles.reactionPill, r.reactedByMe && styles.reactionPillMine]}
-              onPress={() => onToggleReaction(r.emoji)}
+              onPress={() => onToggleReaction(message.id, r.emoji)}
             >
               <Text style={styles.reactionPillText}>
                 {r.emoji} {r.count > 1 ? r.count : ''}
@@ -461,31 +551,31 @@ function MessageBubble({
           {QUICK_REACTIONS.map((emoji) => (
             <TouchableOpacity
               key={emoji}
-              onPress={() => onToggleReaction(emoji)}
+              onPress={() => onToggleReaction(message.id, emoji)}
               style={styles.pickerEmoji}
             >
               <Text style={styles.pickerEmojiText}>{emoji}</Text>
             </TouchableOpacity>
           ))}
           {!message._pending && (
-            <TouchableOpacity onPress={onReply} style={styles.pickerEmoji}>
+            <TouchableOpacity onPress={() => onReply(message)} style={styles.pickerEmoji}>
               <Text style={styles.pickerActionText}>{t('chat.reply')}</Text>
             </TouchableOpacity>
           )}
           {isMine && message.body && (
-            <TouchableOpacity onPress={onEdit} style={styles.pickerEmoji}>
+            <TouchableOpacity onPress={() => onEdit(message)} style={styles.pickerEmoji}>
               <Text style={styles.pickerActionText}>{t('chat.edit')}</Text>
             </TouchableOpacity>
           )}
           {isMine && (
-            <TouchableOpacity onPress={onDelete} style={styles.pickerEmoji}>
+            <TouchableOpacity onPress={() => onDelete(message.id)} style={styles.pickerEmoji}>
               <Text style={[styles.pickerActionText, styles.pickerDeleteText]}>
                 {t('chat.delete')}
               </Text>
             </TouchableOpacity>
           )}
           {!isMine && !message._pending && (
-            <TouchableOpacity onPress={onReport} style={styles.pickerEmoji}>
+            <TouchableOpacity onPress={() => onReport(message)} style={styles.pickerEmoji}>
               <Text style={[styles.pickerActionText, styles.pickerDeleteText]}>
                 {t('chat.reportTitle')}
               </Text>
@@ -501,9 +591,22 @@ function MessageBubble({
           ))}
         </View>
       )}
-    </View>
+      </View>
+    </>
   );
 }
+
+// Typing in the composer updates ChatScreen's `draft` state, which
+// re-runs its render - and with it renderItem for every row the list has
+// mounted. Without this memo each keystroke re-rendered every bubble,
+// re-deriving its styles, its reaction summary and (for voice messages)
+// its waveform. The props above are all primitives or memoized
+// references, so the shallow compare here holds and a keystroke now stops
+// at the list instead of reaching into ~50 subtrees.
+const MessageBubble = memo(MessageBubbleComponent);
+
+// Module scope so the FlatList gets the same function every render.
+const messageKeyExtractor = (item: LocalMessage) => item.id;
 
 const TYPING_DOT_BOUNCE_MS = 300;
 const TYPING_DOT_STAGGER_MS = 150;
@@ -573,13 +676,14 @@ function TypingBubble() {
 }
 
 export function ChatScreen({ route, navigation }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { conversationId, title } = route.params;
   const { userId } = useAuth();
   const { showToast } = useToast();
   const { isOnline } = usePresence();
   const { markConversationRead } = useUnread();
   const outbox = useOutbox();
+  const { typingConversationIds, watch: watchTyping, sendTyping } = useTyping();
   const { startCall } = useCall();
   const insets = useSafeAreaInsets();
   const { windowWidth, contentWidth } = useContentWidth();
@@ -589,6 +693,9 @@ export function ChatScreen({ route, navigation }: Props) {
   const [messages, setMessages] = useState<LocalMessage[]>([]);
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [isLoadingMoreMessages, setIsLoadingMoreMessages] = useState(false);
+  const [didLoadFail, setDidLoadFail] = useState(false);
+  const [isScrolledUp, setIsScrolledUp] = useState(false);
+  const [viewerPath, setViewerPath] = useState<string | null>(null);
   const [reactions, setReactions] = useState<MessageReaction[]>([]);
   const [participants, setParticipants] = useState<ConversationParticipant[]>(
     [],
@@ -600,7 +707,6 @@ export function ChatScreen({ route, navigation }: Props) {
     null,
   );
   const [replyingTo, setReplyingTo] = useState<ReplyPreview | null>(null);
-  const [otherTyping, setOtherTyping] = useState(false);
   const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
@@ -612,10 +718,11 @@ export function ChatScreen({ route, navigation }: Props) {
   const [isSearching, setIsSearching] = useState(false);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const [isOtherBlocked, setIsOtherBlocked] = useState(false);
+  const [reportTarget, setReportTarget] = useState<{
+    userId: string;
+    messageId?: string;
+  } | null>(null);
 
-  const channelRef = useRef<RealtimeChannel | null>(null);
-  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastTypingSentAtRef = useRef(0);
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flatListRef = useRef<FlatList<LocalMessage>>(null);
   // Kept in sync with `participants` below and read from inside
@@ -635,11 +742,23 @@ export function ChatScreen({ route, navigation }: Props) {
     participantsRef.current = participants;
   }, [participants]);
 
+  // Mirrors `reactions` for onToggleReaction to read - see there for why
+  // it can't just depend on the state directly.
+  const reactionsRef = useRef<MessageReaction[]>([]);
+  reactionsRef.current = reactions;
+
   useEffect(() => {
-    void conversationsData.fetchConversation(conversationId).then((conversation) => {
-      setParticipants(conversation.conversation_participants);
-      setIsGroup(conversation.is_group);
-    });
+    void conversationsData
+      .fetchConversation(conversationId)
+      .then((conversation) => {
+        setParticipants(conversation.conversation_participants);
+        setIsGroup(conversation.is_group);
+      })
+      .catch(() => {
+        // Non-fatal on its own: the header falls back to the title
+        // passed in through route params, and the message list surfaces
+        // its own failure below. Swallowed rather than reported twice.
+      });
   }, [conversationId]);
 
   // The composer's bottom safe-area padding (for the home indicator/
@@ -734,18 +853,33 @@ export function ChatScreen({ route, navigation }: Props) {
     [markRead],
   );
 
+  // Split out of the focus effect so the retry button can call it too.
+  const loadMessages = useCallback(async () => {
+    setHasMoreMessages(true);
+    setDidLoadFail(false);
+    try {
+      const fetched = await conversationsData.fetchMessages(conversationId);
+      setMessages(fetched);
+      setHasMoreMessages(fetched.length === conversationsData.MESSAGE_PAGE_SIZE);
+      // Chained rather than fired alongside: which reactions to ask
+      // for is decided by which messages came back.
+      setReactions(
+        await reactionsData.fetchReactionsForMessages(fetched.map((m) => m.id)),
+      );
+    } catch {
+      // Previously this rejection went nowhere, which left an empty
+      // message list behind a composer that looked perfectly functional
+      // - the worst version of offline, since the app has an outbox and
+      // will happily accept messages it can't show you the history of.
+      setDidLoadFail(true);
+    }
+  }, [conversationId]);
+
   useFocusEffect(
     useCallback(() => {
-      setHasMoreMessages(true);
-      void conversationsData.fetchMessages(conversationId).then((fetched) => {
-        setMessages(fetched);
-        setHasMoreMessages(fetched.length === conversationsData.MESSAGE_PAGE_SIZE);
-      });
-      void reactionsData
-        .fetchReactions(conversationId)
-        .then((fetched) => setReactions(fetched));
+      void loadMessages();
       markRead();
-    }, [conversationId, markRead]),
+    }, [loadMessages, markRead]),
   );
 
   // Inverted FlatList's onEndReached fires when the user scrolls up to
@@ -760,10 +894,19 @@ export function ChatScreen({ route, navigation }: Props) {
       const older = await conversationsData.fetchMessages(conversationId, oldest.created_at);
       setMessages((current) => [...current, ...older]);
       if (older.length < conversationsData.MESSAGE_PAGE_SIZE) setHasMoreMessages(false);
+      const olderReactions = await reactionsData.fetchReactionsForMessages(
+        older.map((m) => m.id),
+      );
+      setReactions((current) => mergeReactions(current, olderReactions));
+    } catch {
+      // Non-fatal - what's already loaded stays usable, so this is a
+      // toast rather than taking over the screen. hasMoreMessages is
+      // deliberately left alone so scrolling up can try again.
+      showToast(t('chat.loadMoreFailedToast'));
     } finally {
       setIsLoadingMoreMessages(false);
     }
-  }, [conversationId, hasMoreMessages, isLoadingMoreMessages, messages]);
+  }, [conversationId, hasMoreMessages, isLoadingMoreMessages, messages, showToast, t]);
 
   useEffect(() => {
     let cancelled = false;
@@ -780,6 +923,14 @@ export function ChatScreen({ route, navigation }: Props) {
     // .on(...) calls after it throw "cannot add ... callbacks ... after
     // subscribe()", crashing the screen. Awaiting the removal of any
     // stale same-topic channel first closes that race unconditionally.
+    //
+    // This screen is now the only thing that ever opens this topic -
+    // ConversationsScreen used to open it too for typing indicators,
+    // which meant the removal below was routinely tearing down the
+    // list's live subscription rather than clearing a leftover of our
+    // own. Typing has since moved to its own topic (TypingContext.tsx),
+    // so this is back to guarding only against this effect racing
+    // itself.
     void (async () => {
       const realtimeTopic = `realtime:messages:${conversationId}`;
       const stale = supabase.getChannels().find((c) => c.topic === realtimeTopic);
@@ -866,39 +1017,47 @@ export function ChatScreen({ route, navigation }: Props) {
             );
           },
         )
-        .on('broadcast', { event: 'typing' }, ({ payload }) => {
-          if (payload.userId === userId) return;
-          setOtherTyping(true);
-          if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-          typingTimeoutRef.current = setTimeout(
-            () => setOtherTyping(false),
-            TYPING_INDICATOR_TIMEOUT_MS,
-          );
-        })
         .subscribe();
-
-      channelRef.current = channel;
     })();
 
     return () => {
       cancelled = true;
-      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       if (channel) void supabase.removeChannel(channel);
-      channelRef.current = null;
     };
-  }, [conversationId, upsertMessage, userId]);
+  }, [conversationId, upsertMessage]);
+
+  // Typing broadcasts live on their own topic, owned by TypingProvider,
+  // so that ConversationsScreen can listen for the same conversation at
+  // the same time - see TypingContext.tsx for why sharing this screen's
+  // channel for it was actively harmful.
+  useEffect(() => watchTyping([conversationId]), [watchTyping, conversationId]);
+
+  const otherTyping = typingConversationIds.has(conversationId);
+
+  // Restore whatever was left unsent here. Guarded on the id the load
+  // was started for, so switching conversations quickly can't drop an
+  // older conversation's draft into a newer one.
+  useEffect(() => {
+    let cancelled = false;
+    void draftStorage.loadDraft(conversationId).then((saved) => {
+      if (cancelled || !saved) return;
+      // Never clobber something already being typed or edited.
+      setDraft((current) => (current.length > 0 ? current : saved));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [conversationId]);
 
   const onChangeDraft = (text: string) => {
     setDraft(text);
-    const now = Date.now();
-    if (now - lastTypingSentAtRef.current > TYPING_BROADCAST_THROTTLE_MS) {
-      lastTypingSentAtRef.current = now;
-      void channelRef.current?.send({
-        type: 'broadcast',
-        event: 'typing',
-        payload: { userId },
-      });
-    }
+    sendTyping(conversationId);
+    // Not debounced: AsyncStorage writes are async and off the JS
+    // critical path, and a debounce risks losing the last keystrokes to
+    // a backgrounded app - the exact case this exists for. Editing an
+    // existing message is excluded: that text belongs to the message,
+    // not to a draft, and persisting it would resurrect it as one.
+    if (!editingMessageId) void draftStorage.saveDraft(conversationId, text);
   };
 
   const onSend = async () => {
@@ -909,10 +1068,21 @@ export function ChatScreen({ route, navigation }: Props) {
     if (editingMessageId) {
       const messageId = editingMessageId;
       setEditingMessageId(null);
-      const updated = await conversationsData.editMessage(messageId, body);
-      setMessages((current) =>
-        current.map((m) => (m.id === updated.id ? updated : m)),
-      );
+      try {
+        const updated = await conversationsData.editMessage(messageId, body);
+        setMessages((current) =>
+          current.map((m) => (m.id === updated.id ? updated : m)),
+        );
+      } catch {
+        // The composer held the only copy of what was typed, and it was
+        // cleared before the request went out - so put the user back
+        // exactly where they were instead of dropping the edit silently.
+        // Unlike a send, an edit doesn't go through the outbox, so
+        // there's nothing else retrying on its behalf.
+        setEditingMessageId(messageId);
+        setDraft(body);
+        Alert.alert(t('chat.editFailedTitle'), t('chat.editFailedMessage'));
+      }
       return;
     }
 
@@ -924,6 +1094,8 @@ export function ChatScreen({ route, navigation }: Props) {
     // (dimmed, via displayMessages) and takes care of retrying if this
     // fails or the device is offline, instead of the send just erroring
     // out. See OutboxContext for the retry/persistence behavior.
+    void draftStorage.clearDraft(conversationId);
+
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     outbox.queueMessage({
       conversationId,
@@ -1052,7 +1224,7 @@ export function ChatScreen({ route, navigation }: Props) {
     }
   };
 
-  const onTogglePlayback = async (message: LocalMessage) => {
+  const onTogglePlayback = useCallback(async (message: LocalMessage) => {
     if (!message.media_path) return;
 
     if (playingMessageId) {
@@ -1073,13 +1245,18 @@ export function ChatScreen({ route, navigation }: Props) {
     } catch {
       setPlayingMessageId(null);
     }
-  };
+  }, [playingMessageId]);
 
   const onToggleReaction = useCallback(
     async (messageId: string, emoji: string) => {
       if (!userId) return;
       setPickerMessageId(null);
-      const alreadyReacted = reactions.some(
+      // Read through the ref rather than depending on `reactions`
+      // directly: that dependency gave this callback a new identity on
+      // every incoming reaction, which changed a prop on every bubble
+      // and made the memo below miss for the whole list. Same pattern as
+      // participantsRef above.
+      const alreadyReacted = reactionsRef.current.some(
         (r) => r.message_id === messageId && r.user_id === userId && r.emoji === emoji,
       );
       if (alreadyReacted) {
@@ -1100,7 +1277,7 @@ export function ChatScreen({ route, navigation }: Props) {
         setReactions((current) => [...current, reaction]);
       }
     },
-    [conversationId, reactions, userId],
+    [conversationId, userId],
   );
 
   const onEditMessage = useCallback((message: Message) => {
@@ -1196,12 +1373,24 @@ export function ChatScreen({ route, navigation }: Props) {
       onCloseSearch();
       const alreadyLoaded = messages.some((m) => m.id === result.id);
       if (!alreadyLoaded) {
-        const around = await conversationsData.fetchMessagesAround(conversationId, result.id);
-        setMessages(around);
+        try {
+          const around = await conversationsData.fetchMessagesAround(conversationId, result.id);
+          setMessages(around);
+          // This replaces the loaded window wholesale rather than
+          // extending it, so the reactions it carries are replaced too.
+          setReactions(
+            await reactionsData.fetchReactionsForMessages(around.map((m) => m.id)),
+          );
+        } catch {
+          // Leave the existing window alone and say so, rather than
+          // closing search and appearing to do nothing.
+          showToast(t('chat.jumpToMessageFailedToast'));
+          return;
+        }
       }
       setHighlightedMessageId(result.id);
     },
-    [conversationId, messages, onCloseSearch],
+    [conversationId, messages, onCloseSearch, showToast, t],
   );
 
   useEffect(() => {
@@ -1278,33 +1467,27 @@ export function ChatScreen({ route, navigation }: Props) {
     ]);
   }, [userId, otherParticipant, isOtherBlocked, t, showToast]);
 
-  const onReportUser = useCallback(
-    (reportedUserId: string, messageId?: string) => {
-      if (!userId) return;
-      const reasons: { key: ReportReason; label: string }[] = [
-        { key: 'spam', label: t('chat.reportReasonSpam') },
-        { key: 'harassment', label: t('chat.reportReasonHarassment') },
-        { key: 'inappropriate_content', label: t('chat.reportReasonInappropriate') },
-        { key: 'other', label: t('chat.reportReasonOther') },
-      ];
-      Alert.alert(
-        t('chat.reportTitle'),
-        t('chat.reportMessage'),
-        [
-          ...reasons.map((reason) => ({
-            text: reason.label,
-            onPress: () => {
-              void moderationData
-                .reportUser(userId, reportedUserId, reason.key, { messageId })
-                .then(() => showToast(t('chat.reportSuccessToast')))
-                .catch(() => Alert.alert(t('chat.reportFailedTitle'), t('chat.reportFailedMessage')));
-            },
-          })),
-          { text: t('chat.cancel'), style: 'cancel' },
-        ],
-      );
+  // Deliberately a modal and not an Alert. React Native's Android Alert
+  // does buttons.slice(0, 3) - "At most three buttons (neutral,
+  // negative, positive). Ignore rest." - and this needs four reasons
+  // plus a cancel. On Android the old Alert silently dropped "Other"
+  // and Cancel, and reordered the three that survived, leaving no way
+  // out of the dialog except the hardware back button.
+  const onReportUser = useCallback((reportedUserId: string, messageId?: string) => {
+    setReportTarget({ userId: reportedUserId, messageId });
+  }, []);
+
+  const onSubmitReport = useCallback(
+    (reason: ReportReason) => {
+      if (!userId || !reportTarget) return;
+      const target = reportTarget;
+      setReportTarget(null);
+      void moderationData
+        .reportUser(userId, target.userId, reason, { messageId: target.messageId })
+        .then(() => showToast(t('chat.reportSuccessToast')))
+        .catch(() => Alert.alert(t('chat.reportFailedTitle'), t('chat.reportFailedMessage')));
     },
-    [userId, t, showToast],
+    [userId, reportTarget, showToast, t],
   );
 
   const onOpenChatMenu = useCallback(() => {
@@ -1364,6 +1547,60 @@ export function ChatScreen({ route, navigation }: Props) {
     return [...pendingNewestFirst, ...messages];
   }, [messages, outbox.pendingByConversation, conversationId, userId]);
 
+  // Bucketed once per reactions change instead of scanning the whole
+  // reaction list inside renderItem for every row - that was O(messages x
+  // reactions) per render, and handed each bubble a freshly-filtered array
+  // that no memo could ever match.
+  const reactionsByMessageId = useMemo(() => {
+    const map = new Map<string, MessageReaction[]>();
+    for (const reaction of reactions) {
+      const existing = map.get(reaction.message_id);
+      if (existing) existing.push(reaction);
+      else map.set(reaction.message_id, [reaction]);
+    }
+    return map;
+  }, [reactions]);
+
+  // displayMessages is newest-first, so the message *above* index i on
+  // screen is i+1. A message opens a new day when the one before it in
+  // reading order sits on a different calendar day - and the very oldest
+  // loaded message always opens one, so history never starts mid-day
+  // with no header.
+  const dayLabelsByMessageId = useMemo(() => {
+    const startsADay = messageIdsStartingADay(displayMessages);
+    const labels = new Map<string, string>();
+    for (const message of displayMessages) {
+      if (startsADay.has(message.id)) {
+        labels.set(message.id, formatMessageDay(message.created_at, t, i18n.language));
+      }
+    }
+    return labels;
+  }, [displayMessages, t, i18n.language]);
+
+  const onTogglePicker = useCallback((messageId: string) => {
+    setPickerMessageId((current) => (current === messageId ? null : messageId));
+  }, []);
+
+  const onDismissPicker = useCallback(() => setPickerMessageId(null), []);
+
+  const onReportMessage = useCallback(
+    (message: LocalMessage) => {
+      setPickerMessageId(null);
+      onReportUser(message.sender_id, message.id);
+    },
+    [onReportUser],
+  );
+
+  const onToggleReactionForMessage = useCallback(
+    (messageId: string, emoji: string) => void onToggleReaction(messageId, emoji),
+    [onToggleReaction],
+  );
+
+  const onTogglePlay = useCallback(
+    (message: LocalMessage) => void onTogglePlayback(message),
+    [onTogglePlayback],
+  );
+
   const senderNames = useMemo(() => {
     const map = new Map<string, string>();
     for (const p of participants) {
@@ -1405,6 +1642,83 @@ export function ChatScreen({ route, navigation }: Props) {
     return result;
   }, [participants, messages, userId]);
 
+  // The list is inverted, so offset 0 is the newest message at the
+  // bottom - scrolling "up" through history moves the offset up.
+  const onScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    setIsScrolledUp(event.nativeEvent.contentOffset.y > SCROLL_TO_BOTTOM_THRESHOLD);
+  }, []);
+
+  // Oldest-first, so paging left-to-right in the viewer runs in the
+  // same direction as scrolling down through the conversation. Limited
+  // to the loaded window, which is the same history the chat itself is
+  // showing.
+  const imagePaths = useMemo(
+    () =>
+      displayMessages
+        .filter((m) => m.attachment_type === 'image' && m.media_path)
+        .map((m) => m.media_path as string)
+        .reverse(),
+    [displayMessages],
+  );
+
+  const onOpenImage = useCallback((path: string) => setViewerPath(path), []);
+
+  const onJumpToLatest = useCallback(() => {
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+  }, []);
+
+  const renderMessage = useCallback(
+    ({ item }: { item: LocalMessage }) => (
+      <MessageBubble
+        message={item}
+        isMine={item.sender_id === userId}
+        senderName={
+          isGroup && item.sender_id !== userId
+            ? senderNames.get(item.sender_id) ?? null
+            : null
+        }
+        reactions={reactionsByMessageId.get(item.id) ?? NO_REACTIONS}
+        userId={userId}
+        isPickerOpen={pickerMessageId === item.id}
+        isHighlighted={item.id === highlightedMessageId}
+        bubbleMaxWidth={bubbleMaxWidth}
+        isPlaying={playingMessageId === item.id}
+        seenBy={seenAvatarsByMessageId.get(item.id) ?? NO_SEEN_BY}
+        dayLabel={dayLabelsByMessageId.get(item.id) ?? null}
+        onLongPress={onTogglePicker}
+        onDismissPicker={onDismissPicker}
+        onToggleReaction={onToggleReactionForMessage}
+        onEdit={onEditMessage}
+        onDelete={onDeleteMessage}
+        onReply={onReplyToMessage}
+        onReport={onReportMessage}
+        onTogglePlay={onTogglePlay}
+        onOpenImage={onOpenImage}
+      />
+    ),
+    [
+      userId,
+      isGroup,
+      senderNames,
+      reactionsByMessageId,
+      pickerMessageId,
+      highlightedMessageId,
+      bubbleMaxWidth,
+      playingMessageId,
+      seenAvatarsByMessageId,
+      dayLabelsByMessageId,
+      onTogglePicker,
+      onDismissPicker,
+      onToggleReactionForMessage,
+      onEditMessage,
+      onDeleteMessage,
+      onReplyToMessage,
+      onReportMessage,
+      onTogglePlay,
+      onOpenImage,
+    ],
+  );
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -1415,7 +1729,12 @@ export function ChatScreen({ route, navigation }: Props) {
       <TouchableWithoutFeedback onPress={() => setPickerMessageId(null)}>
       <View style={[styles.content, { maxWidth: contentWidth }]}>
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel={t('chat.a11yBack')}
+        >
           <FontAwesome6 name="chevron-left" iconStyle="solid" size={18} color={colors.ink} />
         </TouchableOpacity>
         <Avatar
@@ -1438,15 +1757,32 @@ export function ChatScreen({ route, navigation }: Props) {
             )
           )}
         </View>
-        <TouchableOpacity style={styles.callButton} onPress={() => setIsSearchOpen(true)}>
+        <TouchableOpacity
+          style={styles.callButton}
+          onPress={() => setIsSearchOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel={t('chat.a11ySearch')}
+        >
           <FontAwesome6 name="magnifying-glass" iconStyle="solid" size={16} color={colors.ink} />
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.callButton}
           onPress={() => navigation.navigate('MediaGallery', { conversationId, title: displayTitle })}
+          accessibilityRole="button"
+          accessibilityLabel={t('chat.a11yGallery')}
         >
           <FontAwesome6 name="images" iconStyle="solid" size={16} color={colors.ink} />
         </TouchableOpacity>
+        {isGroup && (
+          <TouchableOpacity
+            style={styles.callButton}
+            onPress={() => navigation.navigate('GroupInfo', { conversationId })}
+            accessibilityRole="button"
+            accessibilityLabel={t('chat.a11yGroupInfo')}
+          >
+            <FontAwesome6 name="users" iconStyle="solid" size={16} color={colors.ink} />
+          </TouchableOpacity>
+        )}
         {!isGroup && otherParticipant && (
           <TouchableOpacity
             style={styles.callButton}
@@ -1458,12 +1794,19 @@ export function ChatScreen({ route, navigation }: Props) {
                 peerAvatarPath: otherParticipant.profiles.avatar_path,
               })
             }
+            accessibilityRole="button"
+            accessibilityLabel={t('chat.a11yCall')}
           >
             <FontAwesome6 name="video" iconStyle="solid" size={17} color={colors.ember} />
           </TouchableOpacity>
         )}
         {!isGroup && otherParticipant && (
-          <TouchableOpacity style={styles.callButton} onPress={onOpenChatMenu}>
+          <TouchableOpacity
+            style={styles.callButton}
+            onPress={onOpenChatMenu}
+            accessibilityRole="button"
+            accessibilityLabel={t('chat.a11yMenu')}
+          >
             <FontAwesome6 name="ellipsis-vertical" iconStyle="solid" size={16} color={colors.ink} />
           </TouchableOpacity>
         )}
@@ -1487,13 +1830,31 @@ export function ChatScreen({ route, navigation }: Props) {
             onChangeText={onChangeSearchQuery}
             autoFocus
           />
-          <TouchableOpacity onPress={onCloseSearch}>
+          <TouchableOpacity
+            onPress={onCloseSearch}
+            accessibilityRole="button"
+            accessibilityLabel={t('chat.a11yCloseSearch')}
+          >
             <FontAwesome6 name="xmark" iconStyle="solid" size={16} color={colors.smoke} />
           </TouchableOpacity>
         </View>
       )}
 
-      {isSearchOpen ? (
+      {didLoadFail && displayMessages.length === 0 ? (
+        <View style={styles.loadError}>
+          <FontAwesome6
+            name="cloud-arrow-down"
+            iconStyle="solid"
+            size={26}
+            color={colors.smoke}
+          />
+          <Text style={styles.loadErrorTitle}>{t('chat.loadFailedTitle')}</Text>
+          <Text style={styles.loadErrorHint}>{t('chat.loadFailedMessage')}</Text>
+          <TouchableOpacity style={styles.loadErrorButton} onPress={() => void loadMessages()}>
+            <Text style={styles.loadErrorButtonText}>{t('chat.loadFailedRetry')}</Text>
+          </TouchableOpacity>
+        </View>
+      ) : isSearchOpen ? (
         <ScrollView style={styles.list} keyboardShouldPersistTaps="handled">
           {isSearching && <ActivityIndicator color={colors.ember} style={styles.spinner} />}
           {!isSearching && searchQuery.trim().length >= 2 && searchResults.length === 0 && (
@@ -1519,9 +1880,11 @@ export function ChatScreen({ route, navigation }: Props) {
           ref={flatListRef}
           style={styles.list}
           data={displayMessages}
-          keyExtractor={(item) => item.id}
+          keyExtractor={messageKeyExtractor}
           inverted
           ListHeaderComponent={otherTyping ? TypingBubble : null}
+          onScroll={onScroll}
+          scrollEventThrottle={16}
           onEndReached={() => void loadMoreMessages()}
           onEndReachedThreshold={0.5}
           ListFooterComponent={
@@ -1535,40 +1898,18 @@ export function ChatScreen({ route, navigation }: Props) {
               100,
             );
           }}
-          renderItem={({ item }) => (
-            <MessageBubble
-              message={item}
-              isMine={item.sender_id === userId}
-              senderName={
-                isGroup && item.sender_id !== userId
-                  ? senderNames.get(item.sender_id) ?? null
-                  : null
-              }
-              reactions={reactions.filter((r) => r.message_id === item.id)}
-              userId={userId}
-              isPickerOpen={pickerMessageId === item.id}
-              isHighlighted={item.id === highlightedMessageId}
-              bubbleMaxWidth={bubbleMaxWidth}
-              isPlaying={playingMessageId === item.id}
-              seenBy={seenAvatarsByMessageId.get(item.id) ?? []}
-              onLongPress={() =>
-                setPickerMessageId((current) =>
-                  current === item.id ? null : item.id,
-                )
-              }
-              onDismissPicker={() => setPickerMessageId(null)}
-              onToggleReaction={(emoji) => void onToggleReaction(item.id, emoji)}
-              onEdit={() => onEditMessage(item)}
-              onDelete={() => onDeleteMessage(item.id)}
-              onReply={() => onReplyToMessage(item)}
-              onReport={() => {
-                setPickerMessageId(null);
-                onReportUser(item.sender_id, item.id);
-              }}
-              onTogglePlay={() => void onTogglePlayback(item)}
-            />
-          )}
+          renderItem={renderMessage}
         />
+      )}
+      {isScrolledUp && !isSearchOpen && (
+        <TouchableOpacity
+          style={styles.jumpToLatest}
+          onPress={onJumpToLatest}
+          accessibilityRole="button"
+          accessibilityLabel={t('chat.jumpToLatest')}
+        >
+          <FontAwesome6 name="chevron-down" iconStyle="solid" size={14} color={colors.ink} />
+        </TouchableOpacity>
       )}
       {editingMessageId && (
         <View style={styles.editingBar}>
@@ -1612,6 +1953,8 @@ export function ChatScreen({ route, navigation }: Props) {
             <TouchableOpacity
               onPress={() => void onStopRecording(false)}
               style={styles.attachButton}
+              accessibilityRole="button"
+              accessibilityLabel={t('chat.a11yDiscardRecording')}
             >
               <FontAwesome6 name="trash" iconStyle="solid" size={18} color={colors.danger} />
             </TouchableOpacity>
@@ -1622,6 +1965,8 @@ export function ChatScreen({ route, navigation }: Props) {
             <TouchableOpacity
               onPress={() => void onStopRecording(true)}
               style={styles.sendButton}
+              accessibilityRole="button"
+              accessibilityLabel={t('chat.a11ySendRecording')}
             >
               <FontAwesome6 name="paper-plane" iconStyle="solid" size={15} color={colors.white} />
             </TouchableOpacity>
@@ -1632,6 +1977,8 @@ export function ChatScreen({ route, navigation }: Props) {
               onPress={() => void onPickFile()}
               style={styles.attachButton}
               disabled={isUploadingAttachment}
+              accessibilityRole="button"
+              accessibilityLabel={t('chat.a11yAttachFile')}
             >
               <FontAwesome6 name="paperclip" iconStyle="solid" size={18} color={colors.smoke} />
             </TouchableOpacity>
@@ -1639,6 +1986,8 @@ export function ChatScreen({ route, navigation }: Props) {
               onPress={() => void onPickImage()}
               style={styles.attachButton}
               disabled={isUploadingAttachment}
+              accessibilityRole="button"
+              accessibilityLabel={t('chat.a11yAttachPhoto')}
             >
               {isUploadingAttachment ? (
                 <ActivityIndicator size="small" color={colors.smoke} />
@@ -1652,10 +2001,20 @@ export function ChatScreen({ route, navigation }: Props) {
               placeholderTextColor={colors.smoke}
               value={draft}
               onChangeText={onChangeDraft}
-              onSubmitEditing={() => void onSend()}
+              // Grows with the message instead of scrolling a long one
+              // sideways through a single line. Return now inserts a
+              // newline, so sending is the button's job - which is why
+              // onSubmitEditing is gone rather than merely inert.
+              multiline
+              textAlignVertical="center"
             />
             {draft.trim() || editingMessageId ? (
-              <TouchableOpacity onPress={() => void onSend()} style={styles.sendButton}>
+              <TouchableOpacity
+                onPress={() => void onSend()}
+                style={styles.sendButton}
+                accessibilityRole="button"
+                accessibilityLabel={t('chat.a11ySend')}
+              >
                 {editingMessageId ? (
                   <FontAwesome6 name="check" iconStyle="solid" size={16} color={colors.white} />
                 ) : (
@@ -1672,6 +2031,8 @@ export function ChatScreen({ route, navigation }: Props) {
                 onPress={() => void onStartRecording()}
                 style={styles.sendButton}
                 disabled={isUploadingAttachment}
+                accessibilityRole="button"
+                accessibilityLabel={t('chat.a11yRecord')}
               >
                 <FontAwesome6 name="microphone" iconStyle="solid" size={16} color={colors.white} />
               </TouchableOpacity>
@@ -1680,6 +2041,43 @@ export function ChatScreen({ route, navigation }: Props) {
         )}
       </View>
       {!isKeyboardVisible && <FooterNav active="chats" />}
+
+      <MediaViewer
+        paths={imagePaths}
+        initialPath={viewerPath}
+        onClose={() => setViewerPath(null)}
+      />
+
+      <Modal
+        visible={reportTarget !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setReportTarget(null)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>{t('chat.reportTitle')}</Text>
+            <Text style={styles.modalMessage}>{t('chat.reportMessage')}</Text>
+            {REPORT_REASONS.map((reason) => (
+              <TouchableOpacity
+                key={reason}
+                style={styles.reportReason}
+                onPress={() => onSubmitReport(reason)}
+                accessibilityRole="button"
+              >
+                <Text style={styles.reportReasonText}>{t(REPORT_REASON_LABEL_KEYS[reason])}</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={styles.reportCancel}
+              onPress={() => setReportTarget(null)}
+              accessibilityRole="button"
+            >
+              <Text style={styles.reportCancelText}>{t('chat.cancel')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
       </View>
       </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
@@ -1742,6 +2140,53 @@ const makeStyles = (colors: ThemeColors) =>
   },
   searchResultSender: { fontWeight: '700', fontSize: 13.5, color: colors.ink, marginBottom: 2 },
   searchResultSnippet: { fontSize: 13.5, color: colors.smoke },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: colors.paper,
+    borderRadius: radii.lg,
+    padding: spacing.lg,
+  },
+  modalTitle: { fontSize: 17, fontWeight: '700', color: colors.ink, marginBottom: 6 },
+  modalMessage: { fontSize: 13.5, color: colors.smoke, marginBottom: spacing.md },
+  reportReason: {
+    paddingVertical: 13,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.line,
+  },
+  reportReasonText: { fontSize: 15, color: colors.ink },
+  reportCancel: {
+    marginTop: spacing.md,
+    paddingVertical: 11,
+    borderRadius: radii.pill,
+    backgroundColor: colors.paper2,
+    alignItems: 'center',
+  },
+  reportCancelText: { fontSize: 14.5, fontWeight: '700', color: colors.smoke },
+  loadError: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.xxl,
+  },
+  loadErrorTitle: { color: colors.ink, fontWeight: '700', fontSize: 15.5 },
+  loadErrorHint: { color: colors.smoke, fontSize: 13.5, textAlign: 'center' },
+  loadErrorButton: {
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 9,
+    borderRadius: radii.pill,
+    backgroundColor: colors.ember,
+  },
+  loadErrorButtonText: { color: colors.white, fontWeight: '700', fontSize: 14 },
   list: { flex: 1, paddingHorizontal: 12 },
   rowMine: { alignItems: 'flex-end', marginVertical: 4 },
   rowTheirs: { alignItems: 'flex-start', marginVertical: 4 },
@@ -1815,6 +2260,40 @@ const makeStyles = (colors: ThemeColors) =>
   bubbleTextMine: { color: colors.white, fontSize: 14.5, lineHeight: 20 },
   bubbleTextTheirs: { color: colors.ink, fontSize: 14.5, lineHeight: 20 },
   editedTag: { fontSize: 10, color: colors.smoke, marginTop: 2 },
+  linkText: { textDecorationLine: 'underline' },
+  jumpToLatest: {
+    position: 'absolute',
+    right: spacing.lg,
+    bottom: 88,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.paper2,
+    borderWidth: 1,
+    borderColor: colors.line,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-end',
+    gap: spacing.xs,
+    marginTop: 2,
+  },
+  metaTextMine: { fontSize: 10, color: colors.white, opacity: 0.75 },
+  metaTextTheirs: { fontSize: 10, color: colors.smoke },
+  dayDivider: { alignItems: 'center', marginVertical: spacing.md },
+  dayDividerText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.smoke,
+    backgroundColor: colors.paper2,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: radii.pill,
+    overflow: 'hidden',
+  },
   replyQuote: {
     flexDirection: 'row',
     alignItems: 'stretch',
@@ -1940,6 +2419,7 @@ const makeStyles = (colors: ThemeColors) =>
   recordingTime: { fontSize: 14.5, color: colors.ink, fontWeight: '600' },
   input: {
     flex: 1,
+    maxHeight: 120,
     backgroundColor: colors.paper2,
     borderWidth: 1,
     borderColor: colors.line,
