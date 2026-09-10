@@ -1,7 +1,13 @@
 import messaging, {
   FirebaseMessagingTypes,
 } from '@react-native-firebase/messaging';
-import notifee, { AndroidCategory, AndroidImportance, EventType } from '@notifee/react-native';
+import notifee, {
+  AndroidCategory,
+  AndroidImportance,
+  AuthorizationStatus,
+  EventType,
+} from '@notifee/react-native';
+import type { NotificationSettings } from '@notifee/react-native';
 import { supabase } from '../lib/supabase';
 import * as pushTokensData from '../data/pushTokens';
 import { navigateToChat } from '../navigation/navigationRef';
@@ -111,12 +117,48 @@ async function displayForegroundNotification(
   });
 }
 
-export async function requestPermissionAndRegisterToken(): Promise<void> {
-  const settings = await messaging().requestPermission();
-  const granted =
-    settings === messaging.AuthorizationStatus.AUTHORIZED ||
-    settings === messaging.AuthorizationStatus.PROVISIONAL;
-  if (!granted) return;
+export type NotificationPermission = 'granted' | 'denied';
+
+function toPermission(settings: NotificationSettings): NotificationPermission {
+  return settings.authorizationStatus === AuthorizationStatus.AUTHORIZED ||
+    settings.authorizationStatus === AuthorizationStatus.PROVISIONAL
+    ? 'granted'
+    : 'denied';
+}
+
+// Reads the current state without prompting - used to show whether
+// notifications are on, rather than to ask for them.
+export async function getNotificationPermission(): Promise<NotificationPermission> {
+  return toPermission(await notifee.getNotificationSettings());
+}
+
+// Android only lets an app ask twice; after that requestPermission()
+// returns denied without showing anything, and the system settings
+// screen is the only way back. This is that way back.
+export async function openNotificationSettings(): Promise<void> {
+  await notifee.openNotificationSettings();
+}
+
+// This used to call messaging().requestPermission(), which does nothing
+// on Android: it's marked @platform ios upstream and returns
+// `Promise.resolve(AuthorizationStatus.AUTHORIZED)` on Android without
+// ever showing a prompt - the Android native module has no
+// requestPermission method at all, only hasPermission (which just reads
+// areNotificationsEnabled()).
+//
+// With targetSdkVersion 36, POST_NOTIFICATIONS is a runtime permission,
+// so nothing was ever requested and Android dropped every notification
+// silently. The token still registered and the server still reported
+// {"sent":N}, so the whole pipeline looked healthy from the outside -
+// which is exactly why this was hard to see.
+//
+// notifee's requestPermission does request POST_NOTIFICATIONS natively
+// (NotifeeApiModule.java), and behaves correctly on both platforms.
+// Safe to call repeatedly: when the answer is already known it returns
+// that answer rather than prompting again.
+export async function requestPermissionAndRegisterToken(): Promise<NotificationPermission> {
+  const permission = toPermission(await notifee.requestPermission());
+  if (permission === 'denied') return permission;
 
   await ensureAndroidChannel();
 
@@ -126,6 +168,8 @@ export async function requestPermissionAndRegisterToken(): Promise<void> {
   messaging().onTokenRefresh((refreshedToken) => {
     void pushTokensData.registerPushToken(refreshedToken);
   });
+
+  return permission;
 }
 
 // Call before signing out - otherwise this device keeps receiving

@@ -22,6 +22,12 @@ import type { AppStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
 import { supabase } from '../lib/supabase';
 import * as profilesData from '../data/profiles';
+import {
+  getNotificationPermission,
+  openNotificationSettings,
+  requestPermissionAndRegisterToken,
+  type NotificationPermission,
+} from '../notifications';
 import { Avatar } from '../components/Avatar';
 import { AppWallpaper } from '../components/AppWallpaper';
 import { PasswordField } from '../components/PasswordField';
@@ -86,6 +92,46 @@ export function ProfileScreen({ navigation }: Props) {
       setPhone(p.phone ?? '');
     });
   }, [userId]);
+
+  const [notificationPermission, setNotificationPermission] =
+    useState<NotificationPermission | null>(null);
+
+  // Re-read on every mount rather than once: the fix for a blocked
+  // permission happens in system settings, outside the app, so the
+  // answer can change while this screen is backgrounded.
+  useEffect(() => {
+    let cancelled = false;
+    void getNotificationPermission()
+      .then((permission) => {
+        if (!cancelled) setNotificationPermission(permission);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const onEnableNotifications = async () => {
+    // Idempotent: if the choice has already been made this returns it
+    // without prompting, which is what makes the blocked case detectable.
+    const permission = await requestPermissionAndRegisterToken().catch(
+      () => 'denied' as NotificationPermission,
+    );
+    setNotificationPermission(permission);
+    if (permission === 'granted') return;
+
+    Alert.alert(
+      t('profile.notificationsBlockedTitle'),
+      t('profile.notificationsBlockedMessage'),
+      [
+        { text: t('profile.cancel'), style: 'cancel' },
+        {
+          text: t('profile.notificationsOpenSettings'),
+          onPress: () => void openNotificationSettings().catch(() => {}),
+        },
+      ],
+    );
+  };
 
   const onChangePhoto = async () => {
     if (!userId) return;
@@ -302,6 +348,26 @@ export function ProfileScreen({ navigation }: Props) {
             placeholderTextColor={colors.smoke}
             keyboardType="phone-pad"
           />
+        </View>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>{t('profile.notifications')}</Text>
+          <View style={styles.notificationRow}>
+            <Text style={styles.notificationStatus}>
+              {notificationPermission === 'granted'
+                ? t('profile.notificationsOn')
+                : t('profile.notificationsOff')}
+            </Text>
+            {notificationPermission === 'denied' && (
+              <TouchableOpacity
+                style={styles.choiceChipActive}
+                onPress={() => void onEnableNotifications()}
+                accessibilityRole="button"
+              >
+                <Text style={styles.choiceTextActive}>{t('profile.notificationsEnable')}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
         <View style={styles.field}>
@@ -629,6 +695,8 @@ const makeStyles = (colors: ThemeColors) =>
     justifyContent: 'center',
     padding: spacing.lg,
   },
+  notificationRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  notificationStatus: { flex: 1, fontSize: 15, color: colors.ink },
   modalCard: {
     width: '100%',
     maxWidth: 400,

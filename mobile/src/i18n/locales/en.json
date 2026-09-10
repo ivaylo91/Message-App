@@ -231,6 +231,13 @@
     "themeLight": "Light",
     "themeDark": "Dark",
     "language": "Language",
+    "notifications": "Notifications",
+    "notificationsOn": "On",
+    "notificationsOff": "Off",
+    "notificationsEnable": "Turn on",
+    "notificationsBlockedTitle": "Notifications are blocked",
+    "notificationsBlockedMessage": "Android won’t ask again. Turn them on for Hearth in system settings.",
+    "notificationsOpenSettings": "Open settings",
     "deleteAccountFailedTitle": "Couldn't delete account",
     "deleteAccountFailedMessage": "Something went wrong deleting your account. Try again."
   },

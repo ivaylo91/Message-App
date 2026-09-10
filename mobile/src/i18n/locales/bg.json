@@ -231,6 +231,13 @@
     "themeLight": "Светла",
     "themeDark": "Тъмна",
     "language": "Език",
+    "notifications": "Известия",
+    "notificationsOn": "Включени",
+    "notificationsOff": "Изключени",
+    "notificationsEnable": "Включване",
+    "notificationsBlockedTitle": "Известията са блокирани",
+    "notificationsBlockedMessage": "Android няма да попита отново. Включете ги за Hearth от системните настройки.",
+    "notificationsOpenSettings": "Отваряне на настройките",
     "deleteAccountFailedTitle": "Акаунтът не можа да бъде изтрит",
     "deleteAccountFailedMessage": "Възникна грешка при изтриването на акаунта. Опитайте отново."
   },
