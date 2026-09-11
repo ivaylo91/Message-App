@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { Dimensions, StyleSheet, View } from 'react-native';
+import React, { memo, useMemo } from 'react';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
 import { useTheme } from '../theme/ThemeContext';
 
@@ -40,10 +40,16 @@ interface WallpaperIcon {
   color: string;
 }
 
-export function AppWallpaper() {
+function AppWallpaperComponent() {
   const { colors } = useTheme();
+  // Was Dimensions.get('window'), read once inside a memo keyed only on
+  // the theme - so the grid was sized for whatever the screen was at
+  // first render and never recomputed. Rotating the device, or resizing a
+  // split-screen/foldable window, left the pattern covering only part of
+  // the wider dimension.
+  const { width, height } = useWindowDimensions();
+
   const icons = useMemo<WallpaperIcon[]>(() => {
-    const { width, height } = Dimensions.get('window');
     const columns = Math.ceil(width / CELL_SIZE) + 1;
     const rows = Math.ceil(height / CELL_SIZE) + 1;
 
@@ -63,7 +69,7 @@ export function AppWallpaper() {
       }
     }
     return items;
-  }, [colors]);
+  }, [colors, width, height]);
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
@@ -80,6 +86,15 @@ export function AppWallpaper() {
     </View>
   );
 }
+
+// Memoised because it takes no props and is expensive for what it is:
+// the grid is ~98 absolutely-positioned icon views on a phone and ~216 on
+// a tablet, and it is rendered inside ChatScreen - which re-renders on
+// every keystroke in the composer. Without this, every character typed
+// reconciled a hundred-odd background views. It still re-renders when the
+// theme or the window size changes, since both arrive through hooks
+// rather than props.
+export const AppWallpaper = memo(AppWallpaperComponent);
 
 const styles = StyleSheet.create({
   icon: {
