@@ -24,6 +24,10 @@ interface ToastContextValue {
 
 const ToastContext = createContext<ToastContextValue>({ showToast: () => {} });
 
+// Roughly one header row, so the toast clears it on screens that have
+// one and still reads as top-anchored on screens that don't.
+const HEADER_CLEARANCE = 56;
+
 const DISPLAY_MS = 2500;
 const FADE_MS = 200;
 
@@ -68,7 +72,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
             pointerEvents="none"
             style={[
               styles.toast,
-              { top: insets.top + spacing.md, opacity },
+              // Offset past a header row rather than sitting on top of
+              // it: at insets.top + spacing.md this covered the screen
+              // title and, more to the point, the back button - so for
+              // its 2.5s the user could see the confirmation but not
+              // navigate away from it.
+              { top: insets.top + HEADER_CLEARANCE, opacity },
               toast.kind === 'error' ? styles.error : styles.success,
             ]}
           >

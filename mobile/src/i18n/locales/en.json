@@ -69,8 +69,8 @@
   "newChat": {
     "title": "New message",
     "cancel": "Cancel",
-    "searchPlaceholder": "Search by name, @username, email, or phone",
-    "emptyPrompt": "Start typing to find someone",
+    "searchPlaceholder": "Search by name or username",
+    "emptyPrompt": "Search by name, @username, email or phone",
     "noResults": "No matches found",
     "newGroup": "New group",
     "startFailedTitle": "Couldn't start chat",
