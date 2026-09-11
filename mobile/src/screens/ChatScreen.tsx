@@ -39,6 +39,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { ViewStyle } from 'react-native';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import type { AppStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
@@ -74,8 +75,16 @@ import {
   messageIdsStartingADay,
 } from '../utils/messagePreview';
 import { hasLink, linkifyText } from '../utils/linkify';
+import { runPositions, showsSenderName, type RunPosition } from '../utils/messageGrouping';
 import * as draftStorage from '../drafts/draftStorage';
-import { fontSizes, radii, spacing, MAX_BUBBLE_WIDTH, ThemeColors } from '../theme/tokens';
+import {
+  elevation,
+  fontSizes,
+  radii,
+  spacing,
+  MAX_BUBBLE_WIDTH,
+  ThemeColors,
+} from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 import { ConversationParticipant, Message, MessageReaction, ReplyPreview } from '../types';
 
@@ -444,6 +453,7 @@ interface MessageBubbleProps {
   onReport: (message: LocalMessage) => void;
   onTogglePlay: (message: LocalMessage) => void;
   onOpenImage: (path: string) => void;
+  runPosition: RunPosition;
 }
 
 function MessageBubbleComponent({
@@ -467,6 +477,7 @@ function MessageBubbleComponent({
   onReport,
   onTogglePlay,
   onOpenImage,
+  runPosition,
 }: MessageBubbleProps) {
   const { t, i18n } = useTranslation();
   const { colors, gradients } = useTheme();
@@ -476,6 +487,27 @@ function MessageBubbleComponent({
     [reactions, userId],
   );
 
+  // Flatten the corner facing a neighbour in the same run, on the sender's
+  // own side - which is what turns a stack of identical rounded islands
+  // into something that reads as one person talking.
+  const runShape = useMemo<ViewStyle>(() => {
+    const joined = radii.sm;
+    const top = runPosition === 'middle' || runPosition === 'last';
+    const bottom = runPosition === 'middle' || runPosition === 'first';
+    return {
+      ...(top
+        ? isMine
+          ? { borderTopRightRadius: joined }
+          : { borderTopLeftRadius: joined }
+        : null),
+      ...(bottom
+        ? isMine
+          ? { borderBottomRightRadius: joined }
+          : { borderBottomLeftRadius: joined }
+        : null),
+    };
+  }, [runPosition, isMine]);
+
   return (
     <>
       {dayLabel && (
@@ -484,7 +516,9 @@ function MessageBubbleComponent({
         </View>
       )}
       <View style={isMine ? styles.rowMine : styles.rowTheirs}>
-      {senderName && <Text style={styles.senderLabel}>{senderName}</Text>}
+      {senderName && showsSenderName(runPosition) && (
+        <Text style={styles.senderLabel}>{senderName}</Text>
+      )}
       <Touchable
         onLongPress={() => onLongPress(message.id)}
         onPress={onDismissPicker}
@@ -496,6 +530,7 @@ function MessageBubbleComponent({
           style={[
             message.attachment_type === 'image' ? styles.mediaBubble : styles.bubble,
             { maxWidth: bubbleMaxWidth },
+            runShape,
             message._pending && styles.bubblePending,
             isHighlighted && styles.bubbleHighlighted,
           ]}
@@ -1698,6 +1733,11 @@ export function ChatScreen({ route, navigation }: Props) {
 
   const onOpenImage = useCallback((path: string) => setViewerPath(path), []);
 
+  const runPositionByMessageId = useMemo(
+    () => runPositions(displayMessages),
+    [displayMessages],
+  );
+
   const onJumpToLatest = useCallback(() => {
     flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
   }, []);
@@ -1729,6 +1769,7 @@ export function ChatScreen({ route, navigation }: Props) {
         onReport={onReportMessage}
         onTogglePlay={onTogglePlay}
         onOpenImage={onOpenImage}
+        runPosition={runPositionByMessageId.get(item.id) ?? 'single'}
       />
     ),
     [
@@ -1751,6 +1792,7 @@ export function ChatScreen({ route, navigation }: Props) {
       onReportMessage,
       onTogglePlay,
       onOpenImage,
+      runPositionByMessageId,
     ],
   );
 
@@ -2188,6 +2230,7 @@ const makeStyles = (colors: ThemeColors) =>
     backgroundColor: colors.paper,
     borderRadius: radii.lg,
     padding: spacing.lg,
+    ...elevation.lg,
   },
   modalTitle: { fontSize: fontSizes.bodyLg, fontWeight: '700', color: colors.ink, marginBottom: 6 },
   modalMessage: { fontSize: fontSizes.footnote, color: colors.smoke, marginBottom: spacing.md },
@@ -2224,11 +2267,13 @@ const makeStyles = (colors: ThemeColors) =>
   loadErrorButtonText: { color: colors.white, fontWeight: '700', fontSize: fontSizes.body },
   list: { flex: 1, paddingHorizontal: 12 },
   rowMine: { alignItems: 'flex-end', marginVertical: 4 },
+  // Messages inside a run sit closer together than separate remarks do.
+  rowJoined: { marginTop: 2 },
   rowTheirs: { alignItems: 'flex-start', marginVertical: 4 },
   bubble: {
     padding: 11,
     paddingHorizontal: 15,
-    borderRadius: 22,
+    borderRadius: radii.bubble,
   },
   mediaBubble: {
     padding: 4,

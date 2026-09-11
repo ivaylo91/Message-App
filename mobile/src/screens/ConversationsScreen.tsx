@@ -427,12 +427,31 @@ export function ConversationsScreen({ navigation }: Props) {
         }}
         ListEmptyComponent={
           <View style={styles.empty}>
+            <View style={styles.emptyIcon}>
+              <FontAwesome6
+                name={trimmedSearchQuery ? 'magnifying-glass' : 'comments'}
+                iconStyle="solid"
+                size={26}
+                color={colors.smoke}
+              />
+            </View>
             {trimmedSearchQuery ? (
               <Text style={styles.emptyTitle}>{t('conversations.noSearchResults')}</Text>
             ) : (
               <>
                 <Text style={styles.emptyTitle}>{t('conversations.noConversationsYet')}</Text>
                 <Text style={styles.emptyHint}>{t('conversations.startConversationHint')}</Text>
+                {/* An empty list should offer the way out of being empty,
+                    rather than only describing the situation. */}
+                <Touchable
+                  style={styles.emptyAction}
+                  onPress={() => navigation.navigate('NewChat')}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.emptyActionText}>
+                    {t('conversations.startFirstChat')}
+                  </Text>
+                </Touchable>
               </>
             )}
           </View>
@@ -516,6 +535,25 @@ const makeStyles = (colors: ThemeColors) =>
   },
   unreadBadgeText: { color: colors.white, fontSize: fontSizes.caption, fontWeight: '700' },
   empty: { alignItems: 'center', marginTop: 64, paddingHorizontal: spacing.xxl },
+  emptyIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: colors.paper2,
+    borderWidth: 1,
+    borderColor: colors.line,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  emptyAction: {
+    marginTop: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: 10,
+    borderRadius: radii.pill,
+    backgroundColor: colors.ember,
+  },
+  emptyActionText: { color: colors.white, fontWeight: '700', fontSize: fontSizes.body },
   emptyTitle: { color: colors.ink, fontWeight: '700', fontSize: fontSizes.body },
   emptyHint: { color: colors.smoke, marginTop: 4, fontSize: fontSizes.footnote },
 });

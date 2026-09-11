@@ -34,7 +34,12 @@ export const lightColors: ThemeColors = {
   clay: '#B5654A',
   dusk: '#6E7B94',
   white: '#FFF8F2',
-  danger: '#FF3B30',
+  // Was #FF3B30 - the iOS system red, which was the one colour in here
+  // that looked borrowed rather than chosen: a cool red dropped into a
+  // warm ember/clay palette. This sits with clay (#B5654A) and also
+  // reads better, clearing 4.5:1 against paper where the old value did
+  // not manage 3.5:1.
+  danger: '#C6392F',
 };
 
 export const darkColors: ThemeColors = {
@@ -50,7 +55,7 @@ export const darkColors: ThemeColors = {
   clay: '#C97A5E',
   dusk: '#7C8CAD',
   white: '#FFF8F2',
-  danger: '#FF6B60',
+  danger: '#F0685A',
 };
 
 // 'system' defers to the OS setting, which is what this app did
@@ -136,6 +141,11 @@ export const radii = {
   md: 13,
   lg: 16,
   xl: 20,
+  // Message bubbles. Larger than xl and used only here, but it was
+  // hardcoded as 22 in ChatScreen, which put the app's most repeated
+  // shape outside the scale. Most other raw radii in the app are a
+  // circle's size/2 and correctly stay literal.
+  bubble: 22,
   pill: 999,
 } as const;
 
@@ -146,6 +156,39 @@ export const spacing = {
   lg: 16,
   xl: 24,
   xxl: 32,
+} as const;
+
+// Raised surfaces. The app previously used shadows in three places and
+// separated everything else with hairline borders, which reads flat.
+// These are deliberately restrained - a shadow's job here is to say
+// "this floats above the content", not to be visible in itself.
+//
+// Only applied to surfaces that own an opaque background: on Android
+// `elevation` needs one to cast a shadow at all. The chat header and
+// composer deliberately keep their hairlines instead, because they are
+// translucent over the chat wallpaper by design.
+export const elevation = {
+  sm: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  md: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  lg: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    elevation: 14,
+  },
 } as const;
 
 // Caps how wide a screen's content is allowed to stretch. Phones are

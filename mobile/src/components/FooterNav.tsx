@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 import type { AppStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
 import { useUnread } from '../unread/UnreadContext';
-import { fontSizes, spacing, ThemeColors } from '../theme/tokens';
+import { elevation, fontSizes, spacing, ThemeColors } from '../theme/tokens';
 import { Touchable } from './Touchable';
 import { useTheme } from '../theme/ThemeContext';
 
@@ -134,10 +134,9 @@ const makeStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     container: {
       flexDirection: 'row',
-      borderTopWidth: 1,
-      borderTopColor: colors.line,
       backgroundColor: colors.paper2,
       paddingTop: spacing.sm,
+      ...elevation.sm,
     },
     item: { flex: 1, alignItems: 'center', gap: 3 },
     iconWrap: { position: 'relative' },

@@ -33,6 +33,7 @@ import { PasswordField } from '../components/PasswordField';
 import { useContentWidth } from '../hooks/useContentWidth';
 import {
   BUBBLE_GRADIENT_PRESETS,
+  elevation,
   fontSizes,
   radii,
   spacing,
@@ -702,6 +703,7 @@ const makeStyles = (colors: ThemeColors) =>
     backgroundColor: colors.paper,
     borderRadius: radii.lg,
     padding: spacing.lg,
+    ...elevation.lg,
   },
   modalTitle: { fontSize: fontSizes.bodyLg, fontWeight: '700', color: colors.ink, marginBottom: 6 },
   modalMessage: { fontSize: fontSizes.footnote, color: colors.smoke, marginBottom: spacing.lg, lineHeight: 19 },

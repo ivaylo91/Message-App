@@ -198,6 +198,12 @@ export function MediaGalleryScreen({ route, navigation }: Props) {
           <ActivityIndicator style={styles.spinner} color={colors.ember} />
         ) : items.length === 0 ? (
           <View style={styles.emptyState}>
+            <FontAwesome6
+              name={tab === 'photos' ? 'images' : 'paperclip'}
+              iconStyle="solid"
+              size={24}
+              color={colors.smoke}
+            />
             <Text style={styles.emptyText}>
               {tab === 'photos' ? t('mediaGallery.noPhotos') : t('mediaGallery.noFiles')}
             </Text>
@@ -303,7 +309,7 @@ const makeStyles = (colors: ThemeColors) =>
     fileTextBlock: { flex: 1 },
     fileName: { fontSize: fontSizes.body, color: colors.ink, fontWeight: '600' },
     fileSubtitle: { fontSize: fontSizes.caption, color: colors.smoke, marginTop: 2 },
-    emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+    emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.md },
     emptyText: { fontSize: fontSizes.body, color: colors.smoke },
     spinner: { marginTop: spacing.xl },
   });
