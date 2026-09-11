@@ -99,6 +99,15 @@ export function Touchable({
           : {
               color: ripple?.color ?? colors.line,
               borderless: ripple?.borderless ?? iconButton,
+              // Draw the ripple over the content, not under it. Without
+              // this, React Native applies it as nativeBackgroundAndroid -
+              // which *replaces* the view's background drawable, so any
+              // backgroundColor is silently lost. Combined with borderless
+              // (no mask) that made the send button completely invisible: a
+              // white icon on light paper, its ember circle gone. Applies to
+              // every button with a background, so it is unconditional here
+              // rather than a per-site opt-in. Needs API 23+; minSdk is 24.
+              foreground: true,
             }
       }
       {...rest}
