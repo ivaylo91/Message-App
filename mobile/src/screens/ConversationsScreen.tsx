@@ -41,6 +41,7 @@ import { Conversation, Message, Profile } from '../types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Conversations'>;
 
+const MESSAGE_SEARCH_DEBOUNCE_MS = 300;
 const SWIPE_DELETE_WIDTH = 84;
 const SWIPE_OPEN_THRESHOLD = -40;
 
@@ -228,6 +229,11 @@ export function ConversationsScreen({ navigation }: Props) {
   const isLoadingRef = useRef(false);
   const pendingReloadRef = useRef(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [messageHits, setMessageHits] = useState<
+    conversationsData.GlobalMessageSearchResult[]
+  >([]);
+  const [isSearchingMessages, setIsSearchingMessages] = useState(false);
+  const messageSearchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function previewText(message: Message | undefined): string {
     if (!message) return t('conversations.noMessagesYet');
@@ -412,6 +418,30 @@ export function ConversationsScreen({ navigation }: Props) {
     [watchTyping, watchedConversationIds],
   );
 
+  // The conversation filter below stays client-side and instant; message
+  // bodies need the server, so that half is debounced. Two different kinds
+  // of result, deliberately shown in one list under their own headings.
+  const onChangeSearch = useCallback(
+    (text: string) => {
+      setSearchQuery(text);
+      if (messageSearchRef.current) clearTimeout(messageSearchRef.current);
+      if (text.trim().length < 2) {
+        setMessageHits([]);
+        setIsSearchingMessages(false);
+        return;
+      }
+      setIsSearchingMessages(true);
+      messageSearchRef.current = setTimeout(() => {
+        conversationsData
+          .searchAllMessages(text)
+          .then(setMessageHits)
+          .catch(() => setMessageHits([]))
+          .finally(() => setIsSearchingMessages(false));
+      }, MESSAGE_SEARCH_DEBOUNCE_MS);
+    },
+    [],
+  );
+
   const otherParticipantOf = (conversation: Conversation) =>
     conversation.conversation_participants.find((p) => p.user_id !== userId);
 
@@ -484,7 +514,7 @@ export function ConversationsScreen({ navigation }: Props) {
           placeholderTextColor={colors.smoke}
           autoCapitalize="none"
           value={searchQuery}
-          onChangeText={setSearchQuery}
+          onChangeText={onChangeSearch}
         />
         {searchQuery.length > 0 && (
           <Touchable
@@ -502,6 +532,73 @@ export function ConversationsScreen({ navigation }: Props) {
         keyExtractor={(item) => item.id}
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={load} />
+        }
+        ListHeaderComponent={
+          trimmedSearchQuery && filteredConversations.length > 0 ? (
+            <Text style={styles.sectionHeading}>
+              {t('conversations.conversationsSection')}
+            </Text>
+          ) : null
+        }
+        ListFooterComponent={
+          trimmedSearchQuery ? (
+            <View>
+              <Text style={styles.sectionHeading}>
+                {t('conversations.messagesSection')}
+              </Text>
+              {isSearchingMessages && messageHits.length === 0 ? (
+                <Text style={styles.sectionHint}>
+                  {t('conversations.searchingMessages')}
+                </Text>
+              ) : messageHits.length === 0 ? (
+                <Text style={styles.sectionHint}>
+                  {t('conversations.noMessageMatches')}
+                </Text>
+              ) : (
+                messageHits.map((hit) => {
+                  const conv = hit.conversations;
+                  const other = conv.conversation_participants.find(
+                    (p) => p.user_id !== userId,
+                  );
+                  const name = conv.is_group
+                    ? conv.name ?? t('conversations.groupChat')
+                    : other?.profiles.display_name ??
+                      other?.profiles.email ??
+                      t('conversations.directMessage');
+                  return (
+                    <Touchable
+                      key={hit.id}
+                      style={styles.hitRow}
+                      onPress={() =>
+                        navigation.navigate('Chat', {
+                          conversationId: hit.conversation_id,
+                          title: name,
+                          // Lands on the message itself rather than the
+                          // newest page, which could be far away.
+                          highlightMessageId: hit.id,
+                        })
+                      }
+                      accessibilityRole="button"
+                    >
+                      <Avatar
+                        name={name}
+                        avatarPath={conv.is_group ? null : other?.profiles.avatar_path}
+                        size={34}
+                      />
+                      <View style={styles.rowMain}>
+                        <Text style={styles.hitTitle} numberOfLines={1}>
+                          {name}
+                        </Text>
+                        <Text style={styles.hitBody} numberOfLines={1}>
+                          {hit.body}
+                        </Text>
+                      </View>
+                    </Touchable>
+                  );
+                })
+              )}
+            </View>
+          ) : null
         }
         renderItem={({ item }) => {
           const title = conversationTitle(item);
@@ -632,6 +729,31 @@ const makeStyles = (colors: ThemeColors) =>
     paddingHorizontal: spacing.lg,
   },
   rowMain: { flex: 1, minWidth: 0 },
+  sectionHeading: {
+    fontSize: fontSizes.caption,
+    fontWeight: '700',
+    color: colors.smoke,
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: 4,
+  },
+  sectionHint: {
+    fontSize: fontSizes.footnote,
+    color: colors.smoke,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
+  hitRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: 9,
+    paddingHorizontal: spacing.lg,
+  },
+  hitTitle: { fontSize: fontSizes.footnote, fontWeight: '700', color: colors.ink },
+  hitBody: { fontSize: fontSizes.footnote, color: colors.smoke, marginTop: 1 },
   skeletonRow: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -39,7 +39,9 @@ export type AppStackParamList = {
   NewChat: undefined;
   NewGroup: undefined;
   Profile: undefined;
-  Chat: { conversationId: string; title: string };
+  // highlightMessageId jumps straight to a message - used by global
+  // search, which can land on a message far outside the newest page.
+  Chat: { conversationId: string; title: string; highlightMessageId?: string };
   MediaGallery: { conversationId: string; title: string };
   GroupInfo: { conversationId: string };
 };

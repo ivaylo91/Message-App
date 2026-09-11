@@ -1005,11 +1005,47 @@ export function ChatScreen({ route, navigation }: Props) {
     }
   }, [conversationId]);
 
+  // Arriving from global search: load a window centred on the target
+  // rather than the newest page, which could be thousands of messages
+  // away. Reuses the same path as tapping an in-chat search result.
+  const loadMessagesAround = useCallback(
+    async (anchorMessageId: string) => {
+      setDidLoadFail(false);
+      try {
+        const around = await conversationsData.fetchMessagesAround(
+          conversationId,
+          anchorMessageId,
+        );
+        setMessages(around);
+        setReactions(
+          await reactionsData.fetchReactionsForMessages(around.map((m) => m.id)),
+        );
+        setHighlightedMessageId(anchorMessageId);
+      } catch {
+        // Fall back to the normal newest-first load rather than an empty
+        // screen: landing in the right conversation is most of the value.
+        await loadMessages();
+      } finally {
+        setHasLoadedMessages(true);
+      }
+    },
+    [conversationId, loadMessages],
+  );
+
   useFocusEffect(
     useCallback(() => {
+      const target = route.params.highlightMessageId;
+      if (target) {
+        // Consumed once: without clearing it, coming back to this screen
+        // later would jump to the same old message again.
+        navigation.setParams({ highlightMessageId: undefined });
+        void loadMessagesAround(target);
+        markRead();
+        return;
+      }
       void loadMessages();
       markRead();
-    }, [loadMessages, markRead]),
+    }, [loadMessages, loadMessagesAround, markRead, route.params.highlightMessageId, navigation]),
   );
 
   // Inverted FlatList's onEndReached fires when the user scrolls up to

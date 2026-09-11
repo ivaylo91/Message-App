@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { escapeLikePattern } from '../utils/likePattern';
-import { AttachmentType, CallStatus, Conversation, Message } from '../types';
+import { AttachmentType, CallStatus, Conversation, Message, Profile } from '../types';
 
 const CONVERSATION_SELECT = '*, conversation_participants(*, profiles(*))';
 
@@ -178,6 +178,59 @@ export async function searchMessages(
 
   if (error) throw error;
   return data as MessageSearchResult[];
+}
+
+export interface GlobalMessageSearchResult {
+  id: string;
+  sender_id: string;
+  body: string;
+  created_at: string;
+  conversation_id: string;
+  conversations: {
+    id: string;
+    is_group: boolean;
+    name: string | null;
+    conversation_participants: {
+      user_id: string;
+      profiles: Profile;
+    }[];
+  };
+}
+
+// Searches message bodies across every conversation the user belongs to,
+// which is what the conversation list's own search cannot do - that one is
+// a client-side filter over already-loaded rows, so it never sees message
+// content and cannot reach a conversation outside the loaded page.
+//
+// No conversation filter here; RLS does the scoping, since the messages
+// select policy already restricts rows to conversations the caller is a
+// participant of. The conversation is embedded so a result can render its
+// own title even when that conversation isn't in the loaded list.
+//
+// Worth knowing at scale: this is an unanchored ILIKE across every message
+// the user can see, and the RLS check runs per row. Fine at current
+// volumes; if it ever gets slow, a trigram index on body is the lever -
+// though note the planner favoured a conversation-scoped index scan when
+// that was measured for the single-conversation search.
+export async function searchAllMessages(
+  query: string,
+): Promise<GlobalMessageSearchResult[]> {
+  const trimmed = query.trim();
+  if (trimmed.length < 2) return [];
+
+  const { data, error } = await supabase
+    .from('messages')
+    .select(
+      'id, sender_id, body, created_at, conversation_id, conversations!inner(id, is_group, name, conversation_participants(user_id, profiles(*)))',
+    )
+    .is('deleted_at', null)
+    .not('body', 'is', null)
+    .ilike('body', `%${escapeLikePattern(trimmed)}%`)
+    .order('created_at', { ascending: false })
+    .limit(30);
+
+  if (error) throw error;
+  return data as unknown as GlobalMessageSearchResult[];
 }
 
 export interface MediaMessage {
