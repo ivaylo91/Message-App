@@ -26,6 +26,9 @@ export interface ConversationParticipant {
   role: 'MEMBER' | 'ADMIN';
   last_read_at: string | null;
   hidden_at: string | null;
+  // Null = not muted; a future timestamp mutes pushes until it passes.
+  // See utils/mute.ts and 20260911_add_conversation_mute.sql.
+  muted_until: string | null;
   profiles: Profile;
 }
 

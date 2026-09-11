@@ -157,7 +157,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: participants, error: participantsError } = await supabase
       .from("conversation_participants")
-      .select("user_id")
+      .select("user_id, muted_until")
       .eq("conversation_id", message.conversation_id)
       .neq("user_id", message.sender_id);
     if (participantsError) throw participantsError;
@@ -165,7 +165,25 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ skipped: true }), { status: 200 });
     }
 
-    const recipientIds = participants.map((p: { user_id: string }) => p.user_id);
+    // Mute is enforced here rather than on the client: the point is not to
+    // be woken, so the push must not be sent at all. An expired mute is
+    // indistinguishable from no mute, which is why nothing has to clear
+    // old values. Muting is per participant - everyone else in a group
+    // still gets notified.
+    const now = Date.now();
+    const recipientIds = participants
+      .filter((p: { muted_until: string | null }) => {
+        if (!p.muted_until) return true;
+        const until = new Date(p.muted_until).getTime();
+        return Number.isNaN(until) || until <= now;
+      })
+      .map((p: { user_id: string }) => p.user_id);
+
+    if (!recipientIds.length) {
+      return new Response(JSON.stringify({ skipped: true, reason: "all muted" }), {
+        status: 200,
+      });
+    }
 
     const { data: tokens, error: tokensError } = await supabase
       .from("push_tokens")

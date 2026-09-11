@@ -57,6 +57,23 @@ export async function hideConversation(
   if (error) throw error;
 }
 
+// Mute is per participant, so this only ever writes the caller's own row -
+// which is also all the RLS policy permits (verified: updating another
+// participant's row affects zero rows). Pass null to unmute.
+export async function setConversationMuted(
+  conversationId: string,
+  userId: string,
+  mutedUntil: string | null,
+): Promise<void> {
+  const { error } = await supabase
+    .from('conversation_participants')
+    .update({ muted_until: mutedUntil })
+    .eq('conversation_id', conversationId)
+    .eq('user_id', userId);
+
+  if (error) throw error;
+}
+
 export async function fetchUnreadCounts(): Promise<Record<string, number>> {
   const { data, error } = await supabase.rpc('unread_message_counts');
   if (error) throw error;

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Alert,
   Animated,
   FlatList,
   LayoutAnimation,
@@ -22,6 +23,7 @@ import * as profilesData from '../data/profiles';
 import { Avatar } from '../components/Avatar';
 import { Touchable } from '../components/Touchable';
 import { useConfirm } from '../components/ConfirmSheet';
+import { useToast } from '../components/Toast';
 import { Skeleton, SkeletonGroup } from '../components/Skeleton';
 import { AppLogo } from '../components/AppLogo';
 import { FooterNav } from '../components/FooterNav';
@@ -32,6 +34,7 @@ import { useTyping } from '../typing/TypingContext';
 import { useMessageStream } from '../messages/MessageStreamContext';
 import { attachmentPreviewText, callStatusPreviewText } from '../utils/messagePreview';
 import { applyIncomingMessage } from '../utils/conversationList';
+import { isMuted, mutedUntilFor, type MuteDuration } from '../utils/mute';
 import { fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 import { Conversation, Message, Profile } from '../types';
@@ -43,6 +46,7 @@ const SWIPE_OPEN_THRESHOLD = -40;
 
 interface ConversationRowProps {
   title: string;
+  muted: boolean;
   avatarPath: string | null | undefined;
   online: boolean | undefined;
   unreadCount: number;
@@ -52,6 +56,7 @@ interface ConversationRowProps {
   onOpen: () => void;
   onClose: () => void;
   onPress: () => void;
+  onLongPress: () => void;
   onDelete: () => void;
 }
 
@@ -62,6 +67,7 @@ interface ConversationRowProps {
 // the parent), matching the usual Mail/WhatsApp-style swipe list feel.
 function ConversationRow({
   title,
+  muted,
   avatarPath,
   online,
   unreadCount,
@@ -71,6 +77,7 @@ function ConversationRow({
   onOpen,
   onClose,
   onPress,
+  onLongPress,
   onDelete,
 }: ConversationRowProps) {
   const { t } = useTranslation();
@@ -130,10 +137,22 @@ function ConversationRow({
         style={[styles.rowForeground, { transform: [{ translateX }] }]}
         {...panResponder.panHandlers}
       >
-        <Touchable style={styles.row} onPress={onPress}>
+        <Touchable style={styles.row} onPress={onPress} onLongPress={onLongPress}>
           <Avatar name={title} avatarPath={avatarPath} online={online} />
           <View style={styles.rowMain}>
-            <Text style={styles.rowTitle}>{title}</Text>
+            <View style={styles.rowTitleLine}>
+              <Text style={styles.rowTitle} numberOfLines={1}>
+                {title}
+              </Text>
+              {muted && (
+                <FontAwesome6
+                  name="bell-slash"
+                  iconStyle="solid"
+                  size={12}
+                  color={colors.smoke}
+                />
+              )}
+            </View>
             <Text
               style={[
                 styles.rowPreview,
@@ -188,6 +207,7 @@ export function ConversationsScreen({ navigation }: Props) {
   const { unreadCounts, refresh: refreshUnreadCounts } = useUnread();
   const { typingConversationIds, watch: watchTyping } = useTyping();
   const { confirm } = useConfirm();
+  const { showToast } = useToast();
   const { subscribe: subscribeToMessages } = useMessageStream();
   const insets = useSafeAreaInsets();
   const { contentWidth } = useContentWidth();
@@ -286,6 +306,56 @@ export function ConversationsScreen({ navigation }: Props) {
         setConversations(next);
       }),
     [subscribeToMessages, load],
+  );
+
+  // Long-press rather than another swipe action: the swipe already reveals
+  // Delete, and mute has four outcomes rather than one. Uses the same sheet
+  // as every other multi-choice action in the app.
+  const onLongPressConversation = useCallback(
+    (conversation: Conversation, title: string) => {
+      if (!userId) return;
+      const mine = conversation.conversation_participants.find((p) => p.user_id === userId);
+      const currentlyMuted = isMuted(mine?.muted_until);
+
+      const options = currentlyMuted
+        ? [{ id: 'unmute', label: t('conversations.unmute') }]
+        : [
+            { id: 'eightHours', label: t('conversations.muteEightHours') },
+            { id: 'oneWeek', label: t('conversations.muteOneWeek') },
+            { id: 'always', label: t('conversations.muteAlways') },
+          ];
+
+      void confirm({
+        title,
+        message: currentlyMuted ? undefined : t('conversations.mute'),
+        cancelLabel: t('chat.cancel'),
+        options,
+      }).then((choice) => {
+        if (!choice) return;
+        const mutedUntil =
+          choice === 'unmute' ? null : mutedUntilFor(choice as MuteDuration);
+        void conversationsData
+          .setConversationMuted(conversation.id, userId, mutedUntil)
+          .then(() => {
+            // Reload rather than patching in place: muted_until lives on the
+            // participant row the list already carries, so a refetch keeps
+            // the row and the server in step without a second source of truth.
+            void load();
+            showToast(
+              mutedUntil
+                ? t('conversations.mutedToast')
+                : t('conversations.unmutedToast'),
+            );
+          })
+          .catch(() =>
+            Alert.alert(
+              t('conversations.muteFailedTitle'),
+              t('conversations.muteFailedMessage'),
+            ),
+          );
+      });
+    },
+    [userId, confirm, t, load, showToast],
   );
 
   const onDeleteConversation = useCallback(
@@ -441,6 +511,9 @@ export function ConversationsScreen({ navigation }: Props) {
           return (
             <ConversationRow
               title={title}
+              muted={isMuted(
+                item.conversation_participants.find((p) => p.user_id === userId)?.muted_until,
+              )}
               avatarPath={item.is_group ? null : other?.profiles.avatar_path}
               online={item.is_group ? undefined : other && isOnline(other.user_id)}
               unreadCount={unreadCount}
@@ -452,6 +525,7 @@ export function ConversationsScreen({ navigation }: Props) {
                 setOpenRowId((current) => (current === item.id ? null : current))
               }
               onPress={() => navigation.navigate('Chat', { conversationId: item.id, title })}
+              onLongPress={() => onLongPressConversation(item, title)}
               onDelete={() => onDeleteConversation(item, title)}
             />
           );
@@ -566,6 +640,7 @@ const makeStyles = (colors: ThemeColors) =>
     paddingHorizontal: spacing.lg,
   },
   skeletonText: { flex: 1, gap: 7 },
+  rowTitleLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   rowTitle: { fontWeight: '700', fontSize: fontSizes.body, color: colors.ink },
   rowPreview: { color: colors.smoke, marginTop: 2, fontSize: fontSizes.footnote },
   rowPreviewTyping: { color: colors.sage, fontWeight: '600' },
