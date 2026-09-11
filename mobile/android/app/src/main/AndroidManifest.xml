@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
@@ -33,9 +34,15 @@
       <meta-data
         android:name="com.google.firebase.messaging.default_notification_icon"
         android:resource="@drawable/ic_notification" />
+      <!-- tools:replace only on the colour: @react-native-firebase/messaging
+           declares default_notification_color itself (resolving to
+           @color/white via firebase.json) and the merger fails rather than
+           picking a winner. It does not declare an icon, so that one merges
+           cleanly and needs no override. -->
       <meta-data
         android:name="com.google.firebase.messaging.default_notification_color"
-        android:resource="@color/notification_color" />
+        android:resource="@color/notification_color"
+        tools:replace="android:resource" />
       <activity
         android:name=".MainActivity"
         android:label="@string/app_name"
