@@ -132,20 +132,26 @@ export async function displayMessageNotification(
   // initialising i18n in a headless task.
   const title = typeof data?.title === 'string' ? data.title : 'New message';
   const body = typeof data?.body === 'string' ? data.body : 'Sent you a message';
+  // A reaction notification gets no Reply action: replying to a thumbs up
+  // would post a message into the conversation, which is not what the
+  // action appears to offer.
+  const isReaction = data?.type === 'reaction';
 
   await ensureAndroidChannel();
 
   await notifee.displayNotification({
     // Keyed by conversation, so a second message replaces the first rather
     // than stacking - and a reply dismisses the notification it came from.
-    id: conversationId,
+    // Reactions get their own key, or reacting to a message would silently
+    // replace the notification for the message itself.
+    id: isReaction && conversationId ? `${conversationId}:reaction` : conversationId,
     title,
     body,
     data: conversationId ? { conversationId } : {},
     android: {
       channelId: MESSAGE_CHANNEL_ID,
       pressAction: { id: 'default', launchActivity: 'default' },
-      actions: conversationId
+      actions: conversationId && !isReaction
         ? [
             {
               title: REPLY_ACTION_TITLE,

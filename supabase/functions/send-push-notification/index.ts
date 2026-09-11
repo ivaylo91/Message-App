@@ -136,6 +136,101 @@ function genericBodyFor(message: { attachment_type?: string | null }): string {
   }
 }
 
+// Shared by both kinds of push. Returns how many tokens were sent to.
+async function pushToUsers(
+  supabase: ReturnType<typeof createClient>,
+  userIds: string[],
+  title: string,
+  body: string,
+  data: Record<string, string>,
+): Promise<number> {
+  if (!userIds.length) return 0;
+
+  const { data: tokens, error } = await supabase
+    .from("push_tokens")
+    .select("token")
+    .in("user_id", userIds);
+  if (error) throw error;
+  if (!tokens?.length) return 0;
+
+  const serviceAccount: ServiceAccount = JSON.parse(FIREBASE_SERVICE_ACCOUNT!);
+  const accessToken = await getAccessToken(serviceAccount);
+
+  await Promise.all(
+    tokens.map((t: { token: string }) =>
+      sendFcmMessage(accessToken, serviceAccount.project_id, t.token, title, body, data),
+    ),
+  );
+  return tokens.length;
+}
+
+// Not muted, or the mute has expired - the same rule the message path uses.
+function notMuted(mutedUntil: string | null, now: number): boolean {
+  if (!mutedUntil) return true;
+  const until = new Date(mutedUntil).getTime();
+  return Number.isNaN(until) || until <= now;
+}
+
+// Someone reacted to a message: notify only its author. Deliberately not
+// everyone in the conversation - a reaction concerns the person whose
+// message it was.
+async function handleReaction(
+  supabase: ReturnType<typeof createClient>,
+  reaction: {
+    message_id: string;
+    conversation_id: string;
+    user_id: string;
+    emoji: string;
+  },
+): Promise<Response> {
+  const { data: message } = await supabase
+    .from("messages")
+    .select("sender_id, deleted_at")
+    .eq("id", reaction.message_id)
+    .single();
+
+  // Reacting to your own message should not buzz your own phone, and a
+  // deleted message has nothing left to react to.
+  if (!message || message.deleted_at || message.sender_id === reaction.user_id) {
+    return new Response(JSON.stringify({ skipped: true, reason: "no recipient" }), {
+      status: 200,
+    });
+  }
+
+  const { data: participant } = await supabase
+    .from("conversation_participants")
+    .select("muted_until")
+    .eq("conversation_id", reaction.conversation_id)
+    .eq("user_id", message.sender_id)
+    .single();
+
+  // Muting a conversation mutes its reactions too - being woken by a thumbs
+  // up on a muted thread is exactly what mute is for.
+  if (!participant || !notMuted(participant.muted_until, Date.now())) {
+    return new Response(JSON.stringify({ skipped: true, reason: "muted" }), {
+      status: 200,
+    });
+  }
+
+  const { data: reactor } = await supabase
+    .from("profiles")
+    .select("display_name")
+    .eq("id", reaction.user_id)
+    .single();
+
+  // The emoji is the entire content of the notification - without it there
+  // is nothing to say - and it reveals far less than message text would.
+  const sent = await pushToUsers(
+    supabase,
+    [message.sender_id],
+    reactor?.display_name ?? "Someone",
+    `Reacted ${reaction.emoji} to your message`,
+    { conversationId: reaction.conversation_id, type: "reaction" },
+  );
+
+  return new Response(JSON.stringify({ sent }), { status: 200 });
+}
+
 Deno.serve(async (req: Request) => {
   if (WEBHOOK_SECRET && req.headers.get("x-webhook-secret") !== WEBHOOK_SECRET) {
     return new Response("Unauthorized", { status: 401 });
@@ -147,13 +242,22 @@ Deno.serve(async (req: Request) => {
 
   try {
     const payload = await req.json();
+    const supabaseClient = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+
+    // The reaction trigger posts { reaction: ... }; the message trigger
+    // posts { record: ... }. Branching on the key keeps both kinds sharing
+    // the FCM credentials and JWT signing above.
+    if (payload.reaction) {
+      return await handleReaction(supabaseClient, payload.reaction);
+    }
+
     const message = payload.record;
 
     if (!message?.conversation_id || !message?.sender_id) {
       return new Response(JSON.stringify({ skipped: true }), { status: 200 });
     }
 
-    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+    const supabase = supabaseClient;
 
     const { data: participants, error: participantsError } = await supabase
       .from("conversation_participants")
@@ -172,11 +276,7 @@ Deno.serve(async (req: Request) => {
     // still gets notified.
     const now = Date.now();
     const recipientIds = participants
-      .filter((p: { muted_until: string | null }) => {
-        if (!p.muted_until) return true;
-        const until = new Date(p.muted_until).getTime();
-        return Number.isNaN(until) || until <= now;
-      })
+      .filter((p: { muted_until: string | null }) => notMuted(p.muted_until, now))
       .map((p: { user_id: string }) => p.user_id);
 
     if (!recipientIds.length) {
@@ -185,36 +285,21 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const { data: tokens, error: tokensError } = await supabase
-      .from("push_tokens")
-      .select("token")
-      .in("user_id", recipientIds);
-    if (tokensError) throw tokensError;
-    if (!tokens?.length) {
-      return new Response(JSON.stringify({ skipped: true }), { status: 200 });
-    }
-
     const { data: sender } = await supabase
       .from("profiles")
       .select("display_name")
       .eq("id", message.sender_id)
       .single();
 
-    const title = sender?.display_name ?? "New message";
-    const body = genericBodyFor(message);
-
-    const serviceAccount: ServiceAccount = JSON.parse(FIREBASE_SERVICE_ACCOUNT);
-    const accessToken = await getAccessToken(serviceAccount);
-
-    await Promise.all(
-      tokens.map((t: { token: string }) =>
-        sendFcmMessage(accessToken, serviceAccount.project_id, t.token, title, body, {
-          conversationId: message.conversation_id,
-        }),
-      ),
+    const sent = await pushToUsers(
+      supabase,
+      recipientIds,
+      sender?.display_name ?? "New message",
+      genericBodyFor(message),
+      { conversationId: message.conversation_id, type: "message" },
     );
 
-    return new Response(JSON.stringify({ sent: tokens.length }), { status: 200 });
+    return new Response(JSON.stringify({ sent }), { status: 200 });
   } catch (err) {
     console.error(err);
     return new Response(JSON.stringify({ error: String(err) }), { status: 500 });
