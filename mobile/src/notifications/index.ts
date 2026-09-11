@@ -10,10 +10,15 @@ import notifee, {
 import type { NotificationSettings } from '@notifee/react-native';
 import { supabase } from '../lib/supabase';
 import * as pushTokensData from '../data/pushTokens';
+import * as conversationsData from '../data/conversations';
 import { navigateToChat } from '../navigation/navigationRef';
 import { requestAutoAnswer } from '../calling/autoAnswerFlag';
 
 const MESSAGE_CHANNEL_ID = 'messages';
+// Hardcoded, like the call notification's actions: these can be rendered
+// from a headless task where i18n has never been initialised.
+const REPLY_ACTION_TITLE = 'Reply';
+const REPLY_PLACEHOLDER = 'Message';
 const CALL_CHANNEL_ID = 'calls';
 
 let listenersAttached = false;
@@ -105,16 +110,87 @@ function conversationIdFrom(
   return typeof value === 'string' ? value : undefined;
 }
 
-async function displayForegroundNotification(
+// Message pushes are data-only (see supabase/functions/send-push-notification)
+// so that this renders them rather than Firebase. That is what makes an
+// inline reply action possible at all: an action can only be attached to a
+// notification the app builds itself, and a payload carrying an FCM
+// `notification` block is drawn by Android before any JS runs.
+//
+// The trade-off, stated plainly: a `notification` payload is displayed even
+// when the app's JS cannot run, whereas this depends on the background
+// handler executing. High-priority data messages do wake the app, and the
+// call notifications have relied on exactly this since before the reply
+// feature, so the precedent is established rather than new.
+export async function displayMessageNotification(
   message: FirebaseMessagingTypes.RemoteMessage,
 ): Promise<void> {
-  const conversationId = conversationIdFrom(message);
+  const data = message.data;
+  const conversationId = typeof data?.conversationId === 'string' ? data.conversationId : undefined;
+  // Title and body are still composed server-side, so they stay generic -
+  // a push is commonly readable on a locked device (see genericBodyFor in
+  // the Edge Function). They are not localised yet; that would mean
+  // initialising i18n in a headless task.
+  const title = typeof data?.title === 'string' ? data.title : 'New message';
+  const body = typeof data?.body === 'string' ? data.body : 'Sent you a message';
+
+  await ensureAndroidChannel();
+
   await notifee.displayNotification({
-    title: message.notification?.title,
-    body: message.notification?.body,
-    data: conversationId ? { conversationId } : undefined,
-    android: { channelId: MESSAGE_CHANNEL_ID, pressAction: { id: 'default' } },
+    // Keyed by conversation, so a second message replaces the first rather
+    // than stacking - and a reply dismisses the notification it came from.
+    id: conversationId,
+    title,
+    body,
+    data: conversationId ? { conversationId } : {},
+    android: {
+      channelId: MESSAGE_CHANNEL_ID,
+      pressAction: { id: 'default', launchActivity: 'default' },
+      actions: conversationId
+        ? [
+            {
+              title: REPLY_ACTION_TITLE,
+              pressAction: { id: 'reply' },
+              input: { allowFreeFormInput: true, placeholder: REPLY_PLACEHOLDER },
+            },
+          ]
+        : undefined,
+    },
   });
+}
+
+// Sends a reply typed straight into the notification, with no React tree
+// mounted - this can run from a headless background task. The session comes
+// from the keychain-backed store the Supabase client already uses, so it
+// works the same whether the app is running or was killed.
+export async function sendReplyFromNotification(
+  conversationId: string,
+  body: string,
+): Promise<void> {
+  const trimmed = body.trim();
+  if (!trimmed) return;
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  const userId = session?.user?.id;
+  if (!userId) return;
+
+  await conversationsData.sendMessage(conversationId, userId, trimmed, null);
+  // Replying means you have read it; without this the unread badge would
+  // still be counting the message you just answered.
+  await conversationsData.markConversationRead(conversationId, userId).catch(() => {});
+  await notifee.cancelNotification(conversationId);
+}
+
+// Shared by the foreground and background event handlers, which live in
+// different files but must treat the reply action identically.
+export async function handleReplyAction(detail: {
+  notification?: { data?: Record<string, unknown> | undefined };
+  input?: string;
+}): Promise<void> {
+  const conversationId = detail.notification?.data?.conversationId;
+  if (typeof conversationId !== 'string' || typeof detail.input !== 'string') return;
+  await sendReplyFromNotification(conversationId, detail.input);
 }
 
 export type NotificationPermission = 'granted' | 'denied';
@@ -192,7 +268,7 @@ export function attachNotificationListeners(): () => void {
     // that. This push's job is only to wake a backgrounded/killed app
     // (see index.js's background handler).
     if (message.data?.type === 'call') return;
-    await displayForegroundNotification(message);
+    await displayMessageNotification(message);
   });
 
   const unsubscribeOpened = messaging().onNotificationOpenedApp((message) => {
@@ -208,6 +284,10 @@ export function attachNotificationListeners(): () => void {
     });
 
   const unsubscribeNotifeeForeground = notifee.onForegroundEvent(({ type, detail }) => {
+    if (type === EventType.ACTION_PRESS && detail.pressAction?.id === 'reply') {
+      void handleReplyAction(detail);
+      return;
+    }
     if (type === EventType.ACTION_PRESS && detail.pressAction?.id === 'answer') {
       const callerId = detail.notification?.data?.callerId;
       if (typeof callerId === 'string') void requestAutoAnswer(callerId);

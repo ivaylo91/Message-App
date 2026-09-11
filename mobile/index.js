@@ -15,20 +15,22 @@ import notifee, { EventType } from '@notifee/react-native';
 import {
   declineIncomingCallFromNotification,
   displayIncomingCallNotification,
+  displayMessageNotification,
+  handleReplyAction,
 } from './src/notifications';
 import { requestAutoAnswer } from './src/calling/autoAnswerFlag';
 import App from './App';
 import { name as appName } from './app.json';
 
-// Regular messages always include a `notification` payload, so Android
-// displays them automatically while backgrounded/killed and this handler
-// has nothing to do for them. Calls are the exception: their push is
-// data-only (see supabase/functions/send-call-notification) specifically
-// so the app can show its own full-screen ringing UI via notifee instead
-// of a plain notification-shade entry.
+// Both kinds of push are now data-only, so this handler renders both.
+// Calls need it so the app can show its own full-screen ringing UI; messages
+// need it so the notification can carry an inline Reply action, which is
+// only possible on a notification the app builds itself.
 messaging().setBackgroundMessageHandler(async (remoteMessage) => {
   if (remoteMessage.data?.type === 'call') {
     await displayIncomingCallNotification(remoteMessage);
+  } else {
+    await displayMessageNotification(remoteMessage);
   }
 });
 
@@ -43,6 +45,12 @@ messaging().setBackgroundMessageHandler(async (remoteMessage) => {
 // it receives the real call-offer after the tap launches the app.
 notifee.onBackgroundEvent(async ({ type, detail }) => {
   if (type !== EventType.ACTION_PRESS) return;
+  // Replying from the shade without opening the app - the whole point of
+  // the action. Runs headless, so it must not touch React state.
+  if (detail.pressAction?.id === 'reply') {
+    await handleReplyAction(detail);
+    return;
+  }
   const callerId = detail.notification?.data?.callerId;
   if (detail.pressAction?.id === 'decline') {
     if (typeof callerId === 'string') {

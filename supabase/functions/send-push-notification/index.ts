@@ -88,24 +88,26 @@ async function sendFcmMessage(
         Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json",
       },
+      // Data-only: no `notification` block. A payload carrying one is
+      // rendered by Android before any JS runs, which is simpler and more
+      // robust, but it cannot carry an inline Reply action - only a
+      // notification the app builds itself can. So the title and body ride
+      // along as data and the client renders them (displayMessageNotification
+      // in mobile/src/notifications/index.ts), which is also what the call
+      // notifications have always done.
+      //
+      // The trade-off is real: this now depends on the app's background
+      // handler running. High-priority data messages wake it, and calls have
+      // relied on that all along.
+      //
+      // This also supersedes the android.notification.channel_id set here
+      // previously - with no notification block for Firebase to render, the
+      // channel is chosen by notifee on the client instead.
       body: JSON.stringify({
         message: {
           token,
-          notification: { title, body },
-          data,
-          android: {
-            priority: "high",
-            // Without an explicit channel, Android hands a backgrounded
-            // app's notification to Firebase's own
-            // fcm_fallback_notification_channel at DEFAULT importance -
-            // confirmed on a real device. That means no heads-up banner,
-            // and the notification appears under a generic channel in
-            // system settings instead of the app's "Messages" one, which
-            // is created with HIGH importance (see ensureAndroidChannel
-            // in mobile/src/notifications/index.ts). The id must match
-            // MESSAGE_CHANNEL_ID there.
-            notification: { channel_id: "messages" },
-          },
+          data: { ...data, title, body },
+          android: { priority: "high" },
         },
       }),
     },
