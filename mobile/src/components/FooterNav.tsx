@@ -91,6 +91,7 @@ export function FooterNav({ active }: FooterNavProps) {
           <Touchable
             key={item.key}
             style={styles.item}
+            iconButton
             onPress={item.onPress}
             accessibilityRole="button"
             // Without the count folded in, a screen reader announces

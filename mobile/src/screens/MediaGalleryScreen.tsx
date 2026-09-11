@@ -167,7 +167,7 @@ export function MediaGalleryScreen({ route, navigation }: Props) {
     <View style={styles.container}>
       <View style={[styles.content, { maxWidth: contentWidth }]}>
         <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
-          <Touchable style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Touchable style={styles.backButton} onPress={() => navigation.goBack()} iconButton>
             <FontAwesome6 name="chevron-left" iconStyle="solid" size={18} color={colors.ink} />
           </Touchable>
           <Text style={styles.headerTitle} numberOfLines={1}>

@@ -29,6 +29,7 @@ export function PasswordField({ label, value, onChangeText }: PasswordFieldProps
         />
         <Touchable
           style={styles.toggle}
+          iconButton
           onPress={() => setVisible((current) => !current)}
         >
           <FontAwesome6

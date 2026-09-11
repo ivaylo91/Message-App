@@ -78,12 +78,14 @@ export function CallOverlay() {
             <>
               <Touchable
                 style={[styles.controlButton, styles.declineButton]}
+                iconButton
                 onPress={declineCall}
               >
                 <FontAwesome6 name="phone-slash" iconStyle="solid" size={22} color={colors.white} />
               </Touchable>
               <Touchable
                 style={[styles.controlButton, styles.acceptButton]}
+                iconButton
                 onPress={() => void answerCall()}
               >
                 <FontAwesome6 name="phone" iconStyle="solid" size={22} color={colors.white} />
@@ -91,7 +93,7 @@ export function CallOverlay() {
             </>
           ) : (
             <>
-              <Touchable style={styles.controlButton} onPress={toggleMute}>
+              <Touchable style={styles.controlButton} onPress={toggleMute} iconButton>
                 <FontAwesome6
                   name={isMuted ? 'microphone-slash' : 'microphone'}
                   iconStyle="solid"
@@ -99,7 +101,7 @@ export function CallOverlay() {
                   color={colors.white}
                 />
               </Touchable>
-              <Touchable style={styles.controlButton} onPress={toggleCamera}>
+              <Touchable style={styles.controlButton} onPress={toggleCamera} iconButton>
                 <FontAwesome6
                   name={isCameraOff ? 'video-slash' : 'video'}
                   iconStyle="solid"
@@ -107,11 +109,12 @@ export function CallOverlay() {
                   color={colors.white}
                 />
               </Touchable>
-              <Touchable style={styles.controlButton} onPress={switchCamera}>
+              <Touchable style={styles.controlButton} onPress={switchCamera} iconButton>
                 <FontAwesome6 name="camera-rotate" iconStyle="solid" size={19} color={colors.white} />
               </Touchable>
               <Touchable
                 style={[styles.controlButton, styles.declineButton]}
+                iconButton
                 onPress={endCall}
               >
                 <FontAwesome6 name="phone-slash" iconStyle="solid" size={22} color={colors.white} />

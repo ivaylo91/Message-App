@@ -138,6 +138,7 @@ export function MediaViewer({ paths, initialPath, onClose }: MediaViewerProps) {
         <View style={[styles.topBar, { paddingTop: insets.top + spacing.sm }]}>
           <Touchable
             style={styles.closeButton}
+            iconButton
             onPress={onClose}
             accessibilityRole="button"
             accessibilityLabel={t('mediaGallery.a11yCloseViewer')}

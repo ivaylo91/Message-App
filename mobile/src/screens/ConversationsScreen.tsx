@@ -393,6 +393,7 @@ export function ConversationsScreen({ navigation }: Props) {
         <View style={styles.headerActions}>
           <Touchable
             style={styles.iconButton}
+            iconButton
             onPress={() => navigation.navigate('NewChat')}
             accessibilityRole="button"
             accessibilityLabel={t('conversations.a11yNewChat')}

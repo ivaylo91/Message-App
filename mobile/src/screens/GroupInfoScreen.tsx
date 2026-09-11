@@ -187,6 +187,7 @@ export function GroupInfoScreen({ route, navigation }: Props) {
         <View style={styles.header}>
           <Touchable
             style={styles.backButton}
+            iconButton
             onPress={() => navigation.goBack()}
             accessibilityRole="button"
             accessibilityLabel={t('chat.a11yBack')}

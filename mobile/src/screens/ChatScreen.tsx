@@ -1845,6 +1845,7 @@ export function ChatScreen({ route, navigation }: Props) {
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
         <Touchable
           style={styles.backButton}
+          iconButton
           onPress={() => navigation.goBack()}
           accessibilityRole="button"
           accessibilityLabel={t('chat.a11yBack')}
@@ -1873,6 +1874,7 @@ export function ChatScreen({ route, navigation }: Props) {
         </View>
         <Touchable
           style={styles.callButton}
+          iconButton
           onPress={() => setIsSearchOpen(true)}
           accessibilityRole="button"
           accessibilityLabel={t('chat.a11ySearch')}
@@ -1881,6 +1883,7 @@ export function ChatScreen({ route, navigation }: Props) {
         </Touchable>
         <Touchable
           style={styles.callButton}
+          iconButton
           onPress={() => navigation.navigate('MediaGallery', { conversationId, title: displayTitle })}
           accessibilityRole="button"
           accessibilityLabel={t('chat.a11yGallery')}
@@ -1890,6 +1893,7 @@ export function ChatScreen({ route, navigation }: Props) {
         {isGroup && (
           <Touchable
             style={styles.callButton}
+            iconButton
             onPress={() => navigation.navigate('GroupInfo', { conversationId })}
             accessibilityRole="button"
             accessibilityLabel={t('chat.a11yGroupInfo')}
@@ -1900,6 +1904,7 @@ export function ChatScreen({ route, navigation }: Props) {
         {!isGroup && otherParticipant && (
           <Touchable
             style={styles.callButton}
+            iconButton
             onPress={() =>
               void startCall({
                 conversationId,
@@ -1917,6 +1922,7 @@ export function ChatScreen({ route, navigation }: Props) {
         {!isGroup && otherParticipant && (
           <Touchable
             style={styles.callButton}
+            iconButton
             onPress={onOpenChatMenu}
             accessibilityRole="button"
             accessibilityLabel={t('chat.a11yMenu')}
@@ -2020,6 +2026,7 @@ export function ChatScreen({ route, navigation }: Props) {
       {isScrolledUp && !isSearchOpen && (
         <Touchable
           style={styles.jumpToLatest}
+          iconButton
           onPress={onJumpToLatest}
           accessibilityRole="button"
           accessibilityLabel={t('chat.jumpToLatest')}
@@ -2069,6 +2076,7 @@ export function ChatScreen({ route, navigation }: Props) {
             <Touchable
               onPress={() => void onStopRecording(false)}
               style={styles.attachButton}
+              iconButton
               accessibilityRole="button"
               accessibilityLabel={t('chat.a11yDiscardRecording')}
             >
@@ -2081,6 +2089,7 @@ export function ChatScreen({ route, navigation }: Props) {
             <Touchable
               onPress={() => void onStopRecording(true)}
               style={styles.sendButton}
+              iconButton
               accessibilityRole="button"
               accessibilityLabel={t('chat.a11ySendRecording')}
             >
@@ -2092,6 +2101,7 @@ export function ChatScreen({ route, navigation }: Props) {
             <Touchable
               onPress={() => void onPickFile()}
               style={styles.attachButton}
+              iconButton
               disabled={isUploadingAttachment}
               accessibilityRole="button"
               accessibilityLabel={t('chat.a11yAttachFile')}
@@ -2101,6 +2111,7 @@ export function ChatScreen({ route, navigation }: Props) {
             <Touchable
               onPress={() => void onPickImage()}
               style={styles.attachButton}
+              iconButton
               disabled={isUploadingAttachment}
               accessibilityRole="button"
               accessibilityLabel={t('chat.a11yAttachPhoto')}
@@ -2128,6 +2139,7 @@ export function ChatScreen({ route, navigation }: Props) {
               <Touchable
                 onPress={() => void onSend()}
                 style={styles.sendButton}
+                iconButton
                 accessibilityRole="button"
                 accessibilityLabel={t('chat.a11ySend')}
               >
@@ -2146,6 +2158,7 @@ export function ChatScreen({ route, navigation }: Props) {
               <Touchable
                 onPress={() => void onStartRecording()}
                 style={styles.sendButton}
+                iconButton
                 disabled={isUploadingAttachment}
                 accessibilityRole="button"
                 accessibilityLabel={t('chat.a11yRecord')}

@@ -21,17 +21,28 @@ import { useTheme } from '../theme/ThemeContext';
 interface TouchableProps extends Omit<PressableProps, 'style' | 'children'> {
   style?: StyleProp<ViewStyle>;
   children?: React.ReactNode;
-  // `borderless` suits icon-only buttons, where a rectangular ripple
-  // would draw a box around a circular target. Pass null for surfaces
-  // that shouldn't ripple at all (a whole message bubble, say).
+  // Pass null for surfaces that shouldn't ripple at all.
   ripple?: { color?: string; borderless?: boolean } | null;
+  // An icon-only button: the ripple goes borderless (a rectangular one
+  // draws a box around a circular target) and the touch area grows past
+  // the glyph. The chat header's buttons are 18px icons with 4px of
+  // padding - about 26dp against a 44-48dp platform guideline - so they
+  // were noticeably easy to miss.
+  iconButton?: boolean;
   pressedOpacity?: number;
 }
+
+// Deliberately smaller than the shortfall would suggest: the chat header
+// spaces its buttons 12dp apart, so 6 on each side grows them to ~38dp
+// while stopping exactly short of neighbouring slop regions overlapping,
+// which would make taps near a boundary hit the wrong button.
+const ICON_BUTTON_HIT_SLOP = 6;
 
 export function Touchable({
   style,
   children,
   ripple,
+  iconButton = false,
   pressedOpacity = 0.6,
   ...rest
 }: TouchableProps) {
@@ -39,6 +50,7 @@ export function Touchable({
 
   return (
     <Pressable
+      hitSlop={iconButton ? ICON_BUTTON_HIT_SLOP : undefined}
       style={({ pressed }) => [
         style,
         // Android gets the ripple instead, so it is excluded here.
@@ -49,7 +61,7 @@ export function Touchable({
           ? undefined
           : {
               color: ripple?.color ?? colors.line,
-              borderless: ripple?.borderless ?? false,
+              borderless: ripple?.borderless ?? iconButton,
             }
       }
       {...rest}
