@@ -16,6 +16,7 @@ import { TypingProvider } from './src/typing/TypingContext';
 import { CallProvider } from './src/calling/CallContext';
 import { CallOverlay } from './src/calling/CallOverlay';
 import { ToastProvider } from './src/components/Toast';
+import { ConfirmSheetProvider } from './src/components/ConfirmSheet';
 import { RootNavigator } from './src/navigation/RootNavigator';
 import { initI18n } from './src/i18n';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
@@ -33,6 +34,7 @@ function AppContent() {
       <StatusBar barStyle={scheme === 'dark' ? 'light-content' : 'dark-content'} />
       {isI18nReady ? (
         <ToastProvider>
+          <ConfirmSheetProvider>
           <AuthProvider>
             <PresenceProvider>
               <MessageStreamProvider>
@@ -49,6 +51,7 @@ function AppContent() {
               </MessageStreamProvider>
             </PresenceProvider>
           </AuthProvider>
+          </ConfirmSheetProvider>
         </ToastProvider>
       ) : (
         <View

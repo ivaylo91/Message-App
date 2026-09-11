@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert,
   Animated,
   FlatList,
   LayoutAnimation,
@@ -22,6 +21,7 @@ import * as conversationsData from '../data/conversations';
 import * as profilesData from '../data/profiles';
 import { Avatar } from '../components/Avatar';
 import { Touchable } from '../components/Touchable';
+import { useConfirm } from '../components/ConfirmSheet';
 import { Skeleton, SkeletonGroup } from '../components/Skeleton';
 import { AppLogo } from '../components/AppLogo';
 import { FooterNav } from '../components/FooterNav';
@@ -187,6 +187,7 @@ export function ConversationsScreen({ navigation }: Props) {
   const { isOnline } = usePresence();
   const { unreadCounts, refresh: refreshUnreadCounts } = useUnread();
   const { typingConversationIds, watch: watchTyping } = useTyping();
+  const { confirm } = useConfirm();
   const { subscribe: subscribeToMessages } = useMessageStream();
   const insets = useSafeAreaInsets();
   const { contentWidth } = useContentWidth();
@@ -289,26 +290,28 @@ export function ConversationsScreen({ navigation }: Props) {
 
   const onDeleteConversation = useCallback(
     (conversation: Conversation, title: string) => {
-      Alert.alert(
-        t('conversations.deleteConfirmTitle'),
-        t('conversations.deleteConfirmMessage', { name: title }),
-        [
-          { text: t('chat.cancel'), style: 'cancel', onPress: () => setOpenRowId(null) },
-          {
-            text: t('conversations.delete'),
-            style: 'destructive',
-            onPress: () => {
-              if (!userId) return;
-              setConversations((current) => current.filter((c) => c.id !== conversation.id));
-              conversationsData.hideConversation(conversation.id, userId).catch(() => {
-                // best-effort - a failed hide just leaves the row visible after next refresh
-              });
-            },
-          },
+      void confirm({
+        title: t('conversations.deleteConfirmTitle'),
+        message: t('conversations.deleteConfirmMessage', { name: title }),
+        cancelLabel: t('chat.cancel'),
+        options: [
+          { id: 'delete', label: t('conversations.delete'), destructive: true },
         ],
-      );
+      }).then((choice) => {
+        if (choice !== 'delete') {
+          // Dismissing leaves the swiped row open, so it has to be closed
+          // explicitly - the old Alert did this from its cancel button.
+          setOpenRowId(null);
+          return;
+        }
+        if (!userId) return;
+        setConversations((current) => current.filter((c) => c.id !== conversation.id));
+        conversationsData.hideConversation(conversation.id, userId).catch(() => {
+          // best-effort - a failed hide just leaves the row visible after next refresh
+        });
+      });
     },
-    [t, userId],
+    [t, userId, confirm],
   );
 
   useFocusEffect(

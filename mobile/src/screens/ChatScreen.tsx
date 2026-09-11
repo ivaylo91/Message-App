@@ -58,6 +58,7 @@ import { Skeleton, SkeletonGroup } from '../components/Skeleton';
 import { AppLogo } from '../components/AppLogo';
 import { FooterNav } from '../components/FooterNav';
 import { useToast } from '../components/Toast';
+import { useConfirm } from '../components/ConfirmSheet';
 import { useCall } from '../calling/CallContext';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { usePresence } from '../presence/PresenceContext';
@@ -75,6 +76,7 @@ import {
   formatMessageTime,
   messageIdsStartingADay,
 } from '../utils/messagePreview';
+import { haptic } from '../utils/haptics';
 import { hasLink, linkifyText } from '../utils/linkify';
 import { runPositions, showsSenderName, type RunPosition } from '../utils/messageGrouping';
 import * as draftStorage from '../drafts/draftStorage';
@@ -784,6 +786,7 @@ export function ChatScreen({ route, navigation }: Props) {
   const { conversationId, title } = route.params;
   const { userId } = useAuth();
   const { showToast } = useToast();
+  const { confirm } = useConfirm();
   const { isOnline } = usePresence();
   const { markConversationRead } = useUnread();
   const outbox = useOutbox();
@@ -1202,6 +1205,7 @@ export function ChatScreen({ route, navigation }: Props) {
     // fails or the device is offline, instead of the send just erroring
     // out. See OutboxContext for the retry/persistence behavior.
     void draftStorage.clearDraft(conversationId);
+    haptic('tap');
 
     const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     outbox.queueMessage({
@@ -1357,6 +1361,7 @@ export function ChatScreen({ route, navigation }: Props) {
   const onToggleReaction = useCallback(
     async (messageId: string, emoji: string) => {
       if (!userId) return;
+      haptic('select');
       setPickerMessageId(null);
       // Read through the ref rather than depending on `reactions`
       // directly: that dependency gave this callback a new identity on
@@ -1426,22 +1431,19 @@ export function ChatScreen({ route, navigation }: Props) {
   const onDeleteMessage = useCallback(
     (messageId: string) => {
       setPickerMessageId(null);
-      Alert.alert(t('chat.deleteConfirmTitle'), t('chat.deleteConfirmMessage'), [
-        { text: t('chat.cancel'), style: 'cancel' },
-        {
-          text: t('chat.delete'),
-          style: 'destructive',
-          onPress: () => {
-            void conversationsData.deleteMessage(messageId).then(() => {
-              setMessages((current) =>
-                current.filter((m) => m.id !== messageId),
-              );
-            });
-          },
-        },
-      ]);
+      void confirm({
+        title: t('chat.deleteConfirmTitle'),
+        message: t('chat.deleteConfirmMessage'),
+        cancelLabel: t('chat.cancel'),
+        options: [{ id: 'delete', label: t('chat.delete'), destructive: true }],
+      }).then((choice) => {
+        if (choice !== 'delete') return;
+        void conversationsData.deleteMessage(messageId).then(() => {
+          setMessages((current) => current.filter((m) => m.id !== messageId));
+        });
+      });
     },
-    [t],
+    [t, confirm],
   );
 
   const onChangeSearchQuery = useCallback(
@@ -1538,41 +1540,40 @@ export function ChatScreen({ route, navigation }: Props) {
     const otherId = otherParticipant.user_id;
 
     if (isOtherBlocked) {
-      Alert.alert(t('chat.unblockConfirmTitle'), t('chat.unblockConfirmMessage', { name: otherName }), [
-        { text: t('chat.cancel'), style: 'cancel' },
-        {
-          text: t('chat.unblock'),
-          onPress: () => {
-            void moderationData
-              .unblockUser(userId, otherId)
-              .then(() => {
-                setIsOtherBlocked(false);
-                showToast(t('chat.unblockSuccessToast'));
-              })
-              .catch(() => Alert.alert(t('chat.blockFailedTitle'), t('chat.blockFailedMessage')));
-          },
-        },
-      ]);
+      void confirm({
+        title: t('chat.unblockConfirmTitle'),
+        message: t('chat.unblockConfirmMessage', { name: otherName }),
+        cancelLabel: t('chat.cancel'),
+        options: [{ id: 'unblock', label: t('chat.unblock') }],
+      }).then((choice) => {
+        if (choice !== 'unblock') return;
+        void moderationData
+          .unblockUser(userId, otherId)
+          .then(() => {
+            setIsOtherBlocked(false);
+            showToast(t('chat.unblockSuccessToast'));
+          })
+          .catch(() => Alert.alert(t('chat.blockFailedTitle'), t('chat.blockFailedMessage')));
+      });
       return;
     }
 
-    Alert.alert(t('chat.blockConfirmTitle'), t('chat.blockConfirmMessage', { name: otherName }), [
-      { text: t('chat.cancel'), style: 'cancel' },
-      {
-        text: t('chat.block'),
-        style: 'destructive',
-        onPress: () => {
-          void moderationData
-            .blockUser(userId, otherId)
-            .then(() => {
-              setIsOtherBlocked(true);
-              showToast(t('chat.blockSuccessToast'));
-            })
-            .catch(() => Alert.alert(t('chat.blockFailedTitle'), t('chat.blockFailedMessage')));
-        },
-      },
-    ]);
-  }, [userId, otherParticipant, isOtherBlocked, t, showToast]);
+    void confirm({
+      title: t('chat.blockConfirmTitle'),
+      message: t('chat.blockConfirmMessage', { name: otherName }),
+      cancelLabel: t('chat.cancel'),
+      options: [{ id: 'block', label: t('chat.block'), destructive: true }],
+    }).then((choice) => {
+      if (choice !== 'block') return;
+      void moderationData
+        .blockUser(userId, otherId)
+        .then(() => {
+          setIsOtherBlocked(true);
+          showToast(t('chat.blockSuccessToast'));
+        })
+        .catch(() => Alert.alert(t('chat.blockFailedTitle'), t('chat.blockFailedMessage')));
+    });
+  }, [userId, otherParticipant, isOtherBlocked, t, showToast, confirm]);
 
   // Deliberately a modal and not an Alert. React Native's Android Alert
   // does buttons.slice(0, 3) - "At most three buttons (neutral,
@@ -1599,19 +1600,22 @@ export function ChatScreen({ route, navigation }: Props) {
 
   const onOpenChatMenu = useCallback(() => {
     if (!otherParticipant) return;
-    Alert.alert(t('chat.menuTitle'), undefined, [
-      {
-        text: isOtherBlocked ? t('chat.unblock') : t('chat.block'),
-        style: isOtherBlocked ? 'default' : 'destructive',
-        onPress: onToggleBlockOther,
-      },
-      {
-        text: t('chat.reportTitle'),
-        onPress: () => onReportUser(otherParticipant.user_id),
-      },
-      { text: t('chat.cancel'), style: 'cancel' },
-    ]);
-  }, [otherParticipant, isOtherBlocked, onToggleBlockOther, onReportUser, t]);
+    void confirm({
+      title: t('chat.menuTitle'),
+      cancelLabel: t('chat.cancel'),
+      options: [
+        {
+          id: 'block',
+          label: isOtherBlocked ? t('chat.unblock') : t('chat.block'),
+          destructive: !isOtherBlocked,
+        },
+        { id: 'report', label: t('chat.reportTitle') },
+      ],
+    }).then((choice) => {
+      if (choice === 'block') onToggleBlockOther();
+      else if (choice === 'report') onReportUser(otherParticipant.user_id);
+    });
+  }, [otherParticipant, isOtherBlocked, onToggleBlockOther, onReportUser, t, confirm]);
 
   // Newest-first, matching `messages` (see fetchMessages) - queued
   // entries are stored oldest-first so they're reversed before being
@@ -1685,7 +1689,13 @@ export function ChatScreen({ route, navigation }: Props) {
   }, [displayMessages, t, i18n.language]);
 
   const onTogglePicker = useCallback((messageId: string) => {
-    setPickerMessageId((current) => (current === messageId ? null : messageId));
+    setPickerMessageId((current) => {
+      const next = current === messageId ? null : messageId;
+      // Only on the way in - a tick when the picker closes would fire on
+      // every dismissing tap elsewhere in the thread.
+      if (next !== null) haptic('press');
+      return next;
+    });
   }, []);
 
   const onDismissPicker = useCallback(() => setPickerMessageId(null), []);

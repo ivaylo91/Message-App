@@ -30,6 +30,7 @@ import {
 import { Avatar } from '../components/Avatar';
 import { Touchable } from '../components/Touchable';
 import { PasswordField } from '../components/PasswordField';
+import { useConfirm } from '../components/ConfirmSheet';
 import { useContentWidth } from '../hooks/useContentWidth';
 import {
   BUBBLE_GRADIENT_PRESETS,
@@ -61,6 +62,7 @@ const PHONE_PATTERN = /^\+?[0-9]{7,15}$/;
 export function ProfileScreen({ navigation }: Props) {
   const { t, i18n } = useTranslation();
   const { userId } = useAuth();
+  const { confirm } = useConfirm();
   const insets = useSafeAreaInsets();
   const { contentWidth } = useContentWidth();
   const {
@@ -160,21 +162,19 @@ export function ProfileScreen({ navigation }: Props) {
 
   const onDeleteAccount = () => {
     if (isDeletingAccount) return;
-    Alert.alert(
-      t('profile.deleteAccountConfirmTitle'),
-      t('profile.deleteAccountConfirmMessage'),
-      [
-        { text: t('profile.cancel'), style: 'cancel' },
-        {
-          text: t('profile.deleteAccount'),
-          style: 'destructive',
-          // Deletion is irreversible, so it's gated behind re-entering the
-          // password rather than firing straight off this confirm tap - a
-          // stolen/left-unlocked device shouldn't be enough on its own.
-          onPress: () => setIsPasswordPromptVisible(true),
-        },
+    void confirm({
+      title: t('profile.deleteAccountConfirmTitle'),
+      message: t('profile.deleteAccountConfirmMessage'),
+      cancelLabel: t('profile.cancel'),
+      options: [
+        { id: 'delete', label: t('profile.deleteAccount'), destructive: true },
       ],
-    );
+    }).then((choice) => {
+      // Deletion is irreversible, so it stays gated behind re-entering the
+      // password rather than firing straight off this confirmation - a
+      // stolen or left-unlocked device shouldn't be enough on its own.
+      if (choice === 'delete') setIsPasswordPromptVisible(true);
+    });
   };
 
   const onCancelPasswordPrompt = () => {

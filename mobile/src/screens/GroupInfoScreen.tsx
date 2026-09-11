@@ -19,6 +19,7 @@ import * as profilesData from '../data/profiles';
 import { Avatar } from '../components/Avatar';
 import { Touchable } from '../components/Touchable';
 import { useToast } from '../components/Toast';
+import { useConfirm } from '../components/ConfirmSheet';
 import { Skeleton, SkeletonGroup } from '../components/Skeleton';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
@@ -40,6 +41,7 @@ export function GroupInfoScreen({ route, navigation }: Props) {
   const { t } = useTranslation();
   const { userId } = useAuth();
   const { showToast } = useToast();
+  const { confirm } = useConfirm();
   const insets = useSafeAreaInsets();
   const { contentWidth } = useContentWidth();
   const { colors } = useTheme();
@@ -137,46 +139,40 @@ export function GroupInfoScreen({ route, navigation }: Props) {
 
   const onRemove = (participant: ConversationParticipant) => {
     const name = participant.profiles.display_name || participant.profiles.email;
-    Alert.alert(
-      t('groupInfo.removeConfirmTitle'),
-      t('groupInfo.removeConfirmMessage', { name }),
-      [
-        { text: t('chat.cancel'), style: 'cancel' },
-        {
-          text: t('groupInfo.remove'),
-          style: 'destructive',
-          onPress: () => {
-            void conversationsData
-              .removeConversationParticipant(conversationId, participant.user_id)
-              .then(load)
-              .catch(() =>
-                Alert.alert(t('groupInfo.removeFailedTitle'), t('groupInfo.removeFailedMessage')),
-              );
-          },
-        },
-      ],
-    );
+    void confirm({
+      title: t('groupInfo.removeConfirmTitle'),
+      message: t('groupInfo.removeConfirmMessage', { name }),
+      cancelLabel: t('chat.cancel'),
+      options: [{ id: 'remove', label: t('groupInfo.remove'), destructive: true }],
+    }).then((choice) => {
+      if (choice !== 'remove') return;
+      void conversationsData
+        .removeConversationParticipant(conversationId, participant.user_id)
+        .then(load)
+        .catch(() =>
+          Alert.alert(t('groupInfo.removeFailedTitle'), t('groupInfo.removeFailedMessage')),
+        );
+    });
   };
 
   const onLeave = () => {
     if (!userId) return;
-    Alert.alert(t('groupInfo.leaveConfirmTitle'), t('groupInfo.leaveConfirmMessage'), [
-      { text: t('chat.cancel'), style: 'cancel' },
-      {
-        text: t('groupInfo.leave'),
-        style: 'destructive',
-        onPress: () => {
-          void conversationsData
-            .removeConversationParticipant(conversationId, userId)
-            // Back past the chat itself - staying in a conversation you
-            // just left would only show an empty, unusable screen.
-            .then(() => navigation.navigate('Conversations'))
-            .catch(() =>
-              Alert.alert(t('groupInfo.leaveFailedTitle'), t('groupInfo.leaveFailedMessage')),
-            );
-        },
-      },
-    ]);
+    void confirm({
+      title: t('groupInfo.leaveConfirmTitle'),
+      message: t('groupInfo.leaveConfirmMessage'),
+      cancelLabel: t('chat.cancel'),
+      options: [{ id: 'leave', label: t('groupInfo.leave'), destructive: true }],
+    }).then((choice) => {
+      if (choice !== 'leave') return;
+      void conversationsData
+        .removeConversationParticipant(conversationId, userId)
+        // Back past the chat itself - staying in a conversation you just
+        // left would only show an empty, unusable screen.
+        .then(() => navigation.navigate('Conversations'))
+        .catch(() =>
+          Alert.alert(t('groupInfo.leaveFailedTitle'), t('groupInfo.leaveFailedMessage')),
+        );
+    });
   };
 
   const addableResults = results.filter((profile) => !memberIds.has(profile.id));

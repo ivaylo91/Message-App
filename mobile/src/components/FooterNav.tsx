@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -10,6 +10,7 @@ import { useAuth } from '../auth/AuthContext';
 import { useUnread } from '../unread/UnreadContext';
 import { elevation, fontSizes, spacing, ThemeColors } from '../theme/tokens';
 import { Touchable } from './Touchable';
+import { useConfirm } from './ConfirmSheet';
 import { useTheme } from '../theme/ThemeContext';
 
 export type FooterTab = 'notifications' | 'chats' | 'group' | 'exit';
@@ -33,6 +34,7 @@ export function FooterNav({ active }: FooterNavProps) {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const { logout } = useAuth();
+  const { confirm } = useConfirm();
   const { totalUnread, unreadConversationCount } = useUnread();
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -75,11 +77,18 @@ export function FooterNav({ active }: FooterNavProps) {
       // Confirmed rather than immediate: this sits in a bar that's on
       // screen the whole time, one thumb-width from the tab people tap
       // most, and logging out drops them all the way back to sign-in.
-      onPress: () =>
-        Alert.alert(t('footer.logoutConfirmTitle'), t('footer.logoutConfirmMessage'), [
-          { text: t('footer.cancel'), style: 'cancel' },
-          { text: t('footer.logoutConfirm'), style: 'destructive', onPress: () => void logout() },
-        ]),
+      onPress: () => {
+        void confirm({
+          title: t('footer.logoutConfirmTitle'),
+          message: t('footer.logoutConfirmMessage'),
+          cancelLabel: t('footer.cancel'),
+          options: [
+            { id: 'logout', label: t('footer.logoutConfirm'), destructive: true },
+          ],
+        }).then((choice) => {
+          if (choice === 'logout') void logout();
+        });
+      },
     },
   ];
 
