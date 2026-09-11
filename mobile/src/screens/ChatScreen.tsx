@@ -2099,6 +2099,7 @@ export function ChatScreen({ route, navigation }: Props) {
             <Touchable
               onPress={() => void onStopRecording(true)}
               style={styles.sendButton}
+              pressScale
               iconButton
               accessibilityRole="button"
               accessibilityLabel={t('chat.a11ySendRecording')}
@@ -2149,6 +2150,7 @@ export function ChatScreen({ route, navigation }: Props) {
               <Touchable
                 onPress={() => void onSend()}
                 style={styles.sendButton}
+                pressScale
                 iconButton
                 accessibilityRole="button"
                 accessibilityLabel={t('chat.a11ySend')}
@@ -2168,6 +2170,7 @@ export function ChatScreen({ route, navigation }: Props) {
               <Touchable
                 onPress={() => void onStartRecording()}
                 style={styles.sendButton}
+                pressScale
                 iconButton
                 disabled={isUploadingAttachment}
                 accessibilityRole="button"

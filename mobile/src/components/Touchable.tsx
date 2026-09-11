@@ -1,5 +1,5 @@
-import React from 'react';
-import { Platform, Pressable, StyleProp, ViewStyle } from 'react-native';
+import React, { useCallback, useRef } from 'react';
+import { Animated, Platform, Pressable, StyleProp, ViewStyle } from 'react-native';
 import type { PressableProps } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 
@@ -29,6 +29,11 @@ interface TouchableProps extends Omit<PressableProps, 'style' | 'children'> {
   // padding - about 26dp against a 44-48dp platform guideline - so they
   // were noticeably easy to miss.
   iconButton?: boolean;
+  // Springs the target down slightly while held. Opt-in rather than
+  // default because it wraps the element in an extra Animated.View, which
+  // could disturb layout in a flex row - it suits fixed-size primary
+  // actions like the send button, not list rows.
+  pressScale?: boolean;
   pressedOpacity?: number;
 }
 
@@ -38,17 +43,49 @@ interface TouchableProps extends Omit<PressableProps, 'style' | 'children'> {
 // which would make taps near a boundary hit the wrong button.
 const ICON_BUTTON_HIT_SLOP = 6;
 
+const PRESS_SCALE = 0.92;
+
 export function Touchable({
   style,
   children,
   ripple,
   iconButton = false,
+  pressScale = false,
   pressedOpacity = 0.6,
   ...rest
 }: TouchableProps) {
   const { colors } = useTheme();
+  const scale = useRef(new Animated.Value(1)).current;
 
-  return (
+  const springTo = useCallback(
+    (toValue: number) => {
+      Animated.spring(scale, {
+        toValue,
+        friction: 6,
+        tension: 260,
+        useNativeDriver: true,
+      }).start();
+    },
+    [scale],
+  );
+
+  const onPressIn = useCallback(
+    (event: Parameters<NonNullable<PressableProps['onPressIn']>>[0]) => {
+      if (pressScale) springTo(PRESS_SCALE);
+      rest.onPressIn?.(event);
+    },
+    [pressScale, springTo, rest],
+  );
+
+  const onPressOut = useCallback(
+    (event: Parameters<NonNullable<PressableProps['onPressOut']>>[0]) => {
+      if (pressScale) springTo(1);
+      rest.onPressOut?.(event);
+    },
+    [pressScale, springTo, rest],
+  );
+
+  const pressable = (
     <Pressable
       hitSlop={iconButton ? ICON_BUTTON_HIT_SLOP : undefined}
       style={({ pressed }) => [
@@ -65,8 +102,15 @@ export function Touchable({
             }
       }
       {...rest}
+      onPressIn={onPressIn}
+      onPressOut={onPressOut}
     >
       {children}
     </Pressable>
+  );
+
+  if (!pressScale) return pressable;
+  return (
+    <Animated.View style={{ transform: [{ scale }] }}>{pressable}</Animated.View>
   );
 }
