@@ -22,6 +22,7 @@ import * as conversationsData from '../data/conversations';
 import * as profilesData from '../data/profiles';
 import { Avatar } from '../components/Avatar';
 import { Touchable } from '../components/Touchable';
+import { Skeleton, SkeletonGroup } from '../components/Skeleton';
 import { AppLogo } from '../components/AppLogo';
 import { FooterNav } from '../components/FooterNav';
 import { useContentWidth } from '../hooks/useContentWidth';
@@ -157,6 +158,29 @@ function ConversationRow({
   );
 }
 
+const SKELETON_ROW_COUNT = 7;
+
+// Mirrors ConversationRow's geometry - avatar, title, preview - so the
+// real rows land where the placeholders were instead of shifting.
+function ConversationListSkeleton() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
+  return (
+    <SkeletonGroup>
+      {Array.from({ length: SKELETON_ROW_COUNT }).map((_, i) => (
+        <View key={i} style={styles.skeletonRow}>
+          <Skeleton width={48} height={48} radius={24} />
+          <View style={styles.skeletonText}>
+            <Skeleton width="55%" height={13} />
+            <Skeleton width="80%" height={11} />
+          </View>
+        </View>
+      ))}
+    </SkeletonGroup>
+  );
+}
+
 export function ConversationsScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const { userId } = useAuth();
@@ -175,6 +199,7 @@ export function ConversationsScreen({ navigation }: Props) {
   const conversationsRef = useRef<Conversation[]>([]);
   conversationsRef.current = conversations;
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [ownProfile, setOwnProfile] = useState<Profile | null>(null);
   const [openRowId, setOpenRowId] = useState<string | null>(null);
   // Guards against a burst of messages for unknown conversations firing
@@ -220,6 +245,8 @@ export function ConversationsScreen({ navigation }: Props) {
       isLoadingRef.current = false;
       pendingReloadRef.current = false;
       setIsRefreshing(false);
+      // Resolved either way - a genuinely empty list can now say so.
+      setHasLoadedOnce(true);
     }
   }, [userId, refreshUnreadCounts]);
 
@@ -426,6 +453,12 @@ export function ConversationsScreen({ navigation }: Props) {
           );
         }}
         ListEmptyComponent={
+          // Before the first load resolves there is nothing to say yet -
+          // showing "no conversations" (and now a Start a chat button)
+          // while the list is still arriving states something untrue.
+          !hasLoadedOnce ? (
+            <ConversationListSkeleton />
+          ) : (
           <View style={styles.empty}>
             <View style={styles.emptyIcon}>
               <FontAwesome6
@@ -455,6 +488,7 @@ export function ConversationsScreen({ navigation }: Props) {
               </>
             )}
           </View>
+          )
         }
       />
       <FooterNav active="chats" />
@@ -520,6 +554,14 @@ const makeStyles = (colors: ThemeColors) =>
     paddingHorizontal: spacing.lg,
   },
   rowMain: { flex: 1, minWidth: 0 },
+  skeletonRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: 10,
+    paddingHorizontal: spacing.lg,
+  },
+  skeletonText: { flex: 1, gap: 7 },
   rowTitle: { fontWeight: '700', fontSize: fontSizes.body, color: colors.ink },
   rowPreview: { color: colors.smoke, marginTop: 2, fontSize: fontSizes.footnote },
   rowPreviewTyping: { color: colors.sage, fontWeight: '600' },

@@ -19,6 +19,7 @@ import * as profilesData from '../data/profiles';
 import { Avatar } from '../components/Avatar';
 import { Touchable } from '../components/Touchable';
 import { useToast } from '../components/Toast';
+import { Skeleton, SkeletonGroup } from '../components/Skeleton';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
@@ -196,7 +197,17 @@ export function GroupInfoScreen({ route, navigation }: Props) {
         </View>
 
         {isLoading ? (
-          <ActivityIndicator style={styles.spinner} color={colors.ember} />
+          <SkeletonGroup style={styles.listContent}>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <View key={i} style={styles.skeletonMemberRow}>
+                <Skeleton width={38} height={38} radius={19} />
+                <View style={styles.skeletonMemberText}>
+                  <Skeleton width="50%" height={13} />
+                  <Skeleton width="28%" height={11} />
+                </View>
+              </View>
+            ))}
+          </SkeletonGroup>
         ) : (
           <FlatList
             data={participants}
@@ -409,6 +420,13 @@ const makeStyles = (colors: ThemeColors) =>
       borderTopColor: colors.line,
     },
     memberText: { flex: 1, minWidth: 0 },
+    skeletonMemberRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+      paddingVertical: 12,
+    },
+    skeletonMemberText: { flex: 1, gap: 7 },
     memberName: { fontSize: fontSizes.body, color: colors.ink, fontWeight: '600' },
     memberRole: { fontSize: fontSizes.caption, color: colors.smoke, marginTop: 1 },
     leaveButton: {

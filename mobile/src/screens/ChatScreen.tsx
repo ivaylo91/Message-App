@@ -54,6 +54,7 @@ import { Avatar } from '../components/Avatar';
 import { Touchable } from '../components/Touchable';
 import { AppWallpaper } from '../components/AppWallpaper';
 import { MediaViewer } from '../components/MediaViewer';
+import { Skeleton, SkeletonGroup } from '../components/Skeleton';
 import { AppLogo } from '../components/AppLogo';
 import { FooterNav } from '../components/FooterNav';
 import { useToast } from '../components/Toast';
@@ -252,10 +253,12 @@ function MediaImage({ path }: { path: string }) {
   }, [path]);
 
   if (!url) {
+    // The bubble already knows the shape the photo will take, so the
+    // placeholder is that shape rather than a spinner floating inside it.
     return (
-      <View style={[styles.media, styles.mediaLoading]}>
-        <ActivityIndicator />
-      </View>
+      <SkeletonGroup>
+        <View style={[styles.media, styles.mediaLoading]} />
+      </SkeletonGroup>
     );
   }
 
@@ -745,6 +748,37 @@ function TypingBubble() {
   );
 }
 
+// Alternating sides at varied widths, so the wait looks like a
+// conversation arriving rather than a loading bar. Opening a chat used to
+// show a blank area until the first page resolved.
+const SKELETON_BUBBLES: { mine: boolean; width: number }[] = [
+  { mine: false, width: 0.62 },
+  { mine: true, width: 0.45 },
+  { mine: false, width: 0.78 },
+  { mine: true, width: 0.55 },
+  { mine: false, width: 0.4 },
+  { mine: true, width: 0.7 },
+];
+
+function ChatHistorySkeleton({ bubbleMaxWidth }: { bubbleMaxWidth: number }) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
+  return (
+    <SkeletonGroup style={styles.historySkeleton}>
+      {SKELETON_BUBBLES.map((bubble, i) => (
+        <View key={i} style={bubble.mine ? styles.rowMine : styles.rowTheirs}>
+          <Skeleton
+            width={Math.round(bubbleMaxWidth * bubble.width)}
+            height={bubble.mine ? 38 : 48}
+            radius={radii.bubble}
+          />
+        </View>
+      ))}
+    </SkeletonGroup>
+  );
+}
+
 export function ChatScreen({ route, navigation }: Props) {
   const { t, i18n } = useTranslation();
   const { conversationId, title } = route.params;
@@ -764,6 +798,7 @@ export function ChatScreen({ route, navigation }: Props) {
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [isLoadingMoreMessages, setIsLoadingMoreMessages] = useState(false);
   const [didLoadFail, setDidLoadFail] = useState(false);
+  const [hasLoadedMessages, setHasLoadedMessages] = useState(false);
   const [isScrolledUp, setIsScrolledUp] = useState(false);
   const [viewerPath, setViewerPath] = useState<string | null>(null);
   const [reactions, setReactions] = useState<MessageReaction[]>([]);
@@ -936,12 +971,14 @@ export function ChatScreen({ route, navigation }: Props) {
       setReactions(
         await reactionsData.fetchReactionsForMessages(fetched.map((m) => m.id)),
       );
+      setHasLoadedMessages(true);
     } catch {
       // Previously this rejection went nowhere, which left an empty
       // message list behind a composer that looked perfectly functional
       // - the worst version of offline, since the app has an outbox and
       // will happily accept messages it can't show you the history of.
       setDidLoadFail(true);
+      setHasLoadedMessages(true);
     }
   }, [conversationId]);
 
@@ -1917,7 +1954,9 @@ export function ChatScreen({ route, navigation }: Props) {
         </View>
       )}
 
-      {didLoadFail && displayMessages.length === 0 ? (
+      {!hasLoadedMessages && displayMessages.length === 0 ? (
+        <ChatHistorySkeleton bubbleMaxWidth={bubbleMaxWidth} />
+      ) : didLoadFail && displayMessages.length === 0 ? (
         <View style={styles.loadError}>
           <FontAwesome6
             name="cloud-arrow-down"
@@ -2269,6 +2308,7 @@ const makeStyles = (colors: ThemeColors) =>
   rowMine: { alignItems: 'flex-end', marginVertical: 4 },
   // Messages inside a run sit closer together than separate remarks do.
   rowJoined: { marginTop: 2 },
+  historySkeleton: { flex: 1, justifyContent: 'flex-end', padding: spacing.md },
   rowTheirs: { alignItems: 'flex-start', marginVertical: 4 },
   bubble: {
     padding: 11,

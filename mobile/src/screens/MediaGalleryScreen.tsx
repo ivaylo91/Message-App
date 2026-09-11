@@ -18,6 +18,7 @@ import type { MediaMessage } from '../data/conversations';
 import * as mediaData from '../data/media';
 import { Touchable } from '../components/Touchable';
 import { MediaViewer } from '../components/MediaViewer';
+import { Skeleton, SkeletonGroup } from '../components/Skeleton';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
@@ -65,9 +66,9 @@ function PhotoThumbnail({
           resizeMode={FastImage.resizeMode.cover}
         />
       ) : (
-        <View style={[styles.thumbnailImage, styles.thumbnailLoading]}>
-          <ActivityIndicator size="small" />
-        </View>
+        <SkeletonGroup>
+          <View style={[styles.thumbnailImage, styles.thumbnailLoading]} />
+        </SkeletonGroup>
       )}
     </Touchable>
   );
@@ -195,7 +196,25 @@ export function MediaGalleryScreen({ route, navigation }: Props) {
         </View>
 
         {isLoading ? (
-          <ActivityIndicator style={styles.spinner} color={colors.ember} />
+          <SkeletonGroup style={styles.gridContent}>
+            {tab === 'photos' ? (
+              <View style={styles.skeletonGrid}>
+                {Array.from({ length: 9 }).map((_, i) => (
+                  <Skeleton key={i} width={thumbnailSize} height={thumbnailSize} radius={radii.sm} />
+                ))}
+              </View>
+            ) : (
+              Array.from({ length: 6 }).map((_, i) => (
+                <View key={i} style={styles.skeletonFileRow}>
+                  <Skeleton width={40} height={40} radius={radii.md} />
+                  <View style={styles.skeletonFileText}>
+                    <Skeleton width="60%" height={13} />
+                    <Skeleton width="35%" height={11} />
+                  </View>
+                </View>
+              ))
+            )}
+          </SkeletonGroup>
         ) : items.length === 0 ? (
           <View style={styles.emptyState}>
             <FontAwesome6
@@ -285,6 +304,14 @@ const makeStyles = (colors: ThemeColors) =>
     tabText: { fontSize: fontSizes.footnote, fontWeight: '600', color: colors.smoke },
     tabTextActive: { color: colors.white },
     gridContent: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl },
+    skeletonGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: GRID_GAP },
+    skeletonFileRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.md,
+      paddingVertical: 10,
+    },
+    skeletonFileText: { flex: 1, gap: 7 },
     gridRow: { gap: GRID_GAP, marginBottom: GRID_GAP },
     thumbnail: { borderRadius: radii.sm, overflow: 'hidden', backgroundColor: colors.paper2 },
     thumbnailImage: { width: '100%', height: '100%' },
