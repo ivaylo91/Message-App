@@ -129,6 +129,14 @@ Follow these rather than reaching for the raw primitive:
 - **`haptic()`** (`utils/haptics.ts`) for tap feedback. Built on core `Vibration`, so it needs `android.permission.VIBRATE` and is a buzz rather than a true tick; swap in a haptics library there if that stops being good enough.
 - Both locales must stay in sync — every string needs an `en` and a `bg` entry.
 
+### Releasing
+
+`docs/play-store/RELEASE_CHECKLIST.md` covers the steps that live in the Play
+Console and the Supabase dashboard rather than in this repo - notably the
+`USE_FULL_SCREEN_INTENT` declaration, without which Android 14+ silently
+revokes the permission and full-screen incoming calls stop working in
+production.
+
 ### EAS Build
 
 Bare workflow — `android/` and `ios/` are the source of truth, not an Expo config. `eas.json` defines `development`/`preview`/`production` profiles. One-time setup (needs an Expo account, interactive login — not something that can be scripted here):
