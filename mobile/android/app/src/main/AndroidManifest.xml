@@ -25,6 +25,17 @@
       android:theme="@style/AppTheme"
       android:usesCleartextTraffic="${usesCleartextTraffic}"
       android:supportsRtl="true">
+      <!-- Applies to anything Firebase renders itself. Message pushes are
+           data-only now and drawn by notifee, which sets these per
+           notification, but without this a payload that did arrive with a
+           notification block would fall back to the launcher icon and show
+           as a white blob. -->
+      <meta-data
+        android:name="com.google.firebase.messaging.default_notification_icon"
+        android:resource="@drawable/ic_notification" />
+      <meta-data
+        android:name="com.google.firebase.messaging.default_notification_color"
+        android:resource="@color/notification_color" />
       <activity
         android:name=".MainActivity"
         android:label="@string/app_name"

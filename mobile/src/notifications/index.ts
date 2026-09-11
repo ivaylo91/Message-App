@@ -17,6 +17,15 @@ import { requestAutoAnswer } from '../calling/autoAnswerFlag';
 const MESSAGE_CHANNEL_ID = 'messages';
 // Hardcoded, like the call notification's actions: these can be rendered
 // from a headless task where i18n has never been initialised.
+// The status-bar silhouette (res/drawable/ic_notification.xml). Without it
+// notifee falls back to the launcher icon, which Android flattens to a
+// white blob because a small icon is alpha-only.
+const SMALL_ICON = 'ic_notification';
+// Tints that silhouette and the app name in the shade. Matches colors.ember
+// in theme/tokens.ts - notifications are outside the theme context, so it
+// cannot be read from there.
+const NOTIFICATION_COLOR = '#7C3AED';
+
 const REPLY_ACTION_TITLE = 'Reply';
 const REPLY_PLACEHOLDER = 'Message';
 const CALL_CHANNEL_ID = 'calls';
@@ -64,6 +73,8 @@ export async function displayIncomingCallNotification(
     data: { ...(conversationId ? { conversationId } : {}), ...(callerId ? { callerId } : {}) },
     android: {
       channelId: CALL_CHANNEL_ID,
+      smallIcon: SMALL_ICON,
+      color: NOTIFICATION_COLOR,
       category: AndroidCategory.CALL,
       importance: AndroidImportance.HIGH,
       autoCancel: true,
@@ -150,6 +161,8 @@ export async function displayMessageNotification(
     data: conversationId ? { conversationId } : {},
     android: {
       channelId: MESSAGE_CHANNEL_ID,
+      smallIcon: SMALL_ICON,
+      color: NOTIFICATION_COLOR,
       pressAction: { id: 'default', launchActivity: 'default' },
       actions: conversationId && !isReaction
         ? [

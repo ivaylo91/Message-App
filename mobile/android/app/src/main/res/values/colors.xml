@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tints the notification silhouette and the app name in the shade.
+         Mirrors colors.ember in mobile/src/theme/tokens.ts; native resources
+         cannot read from there, so the two have to be kept in step by hand. -->
+    <color name="notification_color">#7C3AED</color>
+</resources>
