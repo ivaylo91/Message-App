@@ -103,15 +103,19 @@ export function ConfirmSheetProvider({ children }: { children: React.ReactNode }
         animationType="fade"
         onRequestClose={() => close(null)}
       >
-        {/* Tapping the scrim dismisses, which is the gesture people try
-            first and Alert never supported. */}
-        <Touchable
-          style={styles.scrim}
-          onPress={() => close(null)}
-          ripple={null}
-          accessibilityRole="button"
-          accessibilityLabel={request?.cancelLabel}
-        >
+        <View style={styles.root}>
+          {/* The scrim is a sibling behind the sheet, not its parent.
+              Tapping it dismisses - the gesture people try first, which
+              Alert never supported - but as a parent it would also catch
+              taps on the sheet's own title, message and padding, so the
+              sheet would appear to close at random. */}
+          <Touchable
+            style={StyleSheet.absoluteFill}
+            onPress={() => close(null)}
+            ripple={null}
+            accessibilityRole="button"
+            accessibilityLabel={request?.cancelLabel}
+          />
           <Animated.View
             style={[
               styles.sheet,
@@ -157,7 +161,7 @@ export function ConfirmSheetProvider({ children }: { children: React.ReactNode }
               </>
             )}
           </Animated.View>
-        </Touchable>
+        </View>
       </Modal>
     </ConfirmContext.Provider>
   );
@@ -169,7 +173,7 @@ export function useConfirm(): ConfirmContextValue {
 
 const makeStyles = (colors: ThemeColors) =>
   StyleSheet.create({
-    scrim: {
+    root: {
       flex: 1,
       backgroundColor: 'rgba(0,0,0,0.45)',
       justifyContent: 'flex-end',
