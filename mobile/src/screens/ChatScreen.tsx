@@ -89,7 +89,13 @@ import {
   ThemeColors,
 } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
-import { ConversationParticipant, Message, MessageReaction, ReplyPreview } from '../types';
+import {
+  Conversation,
+  ConversationParticipant,
+  Message,
+  MessageReaction,
+  ReplyPreview,
+} from '../types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Chat'>;
 
@@ -458,6 +464,7 @@ interface MessageBubbleProps {
   onReport: (message: LocalMessage) => void;
   onTogglePlay: (message: LocalMessage) => void;
   onOpenImage: (path: string) => void;
+  onForward: (message: LocalMessage) => void;
   runPosition: RunPosition;
 }
 
@@ -482,6 +489,7 @@ function MessageBubbleComponent({
   onReport,
   onTogglePlay,
   onOpenImage,
+  onForward,
   runPosition,
 }: MessageBubbleProps) {
   const { t, i18n } = useTranslation();
@@ -635,6 +643,16 @@ function MessageBubbleComponent({
           {!message._pending && (
             <Touchable onPress={() => onReply(message)} style={styles.pickerEmoji}>
               <Text style={styles.pickerActionText}>{t('chat.reply')}</Text>
+            </Touchable>
+          )}
+          {/* Text only: an attachment's storage path is scoped by
+              conversation id (see the message-media policies), so reusing
+              the same path in another conversation would leave it
+              unreadable to the people there. Forwarding a file would mean
+              copying the object into the target's folder first. */}
+          {message.body && !message._pending && (
+            <Touchable onPress={() => onForward(message)} style={styles.pickerEmoji}>
+              <Text style={styles.pickerActionText}>{t('chat.forward')}</Text>
             </Touchable>
           )}
           {isMine && message.body && (
@@ -804,6 +822,8 @@ export function ChatScreen({ route, navigation }: Props) {
   const [hasLoadedMessages, setHasLoadedMessages] = useState(false);
   const [isScrolledUp, setIsScrolledUp] = useState(false);
   const [viewerPath, setViewerPath] = useState<string | null>(null);
+  const [forwardingMessage, setForwardingMessage] = useState<LocalMessage | null>(null);
+  const [forwardTargets, setForwardTargets] = useState<Conversation[] | null>(null);
   const [reactions, setReactions] = useState<MessageReaction[]>([]);
   const [participants, setParticipants] = useState<ConversationParticipant[]>(
     [],
@@ -1789,6 +1809,51 @@ export function ChatScreen({ route, navigation }: Props) {
     flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
   }, []);
 
+  // Targets are fetched when forwarding starts rather than kept in sync:
+  // this screen has no reason to hold the conversation list otherwise, and
+  // a stale list is worse than a brief spinner.
+  const onForward = useCallback(
+    (message: LocalMessage) => {
+      setPickerMessageId(null);
+      setForwardingMessage(message);
+      setForwardTargets(null);
+      if (!userId) return;
+      void conversationsData
+        .fetchConversations(userId)
+        .then((all) => setForwardTargets(all.filter((c) => c.id !== conversationId)))
+        .catch(() => setForwardTargets([]));
+    },
+    [userId, conversationId],
+  );
+
+  const onForwardTo = useCallback(
+    (target: Conversation) => {
+      const message = forwardingMessage;
+      if (!message?.body || !userId) return;
+      setForwardingMessage(null);
+      void conversationsData
+        .sendMessage(target.id, userId, message.body, null)
+        .then(() => showToast(t('chat.forwardedToast')))
+        .catch(() =>
+          Alert.alert(t('chat.forwardFailedTitle'), t('chat.forwardFailedMessage')),
+        );
+    },
+    [forwardingMessage, userId, showToast, t],
+  );
+
+  const forwardTargetTitle = useCallback(
+    (conversation: Conversation) => {
+      if (conversation.is_group) return conversation.name ?? t('conversations.groupChat');
+      const other = conversation.conversation_participants.find((p) => p.user_id !== userId);
+      return (
+        other?.profiles.display_name ??
+        other?.profiles.email ??
+        t('conversations.directMessage')
+      );
+    },
+    [userId, t],
+  );
+
   const renderMessage = useCallback(
     ({ item }: { item: LocalMessage }) => (
       <MessageBubble
@@ -1816,6 +1881,7 @@ export function ChatScreen({ route, navigation }: Props) {
         onReport={onReportMessage}
         onTogglePlay={onTogglePlay}
         onOpenImage={onOpenImage}
+        onForward={onForward}
         runPosition={runPositionByMessageId.get(item.id) ?? 'single'}
       />
     ),
@@ -1839,6 +1905,7 @@ export function ChatScreen({ route, navigation }: Props) {
       onReportMessage,
       onTogglePlay,
       onOpenImage,
+      onForward,
       runPositionByMessageId,
     ],
   );
@@ -2191,6 +2258,60 @@ export function ChatScreen({ route, navigation }: Props) {
       />
 
       <Modal
+        visible={forwardingMessage !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setForwardingMessage(null)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>{t('chat.forwardTitle')}</Text>
+            {forwardTargets === null ? (
+              <ActivityIndicator style={styles.spinner} color={colors.ember} />
+            ) : forwardTargets.length === 0 ? (
+              <Text style={styles.modalMessage}>{t('chat.forwardNoTargets')}</Text>
+            ) : (
+              <ScrollView style={styles.forwardList} keyboardShouldPersistTaps="handled">
+                {forwardTargets.map((target) => {
+                  const name = forwardTargetTitle(target);
+                  return (
+                    <Touchable
+                      key={target.id}
+                      style={styles.forwardRow}
+                      onPress={() => onForwardTo(target)}
+                      accessibilityRole="button"
+                    >
+                      <Avatar
+                        name={name}
+                        avatarPath={
+                          target.is_group
+                            ? null
+                            : target.conversation_participants.find(
+                                (p) => p.user_id !== userId,
+                              )?.profiles.avatar_path
+                        }
+                        size={34}
+                      />
+                      <Text style={styles.forwardName} numberOfLines={1}>
+                        {name}
+                      </Text>
+                    </Touchable>
+                  );
+                })}
+              </ScrollView>
+            )}
+            <Touchable
+              style={styles.reportCancel}
+              onPress={() => setForwardingMessage(null)}
+              accessibilityRole="button"
+            >
+              <Text style={styles.reportCancelText}>{t('chat.cancel')}</Text>
+            </Touchable>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
         visible={reportTarget !== null}
         transparent
         animationType="fade"
@@ -2299,6 +2420,16 @@ const makeStyles = (colors: ThemeColors) =>
   },
   modalTitle: { fontSize: fontSizes.bodyLg, fontWeight: '700', color: colors.ink, marginBottom: 6 },
   modalMessage: { fontSize: fontSizes.footnote, color: colors.smoke, marginBottom: spacing.md },
+  forwardList: { maxHeight: 320 },
+  forwardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.line,
+  },
+  forwardName: { flex: 1, fontSize: fontSizes.body, color: colors.ink },
   reportReason: {
     paddingVertical: 13,
     borderTopWidth: StyleSheet.hairlineWidth,
