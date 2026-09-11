@@ -3,10 +3,17 @@ import { Dimensions, StyleSheet, View } from 'react-native';
 import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
 import { useTheme } from '../theme/ThemeContext';
 
-// A fixed (non-scrolling) wallpaper shown behind every screen, echoing the
-// doodle-pattern chat backgrounds in Viber/WhatsApp: a brick-offset grid
-// of assorted chat/communication icons, faint enough to sit behind real
-// content (lists, text, forms, message bubbles) without hurting readability.
+// A fixed (non-scrolling) wallpaper echoing the doodle-pattern chat
+// backgrounds in Viber/WhatsApp: a brick-offset grid of assorted
+// chat/communication icons, faint enough to sit behind real content
+// without hurting readability.
+//
+// Used on the chat surface and the unauthenticated brand flow (welcome,
+// login, register, forgot password) - not on every screen as it once was.
+// Behind bubbles it reads as a chat wallpaper, which is the point; behind
+// the conversation list, profile, settings and group info it just added
+// visual noise to screens where the content is the thing being read.
+// WhatsApp and Signal draw the same line: textured thread, clean list.
 const ICON_NAMES = [
   'comment',
   'comment-dots',

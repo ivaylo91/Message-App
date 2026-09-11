@@ -5,7 +5,6 @@ import {
   Modal,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
   useWindowDimensions,
 } from 'react-native';
@@ -15,7 +14,8 @@ import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import * as mediaData from '../data/media';
-import { spacing } from '../theme/tokens';
+import { fontSizes, spacing } from '../theme/tokens';
+import { Touchable } from './Touchable';
 
 // Full-screen photo viewer. Before this, tapping a photo in a chat did
 // nothing at all, and tapping one in the media gallery handed the
@@ -136,14 +136,14 @@ export function MediaViewer({ paths, initialPath, onClose }: MediaViewerProps) {
         />
 
         <View style={[styles.topBar, { paddingTop: insets.top + spacing.sm }]}>
-          <TouchableOpacity
+          <Touchable
             style={styles.closeButton}
             onPress={onClose}
             accessibilityRole="button"
             accessibilityLabel={t('mediaGallery.a11yCloseViewer')}
           >
             <FontAwesome6 name="xmark" iconStyle="solid" size={18} color="#fff" />
-          </TouchableOpacity>
+          </Touchable>
           {paths.length > 1 && (
             <Text style={styles.counter}>{`${index + 1} / ${paths.length}`}</Text>
           )}
@@ -178,5 +178,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  counter: { color: '#fff', fontSize: 14, fontWeight: '600' },
+  counter: { color: '#fff', fontSize: fontSizes.body, fontWeight: '600' },
 });

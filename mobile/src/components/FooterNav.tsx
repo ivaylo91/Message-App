@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -8,7 +8,8 @@ import { useTranslation } from 'react-i18next';
 import type { AppStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
 import { useUnread } from '../unread/UnreadContext';
-import { spacing, ThemeColors } from '../theme/tokens';
+import { fontSizes, spacing, ThemeColors } from '../theme/tokens';
+import { Touchable } from './Touchable';
 import { useTheme } from '../theme/ThemeContext';
 
 export type FooterTab = 'notifications' | 'chats' | 'group' | 'exit';
@@ -87,11 +88,10 @@ export function FooterNav({ active }: FooterNavProps) {
       {items.map((item) => {
         const isActive = active === item.key;
         return (
-          <TouchableOpacity
+          <Touchable
             key={item.key}
             style={styles.item}
             onPress={item.onPress}
-            activeOpacity={0.6}
             accessibilityRole="button"
             // Without the count folded in, a screen reader announces
             // "Notifications" and says nothing about the 12 sitting on it.
@@ -123,7 +123,7 @@ export function FooterNav({ active }: FooterNavProps) {
             >
               {item.label}
             </Text>
-          </TouchableOpacity>
+          </Touchable>
         );
       })}
     </View>
@@ -155,7 +155,7 @@ const makeStyles = (colors: ThemeColors) =>
       borderWidth: 1.5,
       borderColor: colors.paper2,
     },
-    badgeText: { color: colors.white, fontSize: 9.5, fontWeight: '700' },
-    label: { fontSize: 10.5, fontWeight: '600', color: colors.smoke },
+    badgeText: { color: colors.white, fontSize: fontSizes.micro, fontWeight: '700' },
+    label: { fontSize: fontSizes.micro, fontWeight: '600', color: colors.smoke },
     labelActive: { color: colors.ember },
   });

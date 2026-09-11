@@ -6,7 +6,6 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
@@ -18,10 +17,10 @@ import { useAuth } from '../auth/AuthContext';
 import * as conversationsData from '../data/conversations';
 import * as profilesData from '../data/profiles';
 import { Avatar } from '../components/Avatar';
-import { AppWallpaper } from '../components/AppWallpaper';
+import { Touchable } from '../components/Touchable';
 import { useToast } from '../components/Toast';
 import { useContentWidth } from '../hooks/useContentWidth';
-import { radii, spacing, ThemeColors } from '../theme/tokens';
+import { fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 import { ConversationParticipant, ProfileSearchResult } from '../types';
 
@@ -183,17 +182,16 @@ export function GroupInfoScreen({ route, navigation }: Props) {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + spacing.md }]}>
-      <AppWallpaper />
       <View style={[styles.content, { maxWidth: contentWidth }]}>
         <View style={styles.header}>
-          <TouchableOpacity
+          <Touchable
             style={styles.backButton}
             onPress={() => navigation.goBack()}
             accessibilityRole="button"
             accessibilityLabel={t('chat.a11yBack')}
           >
             <FontAwesome6 name="chevron-left" iconStyle="solid" size={18} color={colors.ink} />
-          </TouchableOpacity>
+          </Touchable>
           <Text style={styles.headerTitle}>{t('groupInfo.title')}</Text>
         </View>
 
@@ -218,7 +216,7 @@ export function GroupInfoScreen({ route, navigation }: Props) {
                     placeholderTextColor={colors.smoke}
                   />
                   {isAdmin && groupName.trim() !== savedName && groupName.trim().length > 0 && (
-                    <TouchableOpacity
+                    <Touchable
                       style={styles.saveButton}
                       onPress={() => void onSaveName()}
                       disabled={isSavingName}
@@ -230,7 +228,7 @@ export function GroupInfoScreen({ route, navigation }: Props) {
                       ) : (
                         <Text style={styles.saveButtonText}>{t('groupInfo.save')}</Text>
                       )}
-                    </TouchableOpacity>
+                    </Touchable>
                   )}
                 </View>
                 {!isAdmin && <Text style={styles.hint}>{t('groupInfo.adminOnlyHint')}</Text>}
@@ -256,7 +254,7 @@ export function GroupInfoScreen({ route, navigation }: Props) {
                       {isSearching && <ActivityIndicator size="small" color={colors.smoke} />}
                     </View>
                     {addableResults.map((profile) => (
-                      <TouchableOpacity
+                      <Touchable
                         key={profile.id}
                         style={styles.resultRow}
                         onPress={() => void onAdd(profile)}
@@ -277,7 +275,7 @@ export function GroupInfoScreen({ route, navigation }: Props) {
                           size={14}
                           color={colors.ember}
                         />
-                      </TouchableOpacity>
+                      </Touchable>
                     ))}
                   </>
                 )}
@@ -302,7 +300,7 @@ export function GroupInfoScreen({ route, navigation }: Props) {
                     )}
                   </View>
                   {isAdmin && !isSelf && (
-                    <TouchableOpacity
+                    <Touchable
                       onPress={() => onRemove(item)}
                       accessibilityRole="button"
                       accessibilityLabel={t('groupInfo.removeLabel', { name })}
@@ -313,13 +311,13 @@ export function GroupInfoScreen({ route, navigation }: Props) {
                         size={15}
                         color={colors.danger}
                       />
-                    </TouchableOpacity>
+                    </Touchable>
                   )}
                 </View>
               );
             }}
             ListFooterComponent={
-              <TouchableOpacity
+              <Touchable
                 style={styles.leaveButton}
                 onPress={onLeave}
                 accessibilityRole="button"
@@ -331,7 +329,7 @@ export function GroupInfoScreen({ route, navigation }: Props) {
                   color={colors.danger}
                 />
                 <Text style={styles.leaveText}>{t('groupInfo.leave')}</Text>
-              </TouchableOpacity>
+              </Touchable>
             }
           />
         )}
@@ -352,11 +350,11 @@ const makeStyles = (colors: ThemeColors) =>
       paddingBottom: spacing.md,
     },
     backButton: { width: 30, alignItems: 'flex-start' },
-    headerTitle: { fontSize: 20, fontWeight: '800', color: colors.ink },
+    headerTitle: { fontSize: fontSizes.title, fontWeight: '800', color: colors.ink },
     spinner: { marginTop: spacing.xxl },
     listContent: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },
     label: {
-      fontSize: 12,
+      fontSize: fontSizes.caption,
       fontWeight: '700',
       color: colors.smoke,
       textTransform: 'uppercase',
@@ -364,7 +362,7 @@ const makeStyles = (colors: ThemeColors) =>
       marginTop: spacing.lg,
       marginBottom: 6,
     },
-    hint: { fontSize: 12.5, color: colors.smoke, marginTop: 4 },
+    hint: { fontSize: fontSizes.caption, color: colors.smoke, marginTop: 4 },
     nameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
     nameInput: {
       flex: 1,
@@ -374,7 +372,7 @@ const makeStyles = (colors: ThemeColors) =>
       borderRadius: radii.md,
       paddingHorizontal: spacing.md,
       paddingVertical: 10,
-      fontSize: 15,
+      fontSize: fontSizes.body,
       color: colors.ink,
     },
     saveButton: {
@@ -383,7 +381,7 @@ const makeStyles = (colors: ThemeColors) =>
       borderRadius: radii.pill,
       backgroundColor: colors.ember,
     },
-    saveButtonText: { color: colors.white, fontWeight: '700', fontSize: 13.5 },
+    saveButtonText: { color: colors.white, fontWeight: '700', fontSize: fontSizes.footnote },
     searchBar: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -394,14 +392,14 @@ const makeStyles = (colors: ThemeColors) =>
       borderWidth: 1,
       borderColor: colors.line,
     },
-    searchInput: { flex: 1, paddingVertical: 9, fontSize: 14.5, color: colors.ink },
+    searchInput: { flex: 1, paddingVertical: 9, fontSize: fontSizes.body, color: colors.ink },
     resultRow: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.md,
       paddingVertical: 10,
     },
-    resultName: { flex: 1, fontSize: 14.5, color: colors.ink },
+    resultName: { flex: 1, fontSize: fontSizes.body, color: colors.ink },
     memberRow: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -411,8 +409,8 @@ const makeStyles = (colors: ThemeColors) =>
       borderTopColor: colors.line,
     },
     memberText: { flex: 1, minWidth: 0 },
-    memberName: { fontSize: 15, color: colors.ink, fontWeight: '600' },
-    memberRole: { fontSize: 11.5, color: colors.smoke, marginTop: 1 },
+    memberName: { fontSize: fontSizes.body, color: colors.ink, fontWeight: '600' },
+    memberRole: { fontSize: fontSizes.caption, color: colors.smoke, marginTop: 1 },
     leaveButton: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -424,5 +422,5 @@ const makeStyles = (colors: ThemeColors) =>
       borderWidth: 1,
       borderColor: colors.line,
     },
-    leaveText: { color: colors.danger, fontWeight: '700', fontSize: 14.5 },
+    leaveText: { color: colors.danger, fontWeight: '700', fontSize: fontSizes.body },
   });

@@ -6,7 +6,6 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
@@ -18,9 +17,9 @@ import { useAuth } from '../auth/AuthContext';
 import * as conversationsData from '../data/conversations';
 import * as profilesData from '../data/profiles';
 import { Avatar } from '../components/Avatar';
-import { AppWallpaper } from '../components/AppWallpaper';
+import { Touchable } from '../components/Touchable';
 import { useContentWidth } from '../hooks/useContentWidth';
-import { radii, spacing, ThemeColors } from '../theme/tokens';
+import { fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 import { ProfileSearchResult } from '../types';
 
@@ -78,12 +77,11 @@ export function NewChatScreen({ navigation }: Props) {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + spacing.lg }]}>
-      <AppWallpaper />
       <View style={[styles.content, { maxWidth: contentWidth }]}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.goBack()}>
+          <Touchable style={styles.cancelButton} onPress={() => navigation.goBack()}>
             <Text style={styles.cancelText}>{t('newChat.cancel')}</Text>
-          </TouchableOpacity>
+          </Touchable>
           <Text style={styles.title}>{t('newChat.title')}</Text>
         </View>
 
@@ -104,7 +102,7 @@ export function NewChatScreen({ navigation }: Props) {
           contentContainerStyle={{ paddingBottom: insets.bottom + spacing.lg }}
         >
           {!query.trim() && (
-            <TouchableOpacity
+            <Touchable
               style={styles.row}
               onPress={() => navigation.navigate('NewGroup')}
             >
@@ -114,7 +112,7 @@ export function NewChatScreen({ navigation }: Props) {
               <View style={styles.rowMain}>
                 <Text style={styles.rowName}>{t('newChat.newGroup')}</Text>
               </View>
-            </TouchableOpacity>
+            </Touchable>
           )}
 
           {isSearching && <ActivityIndicator color={colors.ember} style={styles.spinner} />}
@@ -127,7 +125,7 @@ export function NewChatScreen({ navigation }: Props) {
           )}
 
           {results.map((profile) => (
-            <TouchableOpacity
+            <Touchable
               key={profile.id}
               style={styles.row}
               onPress={() => void onSelectProfile(profile)}
@@ -142,7 +140,7 @@ export function NewChatScreen({ navigation }: Props) {
                   <Text style={styles.rowSub}>@{profile.username}</Text>
                 )}
               </View>
-            </TouchableOpacity>
+            </Touchable>
           ))}
         </ScrollView>
       </View>
@@ -161,8 +159,8 @@ const makeStyles = (colors: ThemeColors) =>
     justifyContent: 'center',
   },
   cancelButton: { position: 'absolute', left: spacing.lg, top: 0 },
-  cancelText: { color: colors.ember, fontSize: 15, fontWeight: '600' },
-  title: { fontSize: 17, fontWeight: '700', color: colors.ink },
+  cancelText: { color: colors.ember, fontSize: fontSizes.body, fontWeight: '600' },
+  title: { fontSize: fontSizes.bodyLg, fontWeight: '700', color: colors.ink },
   searchBar: {
     marginHorizontal: spacing.lg,
     marginBottom: spacing.md,
@@ -171,13 +169,13 @@ const makeStyles = (colors: ThemeColors) =>
     borderWidth: 1,
     borderColor: colors.line,
   },
-  searchInput: { paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: colors.ink },
+  searchInput: { paddingHorizontal: 14, paddingVertical: 10, fontSize: fontSizes.body, color: colors.ink },
   spinner: { marginTop: spacing.xl },
   emptyText: {
     textAlign: 'center',
     color: colors.smoke,
     marginTop: spacing.xxl,
-    fontSize: 14,
+    fontSize: fontSizes.body,
   },
   row: {
     flexDirection: 'row',
@@ -187,8 +185,8 @@ const makeStyles = (colors: ThemeColors) =>
     paddingVertical: 10,
   },
   rowMain: { flex: 1 },
-  rowName: { fontWeight: '700', fontSize: 15.5, color: colors.ink },
-  rowSub: { fontSize: 12.5, color: colors.smoke, marginTop: 1 },
+  rowName: { fontWeight: '700', fontSize: fontSizes.body, color: colors.ink },
+  rowSub: { fontSize: fontSizes.caption, color: colors.smoke, marginTop: 1 },
   newGroupIcon: {
     width: 48,
     height: 48,

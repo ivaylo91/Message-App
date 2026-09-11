@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
-import { radii, spacing, ThemeColors } from '../theme/tokens';
+import { fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
+import { Touchable } from './Touchable';
 import { useTheme } from '../theme/ThemeContext';
 
 interface PasswordFieldProps {
@@ -26,7 +27,7 @@ export function PasswordField({ label, value, onChangeText }: PasswordFieldProps
           value={value}
           onChangeText={onChangeText}
         />
-        <TouchableOpacity
+        <Touchable
           style={styles.toggle}
           onPress={() => setVisible((current) => !current)}
         >
@@ -36,7 +37,7 @@ export function PasswordField({ label, value, onChangeText }: PasswordFieldProps
             size={18}
             color={colors.smoke}
           />
-        </TouchableOpacity>
+        </Touchable>
       </View>
     </View>
   );
@@ -46,7 +47,7 @@ const makeStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     field: { marginBottom: spacing.lg },
     label: {
-      fontSize: 12,
+      fontSize: fontSizes.caption,
       fontWeight: '700',
       letterSpacing: 0.5,
       textTransform: 'uppercase',
@@ -64,7 +65,7 @@ const makeStyles = (colors: ThemeColors) =>
     input: {
       flex: 1,
       padding: 13,
-      fontSize: 15,
+      fontSize: fontSizes.body,
       color: colors.ink,
     },
     toggle: { paddingHorizontal: 13 },

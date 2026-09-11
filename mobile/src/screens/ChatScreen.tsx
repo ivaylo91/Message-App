@@ -22,7 +22,6 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
@@ -51,6 +50,7 @@ import * as mediaData from '../data/media';
 import * as moderationData from '../data/moderation';
 import type { ReportReason } from '../data/moderation';
 import { Avatar } from '../components/Avatar';
+import { Touchable } from '../components/Touchable';
 import { AppWallpaper } from '../components/AppWallpaper';
 import { MediaViewer } from '../components/MediaViewer';
 import { AppLogo } from '../components/AppLogo';
@@ -75,7 +75,7 @@ import {
 } from '../utils/messagePreview';
 import { hasLink, linkifyText } from '../utils/linkify';
 import * as draftStorage from '../drafts/draftStorage';
-import { radii, spacing, MAX_BUBBLE_WIDTH, ThemeColors } from '../theme/tokens';
+import { fontSizes, radii, spacing, MAX_BUBBLE_WIDTH, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 import { ConversationParticipant, Message, MessageReaction, ReplyPreview } from '../types';
 
@@ -279,7 +279,7 @@ function AudioMessageBubble({
   );
 
   return (
-    <TouchableOpacity
+    <Touchable
       style={styles.audioRow}
       onPress={onTogglePlay}
       disabled={message._pending}
@@ -310,7 +310,7 @@ function AudioMessageBubble({
       <Text style={isMine ? styles.bubbleTextMine : styles.bubbleTextTheirs}>
         {formatDuration(totalSeconds)}
       </Text>
-    </TouchableOpacity>
+    </Touchable>
   );
 }
 
@@ -345,7 +345,7 @@ function FileMessageBubble({ message, isMine }: { message: LocalMessage; isMine:
   };
 
   return (
-    <TouchableOpacity
+    <Touchable
       style={styles.fileRow}
       onPress={() => void onOpen()}
       disabled={message._pending}
@@ -364,7 +364,47 @@ function FileMessageBubble({ message, isMine }: { message: LocalMessage; isMine:
       >
         {message.attachment_name || t('chat.file')}
       </Text>
-    </TouchableOpacity>
+    </Touchable>
+  );
+}
+
+// Reactions used to simply appear, which for something as small and
+// incidental as a pill reads as a rendering glitch rather than as
+// somebody responding. Springing it in from 0.8 gives the arrival a
+// beat. Keyed on the emoji by the caller, so this mounts (and therefore
+// animates) only when a *new* emoji appears - a count ticking from 2 to
+// 3 leaves the same pill mounted and still.
+function ReactionPill({
+  summary,
+  onPress,
+}: {
+  summary: ReactionSummary;
+  onPress: () => void;
+}) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const scale = useRef(new Animated.Value(0.8)).current;
+
+  useEffect(() => {
+    Animated.spring(scale, {
+      toValue: 1,
+      friction: 5,
+      tension: 160,
+      useNativeDriver: true,
+    }).start();
+  }, [scale]);
+
+  return (
+    <Animated.View style={{ transform: [{ scale }] }}>
+      <Touchable
+        style={[styles.reactionPill, summary.reactedByMe && styles.reactionPillMine]}
+        onPress={onPress}
+      >
+        <Text style={styles.reactionPillText}>
+          {summary.emoji} {summary.count > 1 ? summary.count : ''}
+        </Text>
+      </Touchable>
+    </Animated.View>
   );
 }
 
@@ -445,10 +485,9 @@ function MessageBubbleComponent({
       )}
       <View style={isMine ? styles.rowMine : styles.rowTheirs}>
       {senderName && <Text style={styles.senderLabel}>{senderName}</Text>}
-      <TouchableOpacity
+      <Touchable
         onLongPress={() => onLongPress(message.id)}
         onPress={onDismissPicker}
-        activeOpacity={0.8}
       >
         <LinearGradient
           colors={isMine ? [...gradients.mine] : [...gradients.theirs]}
@@ -466,7 +505,7 @@ function MessageBubbleComponent({
           )}
           {message.call_status && <CallLogRow message={message} isMine={isMine} />}
           {message.attachment_type === 'image' && message.media_path && (
-            <TouchableOpacity
+            <Touchable
               // Long-press still has to reach the bubble's own handler,
               // or photos would be the one message type you can't react
               // to, reply to or delete.
@@ -477,7 +516,7 @@ function MessageBubbleComponent({
               accessibilityLabel={t('chat.a11yOpenPhoto')}
             >
               <MediaImage path={message.media_path} />
-            </TouchableOpacity>
+            </Touchable>
           )}
           {message.attachment_type === 'audio' && (
             <AudioMessageBubble
@@ -523,20 +562,16 @@ function MessageBubbleComponent({
             </Text>
           </View>
         </LinearGradient>
-      </TouchableOpacity>
+      </Touchable>
 
       {summary.length > 0 && (
         <View style={styles.reactionRow}>
           {summary.map((r) => (
-            <TouchableOpacity
+            <ReactionPill
               key={r.emoji}
-              style={[styles.reactionPill, r.reactedByMe && styles.reactionPillMine]}
+              summary={r}
               onPress={() => onToggleReaction(message.id, r.emoji)}
-            >
-              <Text style={styles.reactionPillText}>
-                {r.emoji} {r.count > 1 ? r.count : ''}
-              </Text>
-            </TouchableOpacity>
+            />
           ))}
         </View>
       )}
@@ -549,37 +584,37 @@ function MessageBubbleComponent({
           contentContainerStyle={styles.pickerContent}
         >
           {QUICK_REACTIONS.map((emoji) => (
-            <TouchableOpacity
+            <Touchable
               key={emoji}
               onPress={() => onToggleReaction(message.id, emoji)}
               style={styles.pickerEmoji}
             >
               <Text style={styles.pickerEmojiText}>{emoji}</Text>
-            </TouchableOpacity>
+            </Touchable>
           ))}
           {!message._pending && (
-            <TouchableOpacity onPress={() => onReply(message)} style={styles.pickerEmoji}>
+            <Touchable onPress={() => onReply(message)} style={styles.pickerEmoji}>
               <Text style={styles.pickerActionText}>{t('chat.reply')}</Text>
-            </TouchableOpacity>
+            </Touchable>
           )}
           {isMine && message.body && (
-            <TouchableOpacity onPress={() => onEdit(message)} style={styles.pickerEmoji}>
+            <Touchable onPress={() => onEdit(message)} style={styles.pickerEmoji}>
               <Text style={styles.pickerActionText}>{t('chat.edit')}</Text>
-            </TouchableOpacity>
+            </Touchable>
           )}
           {isMine && (
-            <TouchableOpacity onPress={() => onDelete(message.id)} style={styles.pickerEmoji}>
+            <Touchable onPress={() => onDelete(message.id)} style={styles.pickerEmoji}>
               <Text style={[styles.pickerActionText, styles.pickerDeleteText]}>
                 {t('chat.delete')}
               </Text>
-            </TouchableOpacity>
+            </Touchable>
           )}
           {!isMine && !message._pending && (
-            <TouchableOpacity onPress={() => onReport(message)} style={styles.pickerEmoji}>
+            <Touchable onPress={() => onReport(message)} style={styles.pickerEmoji}>
               <Text style={[styles.pickerActionText, styles.pickerDeleteText]}>
                 {t('chat.reportTitle')}
               </Text>
-            </TouchableOpacity>
+            </Touchable>
           )}
         </ScrollView>
       )}
@@ -1729,14 +1764,14 @@ export function ChatScreen({ route, navigation }: Props) {
       <TouchableWithoutFeedback onPress={() => setPickerMessageId(null)}>
       <View style={[styles.content, { maxWidth: contentWidth }]}>
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
-        <TouchableOpacity
+        <Touchable
           style={styles.backButton}
           onPress={() => navigation.goBack()}
           accessibilityRole="button"
           accessibilityLabel={t('chat.a11yBack')}
         >
           <FontAwesome6 name="chevron-left" iconStyle="solid" size={18} color={colors.ink} />
-        </TouchableOpacity>
+        </Touchable>
         <Avatar
           name={displayTitle}
           avatarPath={isGroup ? null : otherParticipant?.profiles.avatar_path}
@@ -1757,34 +1792,34 @@ export function ChatScreen({ route, navigation }: Props) {
             )
           )}
         </View>
-        <TouchableOpacity
+        <Touchable
           style={styles.callButton}
           onPress={() => setIsSearchOpen(true)}
           accessibilityRole="button"
           accessibilityLabel={t('chat.a11ySearch')}
         >
           <FontAwesome6 name="magnifying-glass" iconStyle="solid" size={16} color={colors.ink} />
-        </TouchableOpacity>
-        <TouchableOpacity
+        </Touchable>
+        <Touchable
           style={styles.callButton}
           onPress={() => navigation.navigate('MediaGallery', { conversationId, title: displayTitle })}
           accessibilityRole="button"
           accessibilityLabel={t('chat.a11yGallery')}
         >
           <FontAwesome6 name="images" iconStyle="solid" size={16} color={colors.ink} />
-        </TouchableOpacity>
+        </Touchable>
         {isGroup && (
-          <TouchableOpacity
+          <Touchable
             style={styles.callButton}
             onPress={() => navigation.navigate('GroupInfo', { conversationId })}
             accessibilityRole="button"
             accessibilityLabel={t('chat.a11yGroupInfo')}
           >
             <FontAwesome6 name="users" iconStyle="solid" size={16} color={colors.ink} />
-          </TouchableOpacity>
+          </Touchable>
         )}
         {!isGroup && otherParticipant && (
-          <TouchableOpacity
+          <Touchable
             style={styles.callButton}
             onPress={() =>
               void startCall({
@@ -1798,17 +1833,17 @@ export function ChatScreen({ route, navigation }: Props) {
             accessibilityLabel={t('chat.a11yCall')}
           >
             <FontAwesome6 name="video" iconStyle="solid" size={17} color={colors.ember} />
-          </TouchableOpacity>
+          </Touchable>
         )}
         {!isGroup && otherParticipant && (
-          <TouchableOpacity
+          <Touchable
             style={styles.callButton}
             onPress={onOpenChatMenu}
             accessibilityRole="button"
             accessibilityLabel={t('chat.a11yMenu')}
           >
             <FontAwesome6 name="ellipsis-vertical" iconStyle="solid" size={16} color={colors.ink} />
-          </TouchableOpacity>
+          </Touchable>
         )}
         <AppLogo size={26} />
       </View>
@@ -1830,13 +1865,13 @@ export function ChatScreen({ route, navigation }: Props) {
             onChangeText={onChangeSearchQuery}
             autoFocus
           />
-          <TouchableOpacity
+          <Touchable
             onPress={onCloseSearch}
             accessibilityRole="button"
             accessibilityLabel={t('chat.a11yCloseSearch')}
           >
             <FontAwesome6 name="xmark" iconStyle="solid" size={16} color={colors.smoke} />
-          </TouchableOpacity>
+          </Touchable>
         </View>
       )}
 
@@ -1850,9 +1885,9 @@ export function ChatScreen({ route, navigation }: Props) {
           />
           <Text style={styles.loadErrorTitle}>{t('chat.loadFailedTitle')}</Text>
           <Text style={styles.loadErrorHint}>{t('chat.loadFailedMessage')}</Text>
-          <TouchableOpacity style={styles.loadErrorButton} onPress={() => void loadMessages()}>
+          <Touchable style={styles.loadErrorButton} onPress={() => void loadMessages()}>
             <Text style={styles.loadErrorButtonText}>{t('chat.loadFailedRetry')}</Text>
-          </TouchableOpacity>
+          </Touchable>
         </View>
       ) : isSearchOpen ? (
         <ScrollView style={styles.list} keyboardShouldPersistTaps="handled">
@@ -1861,7 +1896,7 @@ export function ChatScreen({ route, navigation }: Props) {
             <Text style={styles.searchEmptyText}>{t('chat.noSearchResults')}</Text>
           )}
           {searchResults.map((result) => (
-            <TouchableOpacity
+            <Touchable
               key={result.id}
               style={styles.searchResultRow}
               onPress={() => void onSelectSearchResult(result)}
@@ -1872,7 +1907,7 @@ export function ChatScreen({ route, navigation }: Props) {
               <Text style={styles.searchResultSnippet} numberOfLines={1}>
                 {result.body}
               </Text>
-            </TouchableOpacity>
+            </Touchable>
           ))}
         </ScrollView>
       ) : (
@@ -1902,21 +1937,21 @@ export function ChatScreen({ route, navigation }: Props) {
         />
       )}
       {isScrolledUp && !isSearchOpen && (
-        <TouchableOpacity
+        <Touchable
           style={styles.jumpToLatest}
           onPress={onJumpToLatest}
           accessibilityRole="button"
           accessibilityLabel={t('chat.jumpToLatest')}
         >
           <FontAwesome6 name="chevron-down" iconStyle="solid" size={14} color={colors.ink} />
-        </TouchableOpacity>
+        </Touchable>
       )}
       {editingMessageId && (
         <View style={styles.editingBar}>
           <Text style={styles.editingBarText}>{t('chat.editingMessage')}</Text>
-          <TouchableOpacity onPress={onCancelEdit}>
+          <Touchable onPress={onCancelEdit}>
             <Text style={styles.editingBarCancel}>{t('chat.cancel')}</Text>
-          </TouchableOpacity>
+          </Touchable>
         </View>
       )}
       {replyingTo && (
@@ -1935,9 +1970,9 @@ export function ChatScreen({ route, navigation }: Props) {
                   ''}
             </Text>
           </View>
-          <TouchableOpacity onPress={onCancelReply}>
+          <Touchable onPress={onCancelReply}>
             <Text style={styles.editingBarCancel}>{t('chat.cancel')}</Text>
-          </TouchableOpacity>
+          </Touchable>
         </View>
       )}
       <View
@@ -1950,30 +1985,30 @@ export function ChatScreen({ route, navigation }: Props) {
       >
         {isRecording ? (
           <>
-            <TouchableOpacity
+            <Touchable
               onPress={() => void onStopRecording(false)}
               style={styles.attachButton}
               accessibilityRole="button"
               accessibilityLabel={t('chat.a11yDiscardRecording')}
             >
               <FontAwesome6 name="trash" iconStyle="solid" size={18} color={colors.danger} />
-            </TouchableOpacity>
+            </Touchable>
             <View style={styles.recordingIndicator}>
               <View style={styles.recordingDot} />
               <Text style={styles.recordingTime}>{formatDuration(recordingSeconds)}</Text>
             </View>
-            <TouchableOpacity
+            <Touchable
               onPress={() => void onStopRecording(true)}
               style={styles.sendButton}
               accessibilityRole="button"
               accessibilityLabel={t('chat.a11ySendRecording')}
             >
               <FontAwesome6 name="paper-plane" iconStyle="solid" size={15} color={colors.white} />
-            </TouchableOpacity>
+            </Touchable>
           </>
         ) : (
           <>
-            <TouchableOpacity
+            <Touchable
               onPress={() => void onPickFile()}
               style={styles.attachButton}
               disabled={isUploadingAttachment}
@@ -1981,8 +2016,8 @@ export function ChatScreen({ route, navigation }: Props) {
               accessibilityLabel={t('chat.a11yAttachFile')}
             >
               <FontAwesome6 name="paperclip" iconStyle="solid" size={18} color={colors.smoke} />
-            </TouchableOpacity>
-            <TouchableOpacity
+            </Touchable>
+            <Touchable
               onPress={() => void onPickImage()}
               style={styles.attachButton}
               disabled={isUploadingAttachment}
@@ -1994,7 +2029,7 @@ export function ChatScreen({ route, navigation }: Props) {
               ) : (
                 <FontAwesome6 name="camera" iconStyle="solid" size={20} color={colors.smoke} />
               )}
-            </TouchableOpacity>
+            </Touchable>
             <TextInput
               style={styles.input}
               placeholder={t('chat.messagePlaceholder')}
@@ -2009,7 +2044,7 @@ export function ChatScreen({ route, navigation }: Props) {
               textAlignVertical="center"
             />
             {draft.trim() || editingMessageId ? (
-              <TouchableOpacity
+              <Touchable
                 onPress={() => void onSend()}
                 style={styles.sendButton}
                 accessibilityRole="button"
@@ -2025,9 +2060,9 @@ export function ChatScreen({ route, navigation }: Props) {
                     color={colors.white}
                   />
                 )}
-              </TouchableOpacity>
+              </Touchable>
             ) : (
-              <TouchableOpacity
+              <Touchable
                 onPress={() => void onStartRecording()}
                 style={styles.sendButton}
                 disabled={isUploadingAttachment}
@@ -2035,7 +2070,7 @@ export function ChatScreen({ route, navigation }: Props) {
                 accessibilityLabel={t('chat.a11yRecord')}
               >
                 <FontAwesome6 name="microphone" iconStyle="solid" size={16} color={colors.white} />
-              </TouchableOpacity>
+              </Touchable>
             )}
           </>
         )}
@@ -2059,22 +2094,22 @@ export function ChatScreen({ route, navigation }: Props) {
             <Text style={styles.modalTitle}>{t('chat.reportTitle')}</Text>
             <Text style={styles.modalMessage}>{t('chat.reportMessage')}</Text>
             {REPORT_REASONS.map((reason) => (
-              <TouchableOpacity
+              <Touchable
                 key={reason}
                 style={styles.reportReason}
                 onPress={() => onSubmitReport(reason)}
                 accessibilityRole="button"
               >
                 <Text style={styles.reportReasonText}>{t(REPORT_REASON_LABEL_KEYS[reason])}</Text>
-              </TouchableOpacity>
+              </Touchable>
             ))}
-            <TouchableOpacity
+            <Touchable
               style={styles.reportCancel}
               onPress={() => setReportTarget(null)}
               accessibilityRole="button"
             >
               <Text style={styles.reportCancelText}>{t('chat.cancel')}</Text>
-            </TouchableOpacity>
+            </Touchable>
           </View>
         </View>
       </Modal>
@@ -2100,9 +2135,9 @@ const makeStyles = (colors: ThemeColors) =>
   backButton: { paddingHorizontal: 4, paddingVertical: 4 },
   headerNameBlock: { flex: 1 },
   callButton: { paddingHorizontal: 4, paddingVertical: 4 },
-  headerName: { fontWeight: '700', fontSize: 15, color: colors.ink },
-  headerStatus: { fontSize: 11.5, fontWeight: '600', color: colors.sage },
-  headerStatusOffline: { fontSize: 11.5, fontWeight: '600', color: colors.smoke },
+  headerName: { fontWeight: '700', fontSize: fontSizes.body, color: colors.ink },
+  headerStatus: { fontSize: fontSizes.caption, fontWeight: '600', color: colors.sage },
+  headerStatusOffline: { fontSize: fontSizes.caption, fontWeight: '600', color: colors.smoke },
   offlineBanner: {
     marginHorizontal: spacing.md,
     marginTop: spacing.sm,
@@ -2111,7 +2146,7 @@ const makeStyles = (colors: ThemeColors) =>
     backgroundColor: colors.danger,
     alignItems: 'center',
   },
-  offlineBannerText: { color: colors.white, fontSize: 12, fontWeight: '700' },
+  offlineBannerText: { color: colors.white, fontSize: fontSizes.caption, fontWeight: '700' },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2125,12 +2160,12 @@ const makeStyles = (colors: ThemeColors) =>
     borderWidth: 1,
     borderColor: colors.line,
   },
-  searchInput: { flex: 1, fontSize: 14.5, color: colors.ink, padding: 0 },
+  searchInput: { flex: 1, fontSize: fontSizes.body, color: colors.ink, padding: 0 },
   searchEmptyText: {
     textAlign: 'center',
     color: colors.smoke,
     marginTop: spacing.xxl,
-    fontSize: 14,
+    fontSize: fontSizes.body,
   },
   searchResultRow: {
     paddingHorizontal: spacing.lg,
@@ -2138,8 +2173,8 @@ const makeStyles = (colors: ThemeColors) =>
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.line,
   },
-  searchResultSender: { fontWeight: '700', fontSize: 13.5, color: colors.ink, marginBottom: 2 },
-  searchResultSnippet: { fontSize: 13.5, color: colors.smoke },
+  searchResultSender: { fontWeight: '700', fontSize: fontSizes.footnote, color: colors.ink, marginBottom: 2 },
+  searchResultSnippet: { fontSize: fontSizes.footnote, color: colors.smoke },
   modalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.45)',
@@ -2154,14 +2189,14 @@ const makeStyles = (colors: ThemeColors) =>
     borderRadius: radii.lg,
     padding: spacing.lg,
   },
-  modalTitle: { fontSize: 17, fontWeight: '700', color: colors.ink, marginBottom: 6 },
-  modalMessage: { fontSize: 13.5, color: colors.smoke, marginBottom: spacing.md },
+  modalTitle: { fontSize: fontSizes.bodyLg, fontWeight: '700', color: colors.ink, marginBottom: 6 },
+  modalMessage: { fontSize: fontSizes.footnote, color: colors.smoke, marginBottom: spacing.md },
   reportReason: {
     paddingVertical: 13,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.line,
   },
-  reportReasonText: { fontSize: 15, color: colors.ink },
+  reportReasonText: { fontSize: fontSizes.body, color: colors.ink },
   reportCancel: {
     marginTop: spacing.md,
     paddingVertical: 11,
@@ -2169,7 +2204,7 @@ const makeStyles = (colors: ThemeColors) =>
     backgroundColor: colors.paper2,
     alignItems: 'center',
   },
-  reportCancelText: { fontSize: 14.5, fontWeight: '700', color: colors.smoke },
+  reportCancelText: { fontSize: fontSizes.body, fontWeight: '700', color: colors.smoke },
   loadError: {
     flex: 1,
     alignItems: 'center',
@@ -2177,8 +2212,8 @@ const makeStyles = (colors: ThemeColors) =>
     gap: spacing.sm,
     paddingHorizontal: spacing.xxl,
   },
-  loadErrorTitle: { color: colors.ink, fontWeight: '700', fontSize: 15.5 },
-  loadErrorHint: { color: colors.smoke, fontSize: 13.5, textAlign: 'center' },
+  loadErrorTitle: { color: colors.ink, fontWeight: '700', fontSize: fontSizes.body },
+  loadErrorHint: { color: colors.smoke, fontSize: fontSizes.footnote, textAlign: 'center' },
   loadErrorButton: {
     marginTop: spacing.sm,
     paddingHorizontal: spacing.lg,
@@ -2186,7 +2221,7 @@ const makeStyles = (colors: ThemeColors) =>
     borderRadius: radii.pill,
     backgroundColor: colors.ember,
   },
-  loadErrorButtonText: { color: colors.white, fontWeight: '700', fontSize: 14 },
+  loadErrorButtonText: { color: colors.white, fontWeight: '700', fontSize: fontSizes.body },
   list: { flex: 1, paddingHorizontal: 12 },
   rowMine: { alignItems: 'flex-end', marginVertical: 4 },
   rowTheirs: { alignItems: 'flex-start', marginVertical: 4 },
@@ -2251,15 +2286,15 @@ const makeStyles = (colors: ThemeColors) =>
   spinner: { marginTop: spacing.xl },
   historyLoading: { marginVertical: spacing.md },
   senderLabel: {
-    fontSize: 11.5,
+    fontSize: fontSizes.caption,
     fontWeight: '700',
     color: colors.smoke,
     marginBottom: 2,
     marginLeft: 4,
   },
-  bubbleTextMine: { color: colors.white, fontSize: 14.5, lineHeight: 20 },
-  bubbleTextTheirs: { color: colors.ink, fontSize: 14.5, lineHeight: 20 },
-  editedTag: { fontSize: 10, color: colors.smoke, marginTop: 2 },
+  bubbleTextMine: { color: colors.white, fontSize: fontSizes.body, lineHeight: 20 },
+  bubbleTextTheirs: { color: colors.ink, fontSize: fontSizes.body, lineHeight: 20 },
+  editedTag: { fontSize: fontSizes.micro, color: colors.smoke, marginTop: 2 },
   linkText: { textDecorationLine: 'underline' },
   jumpToLatest: {
     position: 'absolute',
@@ -2281,11 +2316,11 @@ const makeStyles = (colors: ThemeColors) =>
     gap: spacing.xs,
     marginTop: 2,
   },
-  metaTextMine: { fontSize: 10, color: colors.white, opacity: 0.75 },
-  metaTextTheirs: { fontSize: 10, color: colors.smoke },
+  metaTextMine: { fontSize: fontSizes.micro, color: colors.white, opacity: 0.75 },
+  metaTextTheirs: { fontSize: fontSizes.micro, color: colors.smoke },
   dayDivider: { alignItems: 'center', marginVertical: spacing.md },
   dayDividerText: {
-    fontSize: 11,
+    fontSize: fontSizes.caption,
     fontWeight: '700',
     color: colors.smoke,
     backgroundColor: colors.paper2,
@@ -2317,10 +2352,10 @@ const makeStyles = (colors: ThemeColors) =>
   // (like bubbleTextMine/Theirs below already do) lets the outer
   // maxWidth cap do the truncating only when actually necessary.
   replyQuoteContent: {},
-  replyQuoteSenderMine: { fontSize: 12, fontWeight: '700', color: colors.white },
-  replyQuoteSenderTheirs: { fontSize: 12, fontWeight: '700', color: colors.ember },
-  replyQuoteTextMine: { fontSize: 12.5, color: 'rgba(255, 255, 255, 0.85)' },
-  replyQuoteTextTheirs: { fontSize: 12.5, color: colors.smoke },
+  replyQuoteSenderMine: { fontSize: fontSizes.caption, fontWeight: '700', color: colors.white },
+  replyQuoteSenderTheirs: { fontSize: fontSizes.caption, fontWeight: '700', color: colors.ember },
+  replyQuoteTextMine: { fontSize: fontSizes.caption, color: 'rgba(255, 255, 255, 0.85)' },
+  replyQuoteTextTheirs: { fontSize: fontSizes.caption, color: colors.smoke },
   reactionRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -2337,7 +2372,7 @@ const makeStyles = (colors: ThemeColors) =>
     borderColor: 'transparent',
   },
   reactionPillMine: { borderColor: colors.ember },
-  reactionPillText: { fontSize: 13 },
+  reactionPillText: { fontSize: fontSizes.footnote },
   picker: {
     backgroundColor: colors.paper2,
     borderRadius: radii.xl,
@@ -2355,8 +2390,8 @@ const makeStyles = (colors: ThemeColors) =>
     paddingVertical: 6,
   },
   pickerEmoji: { paddingHorizontal: 6 },
-  pickerEmojiText: { fontSize: 22 },
-  pickerActionText: { fontSize: 14, color: colors.ember, fontWeight: '600' },
+  pickerEmojiText: { fontSize: fontSizes.title },
+  pickerActionText: { fontSize: fontSizes.body, color: colors.ember, fontWeight: '600' },
   pickerDeleteText: { color: colors.danger },
   seenAvatar: { marginTop: 4, flexDirection: 'row', gap: 2 },
   typingBubble: {
@@ -2377,8 +2412,8 @@ const makeStyles = (colors: ThemeColors) =>
     paddingVertical: spacing.sm,
     backgroundColor: colors.paper2,
   },
-  editingBarText: { fontSize: 12, color: colors.smoke },
-  editingBarCancel: { fontSize: 12, color: colors.ember, fontWeight: '600' },
+  editingBarText: { fontSize: fontSizes.caption, color: colors.smoke },
+  editingBarCancel: { fontSize: fontSizes.caption, color: colors.ember, fontWeight: '600' },
   replyBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -2389,8 +2424,8 @@ const makeStyles = (colors: ThemeColors) =>
     gap: spacing.md,
   },
   replyBarText: { flex: 1 },
-  replyBarLabel: { fontSize: 12, fontWeight: '700', color: colors.ember },
-  replyBarSnippet: { fontSize: 12, color: colors.smoke, marginTop: 1 },
+  replyBarLabel: { fontSize: fontSizes.caption, fontWeight: '700', color: colors.ember },
+  replyBarSnippet: { fontSize: fontSizes.caption, color: colors.smoke, marginTop: 1 },
   composer: {
     flexDirection: 'row',
     padding: spacing.md,
@@ -2416,7 +2451,7 @@ const makeStyles = (colors: ThemeColors) =>
     borderRadius: 5,
     backgroundColor: colors.danger,
   },
-  recordingTime: { fontSize: 14.5, color: colors.ink, fontWeight: '600' },
+  recordingTime: { fontSize: fontSizes.body, color: colors.ink, fontWeight: '600' },
   input: {
     flex: 1,
     maxHeight: 120,
@@ -2428,7 +2463,7 @@ const makeStyles = (colors: ThemeColors) =>
     paddingVertical: 11,
     marginRight: spacing.sm,
     color: colors.ink,
-    fontSize: 14.5,
+    fontSize: fontSizes.body,
   },
   sendButton: {
     width: 38,

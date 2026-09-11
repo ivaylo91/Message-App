@@ -4,7 +4,6 @@ import {
   ScrollView,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,6 +13,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
 import { AppWallpaper } from '../components/AppWallpaper';
+import { Touchable } from '../components/Touchable';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { spacing } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
@@ -83,7 +83,7 @@ export function ForgotPasswordScreen({ navigation }: Props) {
 
             {error && <Text style={s.error}>{error}</Text>}
 
-            <TouchableOpacity
+            <Touchable
               style={[s.primaryButton, (isSubmitting || !email.trim()) && s.primaryButtonDisabled]}
               onPress={() => void onSubmit()}
               disabled={isSubmitting || !email.trim()}
@@ -94,13 +94,13 @@ export function ForgotPasswordScreen({ navigation }: Props) {
                 <FontAwesome6 name="paper-plane" iconStyle="solid" size={16} color={colors.white} />
               )}
               <Text style={s.primaryButtonText}>{t('auth.forgotPassword.submit')}</Text>
-            </TouchableOpacity>
+            </Touchable>
           </>
         )}
 
-        <TouchableOpacity style={s.footer} onPress={() => navigation.navigate('Login')}>
+        <Touchable style={s.footer} onPress={() => navigation.navigate('Login')}>
           <Text style={s.footerText}>{t('auth.forgotPassword.backToLogin')}</Text>
-        </TouchableOpacity>
+        </Touchable>
       </ScrollView>
     </View>
   );

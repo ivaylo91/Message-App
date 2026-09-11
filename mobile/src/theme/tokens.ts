@@ -159,17 +159,34 @@ export const MAX_CONTENT_WIDTH = 480;
 // to 80% of a much wider display.
 export const MAX_BUBBLE_WIDTH = 340;
 
-export const typography = {
-  display: {
-    fontWeight: '800' as const,
-    letterSpacing: -0.3,
-  },
-  body: {
-    fontWeight: '400' as const,
-  },
-  label: {
-    fontWeight: '700' as const,
-    letterSpacing: 0.5,
-    textTransform: 'uppercase' as const,
-  },
-};
+// The type ramp. This replaces a `typography` token that was defined here
+// but never imported anywhere, which is how 19 distinct font sizes - half
+// of them on half-point values like 13.5 and 15.5 - ended up spread across
+// 107 style declarations. Half points don't render distinguishably anyway;
+// what they cost is a consistent rhythm and any single place to adjust it.
+//
+// Seven steps, each mapped from the sizes that were previously in use:
+//
+//   micro    9.5, 10, 10.5      badges, timestamps, the edited tag
+//   caption  11, 11.5, 12, 12.5 labels, hints, chips
+//   footnote 13, 13.5           secondary rows, previews
+//   body     14, 14.5, 15, 15.5 message text, inputs, list titles
+//   bodyLg   16, 17             emphasised body, modal titles
+//   title    20, 22             screen titles on sub-screens
+//   display  28                 the conversation list header
+//   hero     40                 the welcome screen wordmark
+//
+// Line heights are deliberately not part of this yet: adding them would
+// shift vertical rhythm inside fixed-height rows (badges, chips, the tab
+// bar) and that needs looking at on a device, not inferring. Worth doing
+// as a follow-up - no message body currently sets one.
+export const fontSizes = {
+  micro: 10,
+  caption: 12,
+  footnote: 13,
+  body: 15,
+  bodyLg: 17,
+  title: 22,
+  display: 28,
+  hero: 40,
+} as const;

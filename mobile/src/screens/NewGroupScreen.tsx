@@ -6,7 +6,6 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
@@ -18,10 +17,10 @@ import { useAuth } from '../auth/AuthContext';
 import * as conversationsData from '../data/conversations';
 import * as profilesData from '../data/profiles';
 import { Avatar } from '../components/Avatar';
-import { AppWallpaper } from '../components/AppWallpaper';
+import { Touchable } from '../components/Touchable';
 import { AppLogo } from '../components/AppLogo';
 import { useContentWidth } from '../hooks/useContentWidth';
-import { radii, spacing, ThemeColors } from '../theme/tokens';
+import { fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 import { ProfileSearchResult } from '../types';
 
@@ -99,15 +98,14 @@ export function NewGroupScreen({ navigation }: Props) {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + spacing.lg }]}>
-      <AppWallpaper />
       <View style={[styles.content, { maxWidth: contentWidth }]}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.goBack()}>
+          <Touchable style={styles.cancelButton} onPress={() => navigation.goBack()}>
             <Text style={styles.cancelText}>{t('newChat.cancel')}</Text>
-          </TouchableOpacity>
+          </Touchable>
           <AppLogo size={20} />
           <Text style={styles.title}>{t('newGroup.title')}</Text>
-          <TouchableOpacity
+          <Touchable
             style={styles.createButton}
             onPress={() => void onCreate()}
             disabled={!canCreate || isCreating}
@@ -119,7 +117,7 @@ export function NewGroupScreen({ navigation }: Props) {
                 {t('newGroup.create')}
               </Text>
             )}
-          </TouchableOpacity>
+          </Touchable>
         </View>
 
         <View style={styles.nameField}>
@@ -140,7 +138,7 @@ export function NewGroupScreen({ navigation }: Props) {
             contentContainerStyle={styles.chipsContent}
           >
             {selected.map((profile) => (
-              <TouchableOpacity
+              <Touchable
                 key={profile.id}
                 style={styles.chip}
                 onPress={() => toggleSelected(profile)}
@@ -160,7 +158,7 @@ export function NewGroupScreen({ navigation }: Props) {
                   color={colors.white}
                   style={styles.chipRemove}
                 />
-              </TouchableOpacity>
+              </Touchable>
             ))}
           </ScrollView>
         )}
@@ -191,7 +189,7 @@ export function NewGroupScreen({ navigation }: Props) {
           {results.map((profile) => {
             const isSelected = selected.some((p) => p.id === profile.id);
             return (
-              <TouchableOpacity
+              <Touchable
                 key={profile.id}
                 style={styles.row}
                 onPress={() => toggleSelected(profile)}
@@ -216,7 +214,7 @@ export function NewGroupScreen({ navigation }: Props) {
                     />
                   )}
                 </View>
-              </TouchableOpacity>
+              </Touchable>
             );
           })}
         </ScrollView>
@@ -238,10 +236,10 @@ const makeStyles = (colors: ThemeColors) =>
     gap: 6,
   },
   cancelButton: { position: 'absolute', left: spacing.lg, top: 0 },
-  cancelText: { color: colors.ember, fontSize: 15, fontWeight: '600' },
-  title: { fontSize: 17, fontWeight: '700', color: colors.ink },
+  cancelText: { color: colors.ember, fontSize: fontSizes.body, fontWeight: '600' },
+  title: { fontSize: fontSizes.bodyLg, fontWeight: '700', color: colors.ink },
   createButton: { position: 'absolute', right: spacing.lg, top: 0 },
-  createText: { color: colors.ember, fontSize: 15, fontWeight: '700' },
+  createText: { color: colors.ember, fontSize: fontSizes.body, fontWeight: '700' },
   createTextDisabled: { color: colors.smoke },
   nameField: {
     marginHorizontal: spacing.lg,
@@ -254,19 +252,19 @@ const makeStyles = (colors: ThemeColors) =>
     borderColor: colors.line,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    fontSize: 16,
+    fontSize: fontSizes.bodyLg,
     fontWeight: '600',
     color: colors.ink,
   },
   chipsRow: { flexGrow: 0, marginBottom: spacing.md },
   chipsContent: { paddingHorizontal: spacing.lg, gap: spacing.md },
   chip: { alignItems: 'center', width: 56 },
-  chipName: { fontSize: 11, color: colors.ink, marginTop: 4, width: 56, textAlign: 'center' },
+  chipName: { fontSize: fontSizes.caption, color: colors.ink, marginTop: 4, width: 56, textAlign: 'center' },
   chipRemove: {
     position: 'absolute',
     top: -2,
     right: -2,
-    fontSize: 10,
+    fontSize: fontSizes.micro,
     color: colors.white,
     backgroundColor: colors.smoke,
     width: 16,
@@ -284,13 +282,13 @@ const makeStyles = (colors: ThemeColors) =>
     borderWidth: 1,
     borderColor: colors.line,
   },
-  searchInput: { paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: colors.ink },
+  searchInput: { paddingHorizontal: 14, paddingVertical: 10, fontSize: fontSizes.body, color: colors.ink },
   spinner: { marginTop: spacing.xl },
   emptyText: {
     textAlign: 'center',
     color: colors.smoke,
     marginTop: spacing.xxl,
-    fontSize: 14,
+    fontSize: fontSizes.body,
   },
   row: {
     flexDirection: 'row',
@@ -300,8 +298,8 @@ const makeStyles = (colors: ThemeColors) =>
     paddingVertical: 10,
   },
   rowMain: { flex: 1 },
-  rowName: { fontWeight: '700', fontSize: 15.5, color: colors.ink },
-  rowSub: { fontSize: 12.5, color: colors.smoke, marginTop: 1 },
+  rowName: { fontWeight: '700', fontSize: fontSizes.body, color: colors.ink },
+  rowSub: { fontSize: fontSizes.caption, color: colors.smoke, marginTop: 1 },
   checkbox: {
     width: 24,
     height: 24,

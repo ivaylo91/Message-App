@@ -1,12 +1,13 @@
 import React, { useMemo } from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '../navigation/RootNavigator';
 import { AppWallpaper } from '../components/AppWallpaper';
+import { Touchable } from '../components/Touchable';
 import { useContentWidth } from '../hooks/useContentWidth';
-import { radii, spacing, ThemeColors } from '../theme/tokens';
+import { fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Welcome'>;
@@ -37,18 +38,18 @@ export function WelcomeScreen({ navigation }: Props) {
         <Text style={styles.wordmark}>Hearth</Text>
         <Text style={styles.tagline}>{t('welcome.tagline')}</Text>
         <View style={styles.actions}>
-          <TouchableOpacity
+          <Touchable
             style={styles.primaryButton}
             onPress={() => navigation.navigate('Register')}
           >
             <Text style={styles.primaryButtonText}>{t('welcome.getStarted')}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
+          </Touchable>
+          <Touchable
             style={styles.secondaryButton}
             onPress={() => navigation.navigate('Login')}
           >
             <Text style={styles.secondaryButtonText}>{t('welcome.haveAccount')}</Text>
-          </TouchableOpacity>
+          </Touchable>
         </View>
       </View>
       <Text style={[styles.footer, { bottom: insets.bottom + spacing.lg }]}>
@@ -90,14 +91,14 @@ const makeStyles = (colors: ThemeColors) =>
       height: 55,
     },
     wordmark: {
-      fontSize: 40,
+      fontSize: fontSizes.hero,
       fontWeight: '800',
       letterSpacing: -0.5,
       color: colors.ink,
     },
     tagline: {
       color: colors.smoke,
-      fontSize: 15.5,
+      fontSize: fontSizes.body,
       lineHeight: 22,
       textAlign: 'center',
       maxWidth: 220,
@@ -117,7 +118,7 @@ const makeStyles = (colors: ThemeColors) =>
     },
     primaryButtonText: {
       color: colors.white,
-      fontSize: 15.5,
+      fontSize: fontSizes.body,
       fontWeight: '700',
     },
     secondaryButton: {
@@ -128,7 +129,7 @@ const makeStyles = (colors: ThemeColors) =>
     },
     secondaryButtonText: {
       color: colors.ink,
-      fontSize: 14.5,
+      fontSize: fontSizes.body,
       fontWeight: '600',
       opacity: 0.7,
     },
@@ -138,6 +139,6 @@ const makeStyles = (colors: ThemeColors) =>
       right: 0,
       textAlign: 'center',
       color: colors.smoke,
-      fontSize: 12,
+      fontSize: fontSizes.caption,
     },
   });

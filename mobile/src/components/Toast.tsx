@@ -8,7 +8,7 @@ import React, {
 } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { radii, spacing, ThemeColors } from '../theme/tokens';
+import { fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 
 type ToastKind = 'success' | 'error';
@@ -104,5 +104,5 @@ const makeStyles = (colors: ThemeColors) =>
     },
     success: { backgroundColor: colors.sage },
     error: { backgroundColor: colors.danger },
-    text: { color: colors.white, fontWeight: '700', fontSize: 14 },
+    text: { color: colors.white, fontWeight: '700', fontSize: fontSizes.body },
   });

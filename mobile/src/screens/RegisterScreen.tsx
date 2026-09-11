@@ -4,7 +4,6 @@ import {
   ScrollView,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,6 +13,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
 import { AppWallpaper } from '../components/AppWallpaper';
+import { Touchable } from '../components/Touchable';
 import { PasswordField } from '../components/PasswordField';
 import { useToast } from '../components/Toast';
 import { useContentWidth } from '../hooks/useContentWidth';
@@ -122,7 +122,7 @@ export function RegisterScreen({ navigation }: Props) {
 
       {error && <Text style={s.error}>{error}</Text>}
 
-      <TouchableOpacity
+      <Touchable
         style={[s.primaryButton, isSubmitting && s.primaryButtonDisabled]}
         onPress={() => void onSubmit()}
         disabled={isSubmitting}
@@ -133,11 +133,11 @@ export function RegisterScreen({ navigation }: Props) {
           <FontAwesome6 name="user-plus" iconStyle="solid" size={16} color={colors.white} />
         )}
         <Text style={s.primaryButtonText}>{t('auth.register.submit')}</Text>
-      </TouchableOpacity>
+      </Touchable>
 
-      <TouchableOpacity style={s.footer} onPress={() => navigation.navigate('Login')}>
+      <Touchable style={s.footer} onPress={() => navigation.navigate('Login')}>
         <Text style={s.footerText}>{t('auth.register.switchToLogin')}</Text>
-      </TouchableOpacity>
+      </Touchable>
       </ScrollView>
     </View>
   );

@@ -3,12 +3,12 @@ import {
   Alert,
   Animated,
   FlatList,
+  LayoutAnimation,
   PanResponder,
   RefreshControl,
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
@@ -21,7 +21,7 @@ import { useAuth } from '../auth/AuthContext';
 import * as conversationsData from '../data/conversations';
 import * as profilesData from '../data/profiles';
 import { Avatar } from '../components/Avatar';
-import { AppWallpaper } from '../components/AppWallpaper';
+import { Touchable } from '../components/Touchable';
 import { AppLogo } from '../components/AppLogo';
 import { FooterNav } from '../components/FooterNav';
 import { useContentWidth } from '../hooks/useContentWidth';
@@ -31,7 +31,7 @@ import { useTyping } from '../typing/TypingContext';
 import { useMessageStream } from '../messages/MessageStreamContext';
 import { attachmentPreviewText, callStatusPreviewText } from '../utils/messagePreview';
 import { applyIncomingMessage } from '../utils/conversationList';
-import { radii, spacing, ThemeColors } from '../theme/tokens';
+import { fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 import { Conversation, Message, Profile } from '../types';
 
@@ -117,19 +117,19 @@ function ConversationRow({
 
   return (
     <View style={styles.rowContainer}>
-      <TouchableOpacity
+      <Touchable
         style={styles.deleteAction}
         onPress={onDelete}
         accessibilityRole="button"
         accessibilityLabel={t('conversations.a11yDelete')}
       >
         <FontAwesome6 name="trash" iconStyle="solid" size={18} color={colors.white} />
-      </TouchableOpacity>
+      </Touchable>
       <Animated.View
         style={[styles.rowForeground, { transform: [{ translateX }] }]}
         {...panResponder.panHandlers}
       >
-        <TouchableOpacity style={styles.row} onPress={onPress} activeOpacity={0.7}>
+        <Touchable style={styles.row} onPress={onPress}>
           <Avatar name={title} avatarPath={avatarPath} online={online} />
           <View style={styles.rowMain}>
             <Text style={styles.rowTitle}>{title}</Text>
@@ -151,7 +151,7 @@ function ConversationRow({
               </Text>
             </View>
           )}
-        </TouchableOpacity>
+        </Touchable>
       </Animated.View>
     </View>
   );
@@ -244,6 +244,16 @@ export function ConversationsScreen({ navigation }: Props) {
           return;
         }
         if (next === conversationsRef.current) return;
+        // The reordering this causes - a conversation jumping to the top
+        // - used to happen in a single frame, which reads as the list
+        // flickering rather than as a row moving. One line of
+        // LayoutAnimation makes it legible as movement. It is a no-op
+        // rather than an error where the platform doesn't support it.
+        LayoutAnimation.configureNext({
+          duration: 220,
+          update: { type: 'easeInEaseOut', property: 'scaleXY' },
+          create: { type: 'easeInEaseOut', property: 'opacity', duration: 160 },
+        });
         conversationsRef.current = next;
         setConversations(next);
       }),
@@ -331,11 +341,10 @@ export function ConversationsScreen({ navigation }: Props) {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + spacing.lg }]}>
-      <AppWallpaper />
       <View style={[styles.content, { maxWidth: contentWidth }]}>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <TouchableOpacity
+          <Touchable
             onPress={() => navigation.navigate('Profile')}
             accessibilityRole="button"
             accessibilityLabel={t('conversations.a11yProfile')}
@@ -346,7 +355,7 @@ export function ConversationsScreen({ navigation }: Props) {
               size={40}
               online={userId ? isOnline(userId) : undefined}
             />
-          </TouchableOpacity>
+          </Touchable>
           <Text style={styles.headerTitle}>{t('conversations.title')}</Text>
           <AppLogo size={26} />
         </View>
@@ -355,14 +364,14 @@ export function ConversationsScreen({ navigation }: Props) {
             changed once shouldn't hold the most valuable space in the
             header of the screen people open most. */}
         <View style={styles.headerActions}>
-          <TouchableOpacity
+          <Touchable
             style={styles.iconButton}
             onPress={() => navigation.navigate('NewChat')}
             accessibilityRole="button"
             accessibilityLabel={t('conversations.a11yNewChat')}
           >
             <FontAwesome6 name="pen-to-square" iconStyle="solid" size={15} color={colors.ink} />
-          </TouchableOpacity>
+          </Touchable>
         </View>
       </View>
 
@@ -377,13 +386,13 @@ export function ConversationsScreen({ navigation }: Props) {
           onChangeText={setSearchQuery}
         />
         {searchQuery.length > 0 && (
-          <TouchableOpacity
+          <Touchable
             onPress={() => setSearchQuery('')}
             accessibilityRole="button"
             accessibilityLabel={t('conversations.a11yClearSearch')}
           >
             <FontAwesome6 name="xmark" iconStyle="solid" size={13} color={colors.smoke} />
-          </TouchableOpacity>
+          </Touchable>
         )}
       </View>
 
@@ -447,7 +456,7 @@ const makeStyles = (colors: ThemeColors) =>
     justifyContent: 'space-between',
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  headerTitle: { fontSize: 28, fontWeight: '800', letterSpacing: -0.3, color: colors.ink },
+  headerTitle: { fontSize: fontSizes.display, fontWeight: '800', letterSpacing: -0.3, color: colors.ink },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   iconButton: {
     width: 34,
@@ -471,7 +480,7 @@ const makeStyles = (colors: ThemeColors) =>
     borderWidth: 1,
     borderColor: colors.line,
   },
-  searchInput: { flex: 1, paddingVertical: 9, fontSize: 14.5, color: colors.ink },
+  searchInput: { flex: 1, paddingVertical: 9, fontSize: fontSizes.body, color: colors.ink },
   rowContainer: { position: 'relative', overflow: 'hidden', width: '100%' },
   deleteAction: {
     position: 'absolute',
@@ -492,8 +501,8 @@ const makeStyles = (colors: ThemeColors) =>
     paddingHorizontal: spacing.lg,
   },
   rowMain: { flex: 1, minWidth: 0 },
-  rowTitle: { fontWeight: '700', fontSize: 15.5, color: colors.ink },
-  rowPreview: { color: colors.smoke, marginTop: 2, fontSize: 13.5 },
+  rowTitle: { fontWeight: '700', fontSize: fontSizes.body, color: colors.ink },
+  rowPreview: { color: colors.smoke, marginTop: 2, fontSize: fontSizes.footnote },
   rowPreviewTyping: { color: colors.sage, fontWeight: '600' },
   rowPreviewUnread: { color: colors.ink, fontWeight: '600' },
   unreadBadge: {
@@ -505,8 +514,8 @@ const makeStyles = (colors: ThemeColors) =>
     alignItems: 'center',
     justifyContent: 'center',
   },
-  unreadBadgeText: { color: colors.white, fontSize: 12, fontWeight: '700' },
+  unreadBadgeText: { color: colors.white, fontSize: fontSizes.caption, fontWeight: '700' },
   empty: { alignItems: 'center', marginTop: 64, paddingHorizontal: spacing.xxl },
-  emptyTitle: { color: colors.ink, fontWeight: '700', fontSize: 15 },
-  emptyHint: { color: colors.smoke, marginTop: 4, fontSize: 13.5 },
+  emptyTitle: { color: colors.ink, fontWeight: '700', fontSize: fontSizes.body },
+  emptyHint: { color: colors.smoke, marginTop: 4, fontSize: fontSizes.footnote },
 });

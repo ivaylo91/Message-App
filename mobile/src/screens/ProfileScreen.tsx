@@ -8,7 +8,6 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
@@ -29,11 +28,12 @@ import {
   type NotificationPermission,
 } from '../notifications';
 import { Avatar } from '../components/Avatar';
-import { AppWallpaper } from '../components/AppWallpaper';
+import { Touchable } from '../components/Touchable';
 import { PasswordField } from '../components/PasswordField';
 import { useContentWidth } from '../hooks/useContentWidth';
 import {
   BUBBLE_GRADIENT_PRESETS,
+  fontSizes,
   radii,
   spacing,
   ThemeColors,
@@ -260,15 +260,14 @@ export function ProfileScreen({ navigation }: Props) {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + spacing.lg }]}>
-      <AppWallpaper />
       <View style={[styles.content, { maxWidth: contentWidth }]}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.cancelButton} onPress={() => navigation.goBack()}>
+          <Touchable style={styles.cancelButton} onPress={() => navigation.goBack()}>
             <FontAwesome6 name="xmark" iconStyle="solid" size={13} color={colors.danger} />
             <Text style={styles.cancelText}>{t('profile.cancel')}</Text>
-          </TouchableOpacity>
+          </Touchable>
           <Text style={styles.title}>{t('profile.title')}</Text>
-          <TouchableOpacity
+          <Touchable
             style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
             onPress={() => void onSave()}
             disabled={isSaving || !canSave}
@@ -288,7 +287,7 @@ export function ProfileScreen({ navigation }: Props) {
                 </Text>
               </>
             )}
-          </TouchableOpacity>
+          </Touchable>
         </View>
 
         <ScrollView
@@ -298,7 +297,7 @@ export function ProfileScreen({ navigation }: Props) {
           showsVerticalScrollIndicator={false}
         >
         <View style={styles.avatarSection}>
-          <TouchableOpacity onPress={() => void onChangePhoto()} disabled={isUploadingPhoto}>
+          <Touchable onPress={() => void onChangePhoto()} disabled={isUploadingPhoto}>
             <Avatar
               name={displayName || profile?.email || '?'}
               avatarPath={profile?.avatar_path}
@@ -311,7 +310,7 @@ export function ProfileScreen({ navigation }: Props) {
                 <FontAwesome6 name="camera" iconStyle="solid" size={13} color={colors.white} />
               )}
             </View>
-          </TouchableOpacity>
+          </Touchable>
           <Text style={styles.changePhotoHint}>{t('profile.changePhoto')}</Text>
         </View>
 
@@ -359,13 +358,13 @@ export function ProfileScreen({ navigation }: Props) {
                 : t('profile.notificationsOff')}
             </Text>
             {notificationPermission === 'denied' && (
-              <TouchableOpacity
+              <Touchable
                 style={styles.choiceChipActive}
                 onPress={() => void onEnableNotifications()}
                 accessibilityRole="button"
               >
                 <Text style={styles.choiceTextActive}>{t('profile.notificationsEnable')}</Text>
-              </TouchableOpacity>
+              </Touchable>
             )}
           </View>
         </View>
@@ -376,7 +375,7 @@ export function ProfileScreen({ navigation }: Props) {
             {THEME_PREFERENCES.map((preference) => {
               const isSelected = preference === themePreference;
               return (
-                <TouchableOpacity
+                <Touchable
                   key={preference}
                   style={[styles.choiceChip, isSelected && styles.choiceChipActive]}
                   onPress={() => setThemePreference(preference)}
@@ -386,7 +385,7 @@ export function ProfileScreen({ navigation }: Props) {
                   <Text style={[styles.choiceText, isSelected && styles.choiceTextActive]}>
                     {t(THEME_PREFERENCE_LABEL_KEYS[preference])}
                   </Text>
-                </TouchableOpacity>
+                </Touchable>
               );
             })}
           </View>
@@ -398,7 +397,7 @@ export function ProfileScreen({ navigation }: Props) {
             {SUPPORTED_LANGUAGES.map((lang: SupportedLanguage) => {
               const isSelected = i18n.language === lang;
               return (
-                <TouchableOpacity
+                <Touchable
                   key={lang}
                   style={[styles.choiceChip, isSelected && styles.choiceChipActive]}
                   onPress={() => void setLanguage(lang)}
@@ -408,7 +407,7 @@ export function ProfileScreen({ navigation }: Props) {
                   <Text style={[styles.choiceText, isSelected && styles.choiceTextActive]}>
                     {lang.toUpperCase()}
                   </Text>
-                </TouchableOpacity>
+                </Touchable>
               );
             })}
           </View>
@@ -420,7 +419,7 @@ export function ProfileScreen({ navigation }: Props) {
             {BUBBLE_GRADIENT_PRESETS.map((preset) => {
               const isSelected = preset.id === bubbleGradientId;
               return (
-                <TouchableOpacity
+                <Touchable
                   key={preset.id}
                   onPress={() => setBubbleGradientId(preset.id)}
                   style={[styles.bubbleSwatchWrap, isSelected && styles.bubbleSwatchWrapSelected]}
@@ -438,7 +437,7 @@ export function ProfileScreen({ navigation }: Props) {
                       <FontAwesome6 name="check" iconStyle="solid" size={14} color={colors.white} />
                     )}
                   </LinearGradient>
-                </TouchableOpacity>
+                </Touchable>
               );
             })}
           </View>
@@ -447,7 +446,7 @@ export function ProfileScreen({ navigation }: Props) {
         {error && <Text style={styles.error}>{error}</Text>}
 
         <View style={styles.legalSection}>
-          <TouchableOpacity style={styles.legalRow} onPress={() => void Linking.openURL(PRIVACY_POLICY_URL)}>
+          <Touchable style={styles.legalRow} onPress={() => void Linking.openURL(PRIVACY_POLICY_URL)}>
             <FontAwesome6
               name="shield-halved"
               iconStyle="solid"
@@ -457,13 +456,13 @@ export function ProfileScreen({ navigation }: Props) {
             />
             <Text style={styles.legalRowText}>{t('profile.privacyPolicy')}</Text>
             <FontAwesome6 name="arrow-up-right-from-square" iconStyle="solid" size={11} color={colors.smoke} />
-          </TouchableOpacity>
+          </Touchable>
         </View>
 
         <View style={styles.dangerZone}>
           <Text style={styles.dangerZoneTitle}>{t('profile.dangerZoneTitle')}</Text>
 
-          <TouchableOpacity
+          <Touchable
             style={styles.dangerRow}
             onPress={onDeleteAccount}
             disabled={isDeletingAccount}
@@ -485,7 +484,7 @@ export function ProfileScreen({ navigation }: Props) {
               </Text>
               <Text style={styles.dangerRowHint}>{t('profile.deleteAccountHint')}</Text>
             </View>
-          </TouchableOpacity>
+          </Touchable>
         </View>
         </ScrollView>
       </View>
@@ -510,14 +509,14 @@ export function ProfileScreen({ navigation }: Props) {
             />
             {deletePasswordError && <Text style={styles.error}>{deletePasswordError}</Text>}
             <View style={styles.modalActions}>
-              <TouchableOpacity
+              <Touchable
                 style={styles.modalCancelButton}
                 onPress={onCancelPasswordPrompt}
                 disabled={isDeletingAccount}
               >
                 <Text style={styles.modalCancelText}>{t('profile.cancel')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+              </Touchable>
+              <Touchable
                 style={[
                   styles.modalDeleteButton,
                   !deletePassword && styles.modalDeleteButtonDisabled,
@@ -530,7 +529,7 @@ export function ProfileScreen({ navigation }: Props) {
                 ) : (
                   <Text style={styles.modalDeleteText}>{t('profile.deleteAccount')}</Text>
                 )}
-              </TouchableOpacity>
+              </Touchable>
             </View>
           </View>
         </View>
@@ -563,8 +562,8 @@ const makeStyles = (colors: ThemeColors) =>
     borderRadius: radii.pill,
     backgroundColor: `${colors.danger}1F`,
   },
-  cancelText: { color: colors.danger, fontSize: 15, fontWeight: '800' },
-  title: { fontSize: 17, fontWeight: '700', color: colors.ink },
+  cancelText: { color: colors.danger, fontSize: fontSizes.body, fontWeight: '800' },
+  title: { fontSize: fontSizes.bodyLg, fontWeight: '700', color: colors.ink },
   saveButton: {
     position: 'absolute',
     right: spacing.lg,
@@ -577,7 +576,7 @@ const makeStyles = (colors: ThemeColors) =>
     borderRadius: radii.pill,
     backgroundColor: `${colors.sage}1F`,
   },
-  saveText: { color: colors.sage, fontSize: 15, fontWeight: '800' },
+  saveText: { color: colors.sage, fontSize: fontSizes.body, fontWeight: '800' },
   saveTextDisabled: { color: colors.smoke },
   saveButtonDisabled: { backgroundColor: `${colors.smoke}1F` },
   avatarSection: {
@@ -598,7 +597,7 @@ const makeStyles = (colors: ThemeColors) =>
     alignItems: 'center',
     justifyContent: 'center',
   },
-  changePhotoHint: { fontSize: 12.5, color: colors.smoke, marginTop: spacing.sm },
+  changePhotoHint: { fontSize: fontSizes.caption, color: colors.smoke, marginTop: spacing.sm },
   field: { paddingHorizontal: spacing.lg, marginBottom: spacing.lg },
   choiceRow: { flexDirection: 'row', gap: spacing.sm, marginTop: 6 },
   choiceChip: {
@@ -610,7 +609,7 @@ const makeStyles = (colors: ThemeColors) =>
     backgroundColor: colors.paper2,
   },
   choiceChipActive: { backgroundColor: colors.ember, borderColor: colors.ember },
-  choiceText: { fontSize: 13, fontWeight: '700', color: colors.smoke },
+  choiceText: { fontSize: fontSizes.footnote, fontWeight: '700', color: colors.smoke },
   choiceTextActive: { color: colors.white },
   bubbleSwatchRow: {
     flexDirection: 'row',
@@ -633,7 +632,7 @@ const makeStyles = (colors: ThemeColors) =>
     justifyContent: 'center',
   },
   label: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     fontWeight: '700',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
@@ -646,10 +645,10 @@ const makeStyles = (colors: ThemeColors) =>
     backgroundColor: colors.paper2,
     borderRadius: radii.md,
     padding: 13,
-    fontSize: 15,
+    fontSize: fontSizes.body,
     color: colors.ink,
   },
-  error: { color: colors.danger, paddingHorizontal: spacing.lg, fontSize: 13 },
+  error: { color: colors.danger, paddingHorizontal: spacing.lg, fontSize: fontSizes.footnote },
   legalSection: {
     marginTop: spacing.xl,
     paddingHorizontal: spacing.lg,
@@ -660,13 +659,13 @@ const makeStyles = (colors: ThemeColors) =>
     gap: spacing.sm,
     paddingVertical: 10,
   },
-  legalRowText: { flex: 1, fontSize: 14, color: colors.smoke, fontWeight: '600' },
+  legalRowText: { flex: 1, fontSize: fontSizes.body, color: colors.smoke, fontWeight: '600' },
   dangerZone: {
     marginTop: spacing.xxl,
     paddingHorizontal: spacing.lg,
   },
   dangerZoneTitle: {
-    fontSize: 12,
+    fontSize: fontSizes.caption,
     fontWeight: '700',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
@@ -685,9 +684,9 @@ const makeStyles = (colors: ThemeColors) =>
   },
   dangerRowIcon: { width: 22, textAlign: 'center' },
   dangerRowText: { flex: 1, marginLeft: spacing.sm },
-  dangerRowTitle: { fontSize: 15, fontWeight: '600', color: colors.ink },
+  dangerRowTitle: { fontSize: fontSizes.body, fontWeight: '600', color: colors.ink },
   dangerRowTitleDestructive: { color: colors.danger },
-  dangerRowHint: { fontSize: 12.5, color: colors.smoke, marginTop: 2 },
+  dangerRowHint: { fontSize: fontSizes.caption, color: colors.smoke, marginTop: 2 },
   modalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -696,7 +695,7 @@ const makeStyles = (colors: ThemeColors) =>
     padding: spacing.lg,
   },
   notificationRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  notificationStatus: { flex: 1, fontSize: 15, color: colors.ink },
+  notificationStatus: { flex: 1, fontSize: fontSizes.body, color: colors.ink },
   modalCard: {
     width: '100%',
     maxWidth: 400,
@@ -704,8 +703,8 @@ const makeStyles = (colors: ThemeColors) =>
     borderRadius: radii.lg,
     padding: spacing.lg,
   },
-  modalTitle: { fontSize: 17, fontWeight: '700', color: colors.ink, marginBottom: 6 },
-  modalMessage: { fontSize: 13.5, color: colors.smoke, marginBottom: spacing.lg, lineHeight: 19 },
+  modalTitle: { fontSize: fontSizes.bodyLg, fontWeight: '700', color: colors.ink, marginBottom: 6 },
+  modalMessage: { fontSize: fontSizes.footnote, color: colors.smoke, marginBottom: spacing.lg, lineHeight: 19 },
   modalActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
@@ -717,7 +716,7 @@ const makeStyles = (colors: ThemeColors) =>
     paddingVertical: 12,
     borderRadius: radii.md,
   },
-  modalCancelText: { color: colors.smoke, fontSize: 15, fontWeight: '700' },
+  modalCancelText: { color: colors.smoke, fontSize: fontSizes.body, fontWeight: '700' },
   modalDeleteButton: {
     paddingHorizontal: spacing.lg,
     paddingVertical: 12,
@@ -727,5 +726,5 @@ const makeStyles = (colors: ThemeColors) =>
     alignItems: 'center',
   },
   modalDeleteButtonDisabled: { opacity: 0.5 },
-  modalDeleteText: { color: colors.white, fontSize: 15, fontWeight: '700' },
+  modalDeleteText: { color: colors.white, fontSize: fontSizes.body, fontWeight: '700' },
 });

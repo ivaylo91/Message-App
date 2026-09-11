@@ -1,13 +1,14 @@
 import React, { useMemo } from 'react';
-import { Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
 import { RTCView } from 'react-native-webrtc';
 import { useCall } from './CallContext';
+import { Touchable } from '../components/Touchable';
 import { Avatar } from '../components/Avatar';
 import { useTheme } from '../theme/ThemeContext';
-import { radii, spacing, ThemeColors } from '../theme/tokens';
+import { fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
 
 // Rendered once at the app root (see App.tsx) so an incoming call can
 // surface as a full-screen overlay regardless of which screen is
@@ -75,46 +76,46 @@ export function CallOverlay() {
         <View style={[styles.controls, { paddingBottom: insets.bottom + spacing.xl }]}>
           {status === 'incoming' ? (
             <>
-              <TouchableOpacity
+              <Touchable
                 style={[styles.controlButton, styles.declineButton]}
                 onPress={declineCall}
               >
                 <FontAwesome6 name="phone-slash" iconStyle="solid" size={22} color={colors.white} />
-              </TouchableOpacity>
-              <TouchableOpacity
+              </Touchable>
+              <Touchable
                 style={[styles.controlButton, styles.acceptButton]}
                 onPress={() => void answerCall()}
               >
                 <FontAwesome6 name="phone" iconStyle="solid" size={22} color={colors.white} />
-              </TouchableOpacity>
+              </Touchable>
             </>
           ) : (
             <>
-              <TouchableOpacity style={styles.controlButton} onPress={toggleMute}>
+              <Touchable style={styles.controlButton} onPress={toggleMute}>
                 <FontAwesome6
                   name={isMuted ? 'microphone-slash' : 'microphone'}
                   iconStyle="solid"
                   size={19}
                   color={colors.white}
                 />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.controlButton} onPress={toggleCamera}>
+              </Touchable>
+              <Touchable style={styles.controlButton} onPress={toggleCamera}>
                 <FontAwesome6
                   name={isCameraOff ? 'video-slash' : 'video'}
                   iconStyle="solid"
                   size={19}
                   color={colors.white}
                 />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.controlButton} onPress={switchCamera}>
+              </Touchable>
+              <Touchable style={styles.controlButton} onPress={switchCamera}>
                 <FontAwesome6 name="camera-rotate" iconStyle="solid" size={19} color={colors.white} />
-              </TouchableOpacity>
-              <TouchableOpacity
+              </Touchable>
+              <Touchable
                 style={[styles.controlButton, styles.declineButton]}
                 onPress={endCall}
               >
                 <FontAwesome6 name="phone-slash" iconStyle="solid" size={22} color={colors.white} />
-              </TouchableOpacity>
+              </Touchable>
             </>
           )}
         </View>
@@ -130,8 +131,8 @@ const makeStyles = (colors: ThemeColors) =>
       alignItems: 'center',
       gap: 6,
     },
-    peerName: { fontSize: 22, fontWeight: '700', color: colors.white, marginTop: spacing.md },
-    statusLabel: { fontSize: 14.5, color: 'rgba(255, 255, 255, 0.75)' },
+    peerName: { fontSize: fontSizes.title, fontWeight: '700', color: colors.white, marginTop: spacing.md },
+    statusLabel: { fontSize: fontSizes.body, color: 'rgba(255, 255, 255, 0.75)' },
     localPreview: {
       position: 'absolute',
       right: spacing.lg,

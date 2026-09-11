@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
-import { Image, Linking, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, Linking, Platform, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { ANDROID_STORE_URL, IOS_STORE_URL } from '../config/env';
-import { AppWallpaper } from '../components/AppWallpaper';
-import { radii, spacing, ThemeColors } from '../theme/tokens';
+import { Touchable } from '../components/Touchable';
+import { fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 
 // Rendered by RootNavigator in place of the whole app (auth stack
@@ -21,7 +21,6 @@ export function UpdateRequiredScreen() {
 
   return (
     <View style={styles.container}>
-      <AppWallpaper />
       <View style={styles.content}>
         <Image
           source={require('../assets/flame-mark.png')}
@@ -30,9 +29,9 @@ export function UpdateRequiredScreen() {
         />
         <Text style={styles.title}>{t('updateRequired.title')}</Text>
         <Text style={styles.subtitle}>{t('updateRequired.subtitle')}</Text>
-        <TouchableOpacity style={styles.button} onPress={onUpdate}>
+        <Touchable style={styles.button} onPress={onUpdate}>
           <Text style={styles.buttonText}>{t('updateRequired.action')}</Text>
-        </TouchableOpacity>
+        </Touchable>
       </View>
     </View>
   );
@@ -49,7 +48,7 @@ const makeStyles = (colors: ThemeColors) =>
     },
     mark: { width: 56, height: 64, marginBottom: spacing.xl },
     title: {
-      fontSize: 22,
+      fontSize: fontSizes.title,
       fontWeight: '800',
       letterSpacing: -0.2,
       color: colors.ink,
@@ -57,7 +56,7 @@ const makeStyles = (colors: ThemeColors) =>
       marginBottom: spacing.sm,
     },
     subtitle: {
-      fontSize: 15,
+      fontSize: fontSizes.body,
       color: colors.smoke,
       textAlign: 'center',
       lineHeight: 21,
@@ -70,5 +69,5 @@ const makeStyles = (colors: ThemeColors) =>
       borderRadius: radii.lg,
       backgroundColor: colors.ember,
     },
-    buttonText: { color: colors.white, fontSize: 16, fontWeight: '700' },
+    buttonText: { color: colors.white, fontSize: fontSizes.bodyLg, fontWeight: '700' },
   });

@@ -5,7 +5,6 @@ import {
   Linking,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import FastImage from '@d11/react-native-fast-image';
@@ -17,10 +16,10 @@ import type { AppStackParamList } from '../navigation/RootNavigator';
 import * as conversationsData from '../data/conversations';
 import type { MediaMessage } from '../data/conversations';
 import * as mediaData from '../data/media';
-import { AppWallpaper } from '../components/AppWallpaper';
+import { Touchable } from '../components/Touchable';
 import { MediaViewer } from '../components/MediaViewer';
 import { useContentWidth } from '../hooks/useContentWidth';
-import { radii, spacing, ThemeColors } from '../theme/tokens';
+import { fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 import { fileIconName, formatDuration } from '../utils/messagePreview';
 
@@ -54,7 +53,7 @@ function PhotoThumbnail({
   }, [path]);
 
   return (
-    <TouchableOpacity
+    <Touchable
       style={[styles.thumbnail, { width: size, height: size }]}
       onPress={() => onOpen(path)}
       disabled={!url}
@@ -70,7 +69,7 @@ function PhotoThumbnail({
           <ActivityIndicator size="small" />
         </View>
       )}
-    </TouchableOpacity>
+    </Touchable>
   );
 }
 
@@ -93,7 +92,7 @@ function FileRow({ item }: { item: MediaMessage }) {
       : null;
 
   return (
-    <TouchableOpacity style={styles.fileRow} onPress={() => void onOpen()}>
+    <Touchable style={styles.fileRow} onPress={() => void onOpen()}>
       <View style={styles.fileIconCircle}>
         <FontAwesome6
           name={fileIconName(item.attachment_mime_type)}
@@ -108,7 +107,7 @@ function FileRow({ item }: { item: MediaMessage }) {
         </Text>
         {subtitle && <Text style={styles.fileSubtitle}>{subtitle}</Text>}
       </View>
-    </TouchableOpacity>
+    </Touchable>
   );
 }
 
@@ -165,12 +164,11 @@ export function MediaGalleryScreen({ route, navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      <AppWallpaper />
       <View style={[styles.content, { maxWidth: contentWidth }]}>
         <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+          <Touchable style={styles.backButton} onPress={() => navigation.goBack()}>
             <FontAwesome6 name="chevron-left" iconStyle="solid" size={18} color={colors.ink} />
-          </TouchableOpacity>
+          </Touchable>
           <Text style={styles.headerTitle} numberOfLines={1}>
             {title}
           </Text>
@@ -178,22 +176,22 @@ export function MediaGalleryScreen({ route, navigation }: Props) {
         </View>
 
         <View style={styles.tabRow}>
-          <TouchableOpacity
+          <Touchable
             style={[styles.tabButton, tab === 'photos' && styles.tabButtonActive]}
             onPress={() => setTab('photos')}
           >
             <Text style={[styles.tabText, tab === 'photos' && styles.tabTextActive]}>
               {t('mediaGallery.photosTab')}
             </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
+          </Touchable>
+          <Touchable
             style={[styles.tabButton, tab === 'files' && styles.tabButtonActive]}
             onPress={() => setTab('files')}
           >
             <Text style={[styles.tabText, tab === 'files' && styles.tabTextActive]}>
               {t('mediaGallery.filesTab')}
             </Text>
-          </TouchableOpacity>
+          </Touchable>
         </View>
 
         {isLoading ? (
@@ -258,7 +256,7 @@ const makeStyles = (colors: ThemeColors) =>
     backButton: { width: 30, alignItems: 'flex-start' },
     headerTitle: {
       flex: 1,
-      fontSize: 17,
+      fontSize: fontSizes.bodyLg,
       fontWeight: '700',
       color: colors.ink,
       textAlign: 'center',
@@ -278,7 +276,7 @@ const makeStyles = (colors: ThemeColors) =>
       borderRadius: radii.pill,
     },
     tabButtonActive: { backgroundColor: colors.ember },
-    tabText: { fontSize: 13.5, fontWeight: '600', color: colors.smoke },
+    tabText: { fontSize: fontSizes.footnote, fontWeight: '600', color: colors.smoke },
     tabTextActive: { color: colors.white },
     gridContent: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl },
     gridRow: { gap: GRID_GAP, marginBottom: GRID_GAP },
@@ -303,9 +301,9 @@ const makeStyles = (colors: ThemeColors) =>
       justifyContent: 'center',
     },
     fileTextBlock: { flex: 1 },
-    fileName: { fontSize: 14.5, color: colors.ink, fontWeight: '600' },
-    fileSubtitle: { fontSize: 12.5, color: colors.smoke, marginTop: 2 },
+    fileName: { fontSize: fontSizes.body, color: colors.ink, fontWeight: '600' },
+    fileSubtitle: { fontSize: fontSizes.caption, color: colors.smoke, marginTop: 2 },
     emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-    emptyText: { fontSize: 14, color: colors.smoke },
+    emptyText: { fontSize: fontSizes.body, color: colors.smoke },
     spinner: { marginTop: spacing.xl },
   });
