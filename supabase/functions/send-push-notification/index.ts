@@ -93,7 +93,19 @@ async function sendFcmMessage(
           token,
           notification: { title, body },
           data,
-          android: { priority: "high" },
+          android: {
+            priority: "high",
+            // Without an explicit channel, Android hands a backgrounded
+            // app's notification to Firebase's own
+            // fcm_fallback_notification_channel at DEFAULT importance -
+            // confirmed on a real device. That means no heads-up banner,
+            // and the notification appears under a generic channel in
+            // system settings instead of the app's "Messages" one, which
+            // is created with HIGH importance (see ensureAndroidChannel
+            // in mobile/src/notifications/index.ts). The id must match
+            // MESSAGE_CHANNEL_ID there.
+            notification: { channel_id: "messages" },
+          },
         },
       }),
     },
