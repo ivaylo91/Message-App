@@ -60,6 +60,7 @@ import { FooterNav } from '../components/FooterNav';
 import { useToast } from '../components/Toast';
 import { useConfirm } from '../components/ConfirmSheet';
 import { useCall } from '../calling/CallContext';
+import { useAppForeground } from '../hooks/useAppForeground';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { usePresence } from '../presence/PresenceContext';
 import { useUnread } from '../unread/UnreadContext';
@@ -1047,6 +1048,16 @@ export function ChatScreen({ route, navigation }: Props) {
       markRead();
     }, [loadMessages, loadMessagesAround, markRead, route.params.highlightMessageId, navigation]),
   );
+
+  // An open chat that was backgrounded keeps navigation focus the whole
+  // time, so the effect above does not re-run on return and the thread
+  // would be missing everything that arrived meanwhile - see
+  // useAppForeground. Marking read on return matches what opening the
+  // screen does: the messages are on screen either way.
+  useAppForeground(() => {
+    void loadMessages();
+    markRead();
+  });
 
   // Inverted FlatList's onEndReached fires when the user scrolls up to
   // the oldest end of what's currently loaded - fetch the next page

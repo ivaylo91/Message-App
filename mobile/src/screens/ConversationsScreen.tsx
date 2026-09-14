@@ -27,6 +27,7 @@ import { useToast } from '../components/Toast';
 import { Skeleton, SkeletonGroup } from '../components/Skeleton';
 import { AppLogo } from '../components/AppLogo';
 import { FooterNav } from '../components/FooterNav';
+import { useAppForeground } from '../hooks/useAppForeground';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { usePresence } from '../presence/PresenceContext';
 import { useUnread } from '../unread/UnreadContext';
@@ -395,6 +396,13 @@ export function ConversationsScreen({ navigation }: Props) {
       void load();
     }, [load]),
   );
+
+  // Anything that arrived while the app was away was missed by both the
+  // focus effect above and the realtime subscription below - see
+  // useAppForeground.
+  useAppForeground(() => {
+    void load();
+  });
 
   useFocusEffect(
     useCallback(() => {
