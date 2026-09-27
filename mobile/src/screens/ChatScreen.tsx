@@ -646,12 +646,11 @@ function MessageBubbleComponent({
               <Text style={styles.pickerActionText}>{t('chat.reply')}</Text>
             </Touchable>
           )}
-          {/* Text only: an attachment's storage path is scoped by
-              conversation id (see the message-media policies), so reusing
-              the same path in another conversation would leave it
-              unreadable to the people there. Forwarding a file would mean
-              copying the object into the target's folder first. */}
-          {message.body && !message._pending && (
+          {/* Text and attachments alike - an attachment is copied into the
+              target conversation's folder on send (see
+              copyMediaToConversation). A pending message has no server
+              copy yet to forward. */}
+          {(message.body || message.media_path) && !message._pending && (
             <Touchable onPress={() => onForward(message)} style={styles.pickerEmoji}>
               <Text style={styles.pickerActionText}>{t('chat.forward')}</Text>
             </Touchable>
@@ -1876,10 +1875,28 @@ export function ChatScreen({ route, navigation }: Props) {
   const onForwardTo = useCallback(
     (target: Conversation) => {
       const message = forwardingMessage;
-      if (!message?.body || !userId) return;
+      if (!message || !userId) return;
+      const { body, media_path: mediaPath, attachment_type: attachmentType } = message;
+      if (!body && !mediaPath) return;
       setForwardingMessage(null);
-      void conversationsData
-        .sendMessage(target.id, userId, message.body, null)
+      // Forwarded as new messages from the forwarder, not as a reply or a
+      // link back to the original - the target conversation's members may
+      // have no access to the conversation it came from.
+      const send =
+        mediaPath && attachmentType
+          ? mediaData
+              .copyMediaToConversation(mediaPath, target.id)
+              .then((path) =>
+                conversationsData.sendAttachmentMessage(target.id, userId, {
+                  path,
+                  type: attachmentType,
+                  name: message.attachment_name,
+                  mimeType: message.attachment_mime_type,
+                  durationMs: message.attachment_duration_ms,
+                }),
+              )
+          : conversationsData.sendMessage(target.id, userId, body ?? '', null);
+      void send
         .then(() => showToast(t('chat.forwardedToast')))
         .catch(() =>
           Alert.alert(t('chat.forwardFailedTitle'), t('chat.forwardFailedMessage')),

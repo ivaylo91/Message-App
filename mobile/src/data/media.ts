@@ -50,6 +50,29 @@ export async function uploadMedia(
   return path;
 }
 
+// Forwarding an attachment can't just reuse its path: objects live under
+// their conversation's folder and the storage policies grant access by
+// that folder, so the people in the target conversation couldn't read
+// it. Copying server-side puts a new object in the target's folder
+// without the bytes making a round trip through the phone - and the copy
+// is checked against the same policies as a normal read and upload, so
+// it only succeeds for someone in both conversations.
+export async function copyMediaToConversation(
+  sourcePath: string,
+  targetConversationId: string,
+): Promise<string> {
+  // The source path was produced by uploadMedia, so its extension already
+  // passed SAFE_EXTENSION_PATTERN - but it's re-checked rather than
+  // assumed, since it's about to be embedded in a new object key.
+  const rawExt = sourcePath.includes('.') ? sourcePath.split('.').pop() : null;
+  const ext = rawExt && SAFE_EXTENSION_PATTERN.test(rawExt) ? rawExt : 'bin';
+  const path = `${targetConversationId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+  const { error } = await supabase.storage.from(BUCKET).copy(sourcePath, path);
+  if (error) throw error;
+  return path;
+}
+
 export async function getMediaSignedUrl(path: string): Promise<string> {
   return getCachedSignedUrl(BUCKET, path, async () => {
     const { data, error } = await supabase.storage
