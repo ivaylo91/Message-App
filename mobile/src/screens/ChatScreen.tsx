@@ -95,12 +95,30 @@ import {
   ConversationParticipant,
   Message,
   MessageReaction,
+  Profile,
   ReplyPreview,
 } from '../types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Chat'>;
 
 const QUICK_REACTIONS = ['❤️', '👍', '😂', '😮', '😢', '🙏'];
+
+// Stands in for a sender who is no longer in the participant list (they
+// left, or were removed) when building a reply preview - the preview only
+// needs the id, and shows no name rather than failing.
+function placeholderProfile(id: string): Profile {
+  return {
+    id,
+    email: '',
+    display_name: '',
+    avatar_path: null,
+    username: null,
+    phone: null,
+    last_seen_at: null,
+    show_read_receipts: true,
+    show_last_seen: true,
+  };
+}
 const REPORT_REASONS: ReportReason[] = [
   'spam',
   'harassment',
@@ -958,7 +976,7 @@ export function ChatScreen({ route, navigation }: Props) {
           if (replied) {
             const profile = participantsRef.current.find(
               (p) => p.user_id === replied.sender_id,
-            )?.profiles ?? { id: replied.sender_id, email: '', display_name: '', avatar_path: null, username: null, phone: null, last_seen_at: null };
+            )?.profiles ?? placeholderProfile(replied.sender_id);
             enriched = {
               ...incoming,
               reply_to: {
@@ -1477,7 +1495,7 @@ export function ChatScreen({ route, navigation }: Props) {
       setEditingMessageId(null);
       const profile = participants.find(
         (p) => p.user_id === message.sender_id,
-      )?.profiles ?? { id: message.sender_id, email: '', display_name: '', avatar_path: null, username: null, phone: null, last_seen_at: null };
+      )?.profiles ?? placeholderProfile(message.sender_id);
       setReplyingTo({
         id: message.id,
         body: message.body,
@@ -2003,10 +2021,13 @@ export function ChatScreen({ route, navigation }: Props) {
         />
         <View style={styles.headerNameBlock}>
           <Text style={styles.headerName}>{displayTitle}</Text>
+          {/* Nothing at all for someone who hides their last seen -
+              "Offline" would be a claim we can't make, since they may be
+              online and simply not announcing it. */}
           {!otherTyping && !isGroup && otherParticipant && (
             isOnline(otherParticipant.user_id) ? (
               <Text style={styles.headerStatus}>{t('chat.online')}</Text>
-            ) : (
+            ) : otherParticipant.profiles.show_last_seen === false ? null : (
               <Text style={styles.headerStatusOffline}>
                 {formatLastSeen(otherParticipant.profiles.last_seen_at, t)}
               </Text>

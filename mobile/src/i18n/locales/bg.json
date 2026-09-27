@@ -259,6 +259,13 @@
     "notificationsBlockedTitle": "Известията са блокирани",
     "notificationsBlockedMessage": "Android няма да попита отново. Включете ги за Hearth от системните настройки.",
     "notificationsOpenSettings": "Отваряне на настройките",
+    "privacy": "Поверителност",
+    "readReceipts": "Потвърждения за прочитане",
+    "readReceiptsHint": "Другите да виждат кога сте прочели съобщенията им.",
+    "lastSeen": "На линия и последно активен",
+    "lastSeenHint": "Другите да виждат кога сте на линия или последно активни.",
+    "privacySaveFailedTitle": "Настройката не можа да бъде запазена",
+    "privacySaveFailedMessage": "Проверете връзката си и опитайте отново.",
     "deleteAccountFailedTitle": "Акаунтът не можа да бъде изтрит",
     "deleteAccountFailedMessage": "Възникна грешка при изтриването на акаунта. Опитайте отново."
   },

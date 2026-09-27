@@ -259,6 +259,13 @@
     "notificationsBlockedTitle": "Notifications are blocked",
     "notificationsBlockedMessage": "Android won’t ask again. Turn them on for Hearth in system settings.",
     "notificationsOpenSettings": "Open settings",
+    "privacy": "Privacy",
+    "readReceipts": "Read receipts",
+    "readReceiptsHint": "Let others see when you've read their messages.",
+    "lastSeen": "Online and last seen",
+    "lastSeenHint": "Let others see when you're online or were last active.",
+    "privacySaveFailedTitle": "Couldn't save setting",
+    "privacySaveFailedMessage": "Check your connection and try again.",
     "deleteAccountFailedTitle": "Couldn't delete account",
     "deleteAccountFailedMessage": "Something went wrong deleting your account. Try again."
   },

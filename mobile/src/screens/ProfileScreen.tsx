@@ -6,6 +6,7 @@ import {
   Modal,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -32,6 +33,7 @@ import { Touchable } from '../components/Touchable';
 import { PasswordField } from '../components/PasswordField';
 import { useConfirm } from '../components/ConfirmSheet';
 import { useContentWidth } from '../hooks/useContentWidth';
+import { usePresence } from '../presence/PresenceContext';
 import {
   BUBBLE_GRADIENT_PRESETS,
   elevation,
@@ -63,6 +65,7 @@ export function ProfileScreen({ navigation }: Props) {
   const { t, i18n } = useTranslation();
   const { userId } = useAuth();
   const { confirm } = useConfirm();
+  const { setSharesLastSeen } = usePresence();
   const insets = useSafeAreaInsets();
   const { contentWidth } = useContentWidth();
   const {
@@ -95,6 +98,25 @@ export function ProfileScreen({ navigation }: Props) {
       setPhone(p.phone ?? '');
     });
   }, [userId]);
+
+  // Saved as soon as it's flipped, like the theme and language below,
+  // rather than waiting for the Save button - it's a switch, and a switch
+  // that silently doesn't apply until another tap reads as broken. Shown
+  // flipped immediately and put back if the save fails.
+  const onTogglePrivacy = async (
+    key: 'show_read_receipts' | 'show_last_seen',
+    value: boolean,
+  ) => {
+    if (!userId) return;
+    setProfile((current) => (current ? { ...current, [key]: value } : current));
+    try {
+      await profilesData.updateProfile(userId, { [key]: value });
+      if (key === 'show_last_seen') setSharesLastSeen(value);
+    } catch {
+      setProfile((current) => (current ? { ...current, [key]: !value } : current));
+      Alert.alert(t('profile.privacySaveFailedTitle'), t('profile.privacySaveFailedMessage'));
+    }
+  };
 
   const [notificationPermission, setNotificationPermission] =
     useState<NotificationPermission | null>(null);
@@ -368,6 +390,31 @@ export function ProfileScreen({ navigation }: Props) {
               </Touchable>
             )}
           </View>
+        </View>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>{t('profile.privacy')}</Text>
+          {(
+            [
+              ['show_read_receipts', 'profile.readReceipts', 'profile.readReceiptsHint'],
+              ['show_last_seen', 'profile.lastSeen', 'profile.lastSeenHint'],
+            ] as const
+          ).map(([key, labelKey, hintKey]) => (
+            <View key={key} style={styles.privacyRow}>
+              <View style={styles.privacyText}>
+                <Text style={styles.notificationStatus}>{t(labelKey)}</Text>
+                <Text style={styles.dangerRowHint}>{t(hintKey)}</Text>
+              </View>
+              <Switch
+                value={profile?.[key] ?? true}
+                onValueChange={(value) => void onTogglePrivacy(key, value)}
+                disabled={!profile}
+                trackColor={{ false: colors.line, true: colors.emberGlow }}
+                thumbColor={profile?.[key] ?? true ? colors.ember : colors.smoke}
+                accessibilityLabel={t(labelKey)}
+              />
+            </View>
+          ))}
         </View>
 
         <View style={styles.field}>
@@ -697,6 +744,13 @@ const makeStyles = (colors: ThemeColors) =>
   },
   notificationRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   notificationStatus: { flex: 1, fontSize: fontSizes.body, color: colors.ink },
+  privacyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  privacyText: { flex: 1 },
   modalCard: {
     width: '100%',
     maxWidth: 400,
