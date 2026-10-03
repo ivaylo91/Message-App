@@ -459,7 +459,6 @@ export function ConversationsScreen({ navigation }: Props) {
     const other = otherParticipantOf(conversation);
     return (
       other?.profiles.display_name ??
-      other?.profiles.email ??
       t('conversations.directMessage')
     );
   };
@@ -488,7 +487,7 @@ export function ConversationsScreen({ navigation }: Props) {
             accessibilityLabel={t('conversations.a11yProfile')}
           >
             <Avatar
-              name={ownProfile?.display_name || ownProfile?.email || '?'}
+              name={ownProfile?.display_name || '?'}
               avatarPath={ownProfile?.avatar_path}
               size={40}
               online={userId ? isOnline(userId) : undefined}
@@ -571,7 +570,6 @@ export function ConversationsScreen({ navigation }: Props) {
                   const name = conv.is_group
                     ? conv.name ?? t('conversations.groupChat')
                     : other?.profiles.display_name ??
-                      other?.profiles.email ??
                       t('conversations.directMessage');
                   return (
                     <Touchable

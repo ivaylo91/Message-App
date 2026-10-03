@@ -138,7 +138,7 @@ export function GroupInfoScreen({ route, navigation }: Props) {
   };
 
   const onRemove = (participant: ConversationParticipant) => {
-    const name = participant.profiles.display_name || participant.profiles.email;
+    const name = participant.profiles.display_name;
     void confirm({
       title: t('groupInfo.removeConfirmTitle'),
       message: t('groupInfo.removeConfirmMessage', { name }),
@@ -294,7 +294,7 @@ export function GroupInfoScreen({ route, navigation }: Props) {
               </View>
             }
             renderItem={({ item }) => {
-              const name = item.profiles.display_name || item.profiles.email;
+              const name = item.profiles.display_name;
               const isSelf = item.user_id === userId;
               return (
                 <View style={styles.memberRow}>

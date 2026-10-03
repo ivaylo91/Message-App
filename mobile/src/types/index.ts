@@ -1,15 +1,21 @@
+// What anyone can read about another user. Email and phone are not
+// here: the server refuses them to everyone but their owner (see
+// 20261003_hide_contact_details.sql), so they live on OwnProfile.
 export interface Profile {
   id: string;
-  email: string;
   display_name: string;
   avatar_path: string | null;
   username: string | null;
-  phone: string | null;
   // Null while the user hides it - the server clears it rather than the
   // app hiding it (see 20260927_add_privacy_settings.sql).
   last_seen_at: string | null;
   show_read_receipts: boolean;
   show_last_seen: boolean;
+}
+
+export interface OwnProfile extends Profile {
+  email: string;
+  phone: string | null;
 }
 
 // What search_profiles() returns - deliberately narrower than Profile.

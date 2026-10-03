@@ -398,7 +398,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
 
         const offerPayload = {
           from: userId,
-          callerName: ownProfile.display_name || ownProfile.email,
+          callerName: ownProfile.display_name,
           callerAvatarPath: ownProfile.avatar_path,
           conversationId: callPeer.conversationId,
           sdp: offer.sdp,

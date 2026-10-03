@@ -109,11 +109,9 @@ const QUICK_REACTIONS = ['❤️', '👍', '😂', '😮', '😢', '🙏'];
 function placeholderProfile(id: string): Profile {
   return {
     id,
-    email: '',
     display_name: '',
     avatar_path: null,
     username: null,
-    phone: null,
     last_seen_at: null,
     show_read_receipts: true,
     show_last_seen: true,
@@ -224,7 +222,7 @@ function replySenderLabel(
   t: (key: string) => string,
 ): string {
   if (reply.sender_id === userId) return t('chat.you');
-  return reply.profiles.display_name || reply.profiles.email;
+  return reply.profiles.display_name;
 }
 
 function ReplyQuote({
@@ -1620,7 +1618,7 @@ export function ChatScreen({ route, navigation }: Props) {
 
   const onToggleBlockOther = useCallback(() => {
     if (!userId || !otherParticipant) return;
-    const otherName = otherParticipant.profiles.display_name || otherParticipant.profiles.email;
+    const otherName = otherParticipant.profiles.display_name;
     const otherId = otherParticipant.user_id;
 
     if (isOtherBlocked) {
@@ -1805,7 +1803,7 @@ export function ChatScreen({ route, navigation }: Props) {
   const senderNames = useMemo(() => {
     const map = new Map<string, string>();
     for (const p of participants) {
-      map.set(p.user_id, p.profiles.display_name || p.profiles.email);
+      map.set(p.user_id, p.profiles.display_name);
     }
     return map;
   }, [participants]);
@@ -1814,7 +1812,7 @@ export function ChatScreen({ route, navigation }: Props) {
     title ||
     (isGroup
       ? t('conversations.groupChat')
-      : otherParticipant?.profiles.display_name || otherParticipant?.profiles.email) ||
+      : otherParticipant?.profiles.display_name) ||
     '…';
 
   // Messenger-style read receipts: for each other participant, the
@@ -1835,7 +1833,7 @@ export function ChatScreen({ route, navigation }: Props) {
       if (!seen) continue;
       const list = result.get(seen.id) ?? [];
       list.push({
-        name: participant.profiles.display_name || participant.profiles.email,
+        name: participant.profiles.display_name,
         avatarPath: participant.profiles.avatar_path,
       });
       result.set(seen.id, list);
@@ -1929,7 +1927,6 @@ export function ChatScreen({ route, navigation }: Props) {
       const other = conversation.conversation_participants.find((p) => p.user_id !== userId);
       return (
         other?.profiles.display_name ??
-        other?.profiles.email ??
         t('conversations.directMessage')
       );
     },

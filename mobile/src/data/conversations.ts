@@ -1,8 +1,9 @@
 import { supabase } from '../lib/supabase';
 import { escapeLikePattern } from '../utils/likePattern';
+import { PROFILE_COLUMNS } from './profiles';
 import { AttachmentType, CallStatus, Conversation, Message, Profile } from '../types';
 
-const CONVERSATION_SELECT = '*, conversation_participants(*, profiles(*))';
+const CONVERSATION_SELECT = `*, conversation_participants(*, profiles(${PROFILE_COLUMNS}))`;
 
 export async function fetchConversations(userId: string): Promise<Conversation[]> {
   const { data: hiddenRows, error: hiddenError } = await supabase
@@ -113,7 +114,7 @@ export async function createConversation(
 }
 
 const MESSAGE_SELECT =
-  '*, reply_to:reply_to_message_id(id, body, media_path, attachment_type, attachment_name, sender_id, deleted_at, profiles(*))';
+  `*, reply_to:reply_to_message_id(id, body, media_path, attachment_type, attachment_name, sender_id, deleted_at, profiles(${PROFILE_COLUMNS}))`;
 
 // ChatScreen's page size for both the initial load and each older page it
 // fetches as the user scrolls up - see loadMoreMessages there.
@@ -221,7 +222,7 @@ export async function searchAllMessages(
   const { data, error } = await supabase
     .from('messages')
     .select(
-      'id, sender_id, body, created_at, conversation_id, conversations!inner(id, is_group, name, conversation_participants(user_id, profiles(*)))',
+      `id, sender_id, body, created_at, conversation_id, conversations!inner(id, is_group, name, conversation_participants(user_id, profiles(${PROFILE_COLUMNS})))`,
     )
     .is('deleted_at', null)
     .not('body', 'is', null)

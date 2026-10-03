@@ -1,7 +1,7 @@
 import * as base64js from 'base64-js';
 import { supabase } from '../lib/supabase';
 import { getCachedSignedUrl } from '../lib/signedUrlCache';
-import { Profile, ProfileSearchResult } from '../types';
+import { OwnProfile, Profile, ProfileSearchResult } from '../types';
 
 const AVATAR_BUCKET = 'avatars';
 // Long-lived (vs. the old 1h) since the URL is now cached to disk, not
@@ -32,10 +32,16 @@ export async function searchProfiles(query: string): Promise<ProfileSearchResult
   return data as ProfileSearchResult[];
 }
 
+// Every profile read names its columns. `*` would include email and
+// phone, which the server refuses to anyone but their owner - and
+// Postgres rejects the whole query rather than leaving those two out.
+export const PROFILE_COLUMNS =
+  'id, display_name, avatar_path, username, last_seen_at, show_read_receipts, show_last_seen';
+
 export async function fetchProfile(userId: string): Promise<Profile> {
   const { data, error } = await supabase
     .from('profiles')
-    .select('*')
+    .select(PROFILE_COLUMNS)
     .eq('id', userId)
     .single();
 
@@ -43,11 +49,23 @@ export async function fetchProfile(userId: string): Promise<Profile> {
   return data as Profile;
 }
 
+// The signed-in user's own profile, including the contact details only
+// they can read - fetched through get_my_contact_details(), since a
+// column grant can't be limited to your own row.
+export async function fetchOwnProfile(userId: string): Promise<OwnProfile> {
+  const [profile, contact] = await Promise.all([
+    fetchProfile(userId),
+    supabase.rpc('get_my_contact_details').single<{ email: string; phone: string | null }>(),
+  ]);
+  if (contact.error) throw contact.error;
+  return { ...profile, email: contact.data.email, phone: contact.data.phone };
+}
+
 export async function updateProfile(
   userId: string,
   updates: Partial<
     Pick<
-      Profile,
+      OwnProfile,
       'display_name' | 'avatar_path' | 'username' | 'phone' | 'show_read_receipts' | 'show_last_seen'
     >
   >,
@@ -56,7 +74,7 @@ export async function updateProfile(
     .from('profiles')
     .update(updates)
     .eq('id', userId)
-    .select()
+    .select(PROFILE_COLUMNS)
     .single();
 
   if (error) throw error;

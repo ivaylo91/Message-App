@@ -44,7 +44,7 @@ import {
   ThemePreference,
 } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
-import { Profile } from '../types';
+import { OwnProfile } from '../types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Profile'>;
 
@@ -77,7 +77,7 @@ export function ProfileScreen({ navigation }: Props) {
     setThemePreference,
   } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<OwnProfile | null>(null);
   const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
   const [phone, setPhone] = useState('');
@@ -91,7 +91,7 @@ export function ProfileScreen({ navigation }: Props) {
 
   useEffect(() => {
     if (!userId) return;
-    void profilesData.fetchProfile(userId).then((p) => {
+    void profilesData.fetchOwnProfile(userId).then((p) => {
       setProfile(p);
       setDisplayName(p.display_name);
       setUsername(p.username ?? '');
@@ -176,7 +176,7 @@ export function ProfileScreen({ navigation }: Props) {
         asset.type ?? 'image/jpeg',
       );
       const updated = await profilesData.updateProfile(userId, { avatar_path: path });
-      setProfile(updated);
+      setProfile((current) => (current ? { ...current, ...updated } : current));
     } finally {
       setIsUploadingPhoto(false);
     }
