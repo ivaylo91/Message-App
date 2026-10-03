@@ -32,6 +32,7 @@ interface QueueMessageInput {
   body: string;
   replyToMessageId: string | null;
   replyToPreview: ReplyPreview | null;
+  mentions?: string[];
 }
 
 interface OutboxContextValue {
@@ -106,6 +107,7 @@ export function OutboxProvider({ children }: { children: React.ReactNode }) {
             userId,
             next.body,
             next.replyToMessageId,
+            next.mentions,
           );
           removeFromQueue(next.tempId);
         } catch (err) {

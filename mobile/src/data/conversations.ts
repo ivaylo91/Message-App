@@ -349,6 +349,7 @@ export async function sendMessage(
   senderId: string,
   body: string,
   replyToMessageId?: string | null,
+  mentions?: string[],
 ): Promise<Message> {
   const { data, error } = await supabase
     .from('messages')
@@ -357,6 +358,9 @@ export async function sendMessage(
       sender_id: senderId,
       body,
       reply_to_message_id: replyToMessageId ?? null,
+      // Left out when empty, so the column's default applies and the
+      // insert is byte-for-byte what it was before mentions existed.
+      ...(mentions && mentions.length > 0 ? { mentions } : {}),
     })
     .select(MESSAGE_SELECT)
     .single();

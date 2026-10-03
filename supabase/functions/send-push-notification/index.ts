@@ -274,12 +274,25 @@ Deno.serve(async (req: Request) => {
     // indistinguishable from no mute, which is why nothing has to clear
     // old values. Muting is per participant - everyone else in a group
     // still gets notified.
+    //
+    // An @mention is the exception: being named is the case mute is not
+    // meant to silence, so a mentioned participant is pushed regardless,
+    // with a body saying so. Only ids that are actually participants
+    // count - `participants` is this conversation's, so an id in mentions
+    // for anyone else reaches no one.
     const now = Date.now();
+    const mentioned = new Set<string>(Array.isArray(message.mentions) ? message.mentions : []);
+    const mentionedIds = participants
+      .filter((p: { user_id: string }) => mentioned.has(p.user_id))
+      .map((p: { user_id: string }) => p.user_id);
     const recipientIds = participants
-      .filter((p: { muted_until: string | null }) => notMuted(p.muted_until, now))
+      .filter(
+        (p: { user_id: string; muted_until: string | null }) =>
+          !mentioned.has(p.user_id) && notMuted(p.muted_until, now),
+      )
       .map((p: { user_id: string }) => p.user_id);
 
-    if (!recipientIds.length) {
+    if (!recipientIds.length && !mentionedIds.length) {
       return new Response(JSON.stringify({ skipped: true, reason: "all muted" }), {
         status: 200,
       });
@@ -291,13 +304,14 @@ Deno.serve(async (req: Request) => {
       .eq("id", message.sender_id)
       .single();
 
-    const sent = await pushToUsers(
-      supabase,
-      recipientIds,
-      sender?.display_name ?? "New message",
-      genericBodyFor(message),
-      { conversationId: message.conversation_id, type: "message" },
-    );
+    const title = sender?.display_name ?? "New message";
+    const data = { conversationId: message.conversation_id, type: "message" };
+    const [sentRegular, sentMentioned] = await Promise.all([
+      pushToUsers(supabase, recipientIds, title, genericBodyFor(message), data),
+      // Still generic - who mentioned you, not what they said.
+      pushToUsers(supabase, mentionedIds, title, "Mentioned you", data),
+    ]);
+    const sent = sentRegular + sentMentioned;
 
     return new Response(JSON.stringify({ sent }), { status: 200 });
   } catch (err) {

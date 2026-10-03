@@ -7,6 +7,8 @@ export interface OutboxEntry {
   body: string;
   replyToMessageId: string | null;
   replyToPreview: ReplyPreview | null;
+  // Optional so entries persisted by an earlier build still load.
+  mentions?: string[];
   createdAt: string;
 }
 

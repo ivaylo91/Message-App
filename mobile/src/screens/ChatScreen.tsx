@@ -81,6 +81,13 @@ import { MessageMenu, MessageMenuAction } from '../components/MessageMenu';
 import { SwipeToReply } from '../components/SwipeToReply';
 import { useMuteChooser } from '../hooks/useMuteChooser';
 import { isMuted } from '../utils/mute';
+import {
+  activeMentionQuery,
+  insertMention,
+  mentionsStillPresent,
+  splitMentions,
+  type PickedMention,
+} from '../utils/mentions';
 import { hasLink, linkifyText } from '../utils/linkify';
 import { runPositions, showsSenderName, type RunPosition } from '../utils/messageGrouping';
 import * as draftStorage from '../drafts/draftStorage';
@@ -106,6 +113,7 @@ type Props = NativeStackScreenProps<AppStackParamList, 'Chat'>;
 
 const QUICK_REACTIONS = ['❤️', '👍', '😂', '😮', '😢', '🙏'];
 const NO_REACTED: ReadonlySet<string> = new Set();
+const NO_MENTION_NAMES: string[] = [];
 
 type MessageStatus = 'pending' | 'sent' | 'read';
 const STATUS_ICONS: Record<MessageStatus, 'clock' | 'check' | 'check-double'> = {
@@ -175,6 +183,7 @@ function pendingToLocalMessage(entry: OutboxEntry, senderId: string): LocalMessa
     deleted_at: null,
     reply_to_message_id: entry.replyToMessageId,
     reply_to: entry.replyToPreview,
+    mentions: entry.mentions,
     _pending: true,
   };
 }
@@ -492,6 +501,8 @@ interface MessageBubbleProps {
   isHighlighted: boolean;
   // Mine only; null on other people's messages.
   status: MessageStatus | null;
+  // Display names of the people this message @mentions, for highlighting.
+  mentionNames: string[];
   seenBy: SeenBy;
   bubbleMaxWidth: number;
   isPlaying: boolean;
@@ -518,6 +529,7 @@ function MessageBubbleComponent({
   userId,
   isHighlighted,
   status,
+  mentionNames,
   seenBy,
   bubbleMaxWidth,
   isPlaying,
@@ -637,11 +649,16 @@ function MessageBubbleComponent({
           )}
           {message.body && (
             <Text style={isMine ? styles.bubbleTextMine : styles.bubbleTextTheirs}>
-              {hasLink(message.body)
-                ? linkifyText(message.body).map((segment, i) =>
+              {splitMentions(message.body, mentionNames).map((part, i) =>
+                part.isMention ? (
+                  <Text key={i} style={isMine ? styles.mentionMine : styles.mentionTheirs}>
+                    {part.text}
+                  </Text>
+                ) : hasLink(part.text) ? (
+                  linkifyText(part.text).map((segment, j) =>
                     segment.url ? (
                       <Text
-                        key={i}
+                        key={`${i}-${j}`}
                         style={styles.linkText}
                         onPress={() => {
                           const url = segment.url;
@@ -654,7 +671,10 @@ function MessageBubbleComponent({
                       segment.text
                     ),
                   )
-                : message.body}
+                ) : (
+                  part.text
+                ),
+              )}
             </Text>
           )}
           <View style={styles.metaRow}>
@@ -850,6 +870,15 @@ export function ChatScreen({ route, navigation }: Props) {
   );
   const [isGroup, setIsGroup] = useState(false);
   const [draft, setDraft] = useState('');
+  // Where the cursor is, for the @mention suggestions - see onChangeDraft
+  // for why it's also nudged on every text change.
+  const [cursor, setCursor] = useState(0);
+  // Set once to place the cursor after an inserted mention, then released
+  // so the input isn't left fighting the user over where the cursor goes.
+  const [forcedSelection, setForcedSelection] = useState<{ start: number; end: number } | null>(
+    null,
+  );
+  const [pickedMentions, setPickedMentions] = useState<PickedMention[]>([]);
   const [menuTarget, setMenuTarget] = useState<{
     message: LocalMessage;
     anchorY: number;
@@ -1250,6 +1279,14 @@ export function ChatScreen({ route, navigation }: Props) {
   }, [conversationId]);
 
   const onChangeDraft = (text: string) => {
+    // onChangeText arrives before onSelectionChange, so for a moment the
+    // cursor we hold is from before this edit - and a suggestion list
+    // computed from it would lag a character behind. Typing or deleting
+    // moves the cursor by exactly the change in length; onSelectionChange
+    // corrects anything else (a paste in the middle, a tap elsewhere).
+    const delta = text.length - draft.length;
+    setCursor((current) => Math.max(0, Math.min(text.length, current + delta)));
+    if (!text) setPickedMentions([]);
     setDraft(text);
     sendTyping(conversationId);
     // Not debounced: AsyncStorage writes are async and off the JS
@@ -1289,6 +1326,9 @@ export function ChatScreen({ route, navigation }: Props) {
     const replyToMessageId = replyingTo?.id ?? null;
     const replyToPreview = replyingTo;
     setReplyingTo(null);
+    // Only people whose "@Name" survived to the final text.
+    const mentions = mentionsStillPresent(body, pickedMentions);
+    setPickedMentions([]);
 
     // Queued rather than sent directly - the outbox shows it immediately
     // (dimmed, via displayMessages) and takes care of retrying if this
@@ -1304,8 +1344,39 @@ export function ChatScreen({ route, navigation }: Props) {
       body,
       replyToMessageId,
       replyToPreview,
+      mentions,
     });
     markRead();
+  };
+
+  // Group chats only, and not while editing: an edit changes the text but
+  // not who the message notified, so offering mentions there would
+  // promise something it can't do.
+  const mentionQuery =
+    isGroup && !editingMessageId && !isRecording ? activeMentionQuery(draft, cursor) : null;
+  const mentionText = mentionQuery?.query ?? null;
+  const mentionSuggestions = useMemo(() => {
+    if (mentionText === null) return [];
+    const q = mentionText.toLowerCase();
+    return participants
+      .filter(
+        (p) =>
+          p.user_id !== userId &&
+          (p.profiles.display_name.toLowerCase().includes(q) ||
+            (p.profiles.username ?? '').toLowerCase().includes(q)),
+      )
+      .slice(0, 5);
+  }, [mentionText, participants, userId]);
+
+  const onPickMention = (participant: ConversationParticipant) => {
+    if (!mentionQuery) return;
+    const name = participant.profiles.display_name;
+    const next = insertMention(draft, mentionQuery.start, cursor, name);
+    onChangeDraft(next.text);
+    setCursor(next.cursor);
+    setForcedSelection({ start: next.cursor, end: next.cursor });
+    setPickedMentions((current) => [...current, { userId: participant.user_id, name }]);
+    haptic('select');
   };
 
   const onPickImage = async () => {
@@ -1919,6 +1990,22 @@ export function ChatScreen({ route, navigation }: Props) {
   // last_read_at null - see 20260927_add_privacy_settings.sql), so their
   // messages stay at a single tick rather than claiming a read we can't
   // see. There is no separate "delivered" state: nothing records delivery.
+  // Resolved once per list change rather than per row per render, so each
+  // bubble gets the same array back and its memo holds. An id that isn't a
+  // participant (they left) simply isn't highlighted.
+  const mentionNamesByMessageId = useMemo(() => {
+    const nameById = new Map(participants.map((p) => [p.user_id, p.profiles.display_name]));
+    const result = new Map<string, string[]>();
+    for (const message of displayMessages) {
+      if (!message.mentions?.length) continue;
+      const names = message.mentions
+        .map((id) => nameById.get(id))
+        .filter((name): name is string => Boolean(name));
+      if (names.length) result.set(message.id, names);
+    }
+    return result;
+  }, [participants, displayMessages]);
+
   const readByEveryoneUntilMs = useMemo(() => {
     const others = participants.filter((p) => p.user_id !== userId);
     if (others.length === 0) return null;
@@ -2134,6 +2221,7 @@ export function ChatScreen({ route, navigation }: Props) {
         reactions={reactionsByMessageId.get(item.id) ?? NO_REACTIONS}
         userId={userId}
         isHighlighted={item.id === highlightedMessageId}
+        mentionNames={mentionNamesByMessageId.get(item.id) ?? NO_MENTION_NAMES}
         status={
           item.sender_id !== userId
             ? null
@@ -2163,6 +2251,7 @@ export function ChatScreen({ route, navigation }: Props) {
       senderNames,
       reactionsByMessageId,
       highlightedMessageId,
+      mentionNamesByMessageId,
       readByEveryoneUntilMs,
       bubbleMaxWidth,
       playingMessageId,
@@ -2387,6 +2476,32 @@ export function ChatScreen({ route, navigation }: Props) {
           </Touchable>
         </View>
       )}
+      {mentionSuggestions.length > 0 && (
+        <View style={styles.mentionList}>
+          {mentionSuggestions.map((participant) => (
+            <Touchable
+              key={participant.user_id}
+              style={styles.mentionRow}
+              onPress={() => onPickMention(participant)}
+              accessibilityRole="button"
+            >
+              <Avatar
+                name={participant.profiles.display_name}
+                avatarPath={participant.profiles.avatar_path}
+                size={28}
+              />
+              <Text style={styles.mentionName} numberOfLines={1}>
+                {participant.profiles.display_name}
+              </Text>
+              {participant.profiles.username && (
+                <Text style={styles.mentionUsername} numberOfLines={1}>
+                  @{participant.profiles.username}
+                </Text>
+              )}
+            </Touchable>
+          ))}
+        </View>
+      )}
       <View
         style={[
           styles.composer,
@@ -2453,6 +2568,11 @@ export function ChatScreen({ route, navigation }: Props) {
               placeholderTextColor={colors.smoke}
               value={draft}
               onChangeText={onChangeDraft}
+              selection={forcedSelection ?? undefined}
+              onSelectionChange={(event) => {
+                setCursor(event.nativeEvent.selection.end);
+                if (forcedSelection) setForcedSelection(null);
+              }}
               // Grows with the message instead of scrolling a long one
               // sideways through a single line. Return now inserts a
               // newline, so sending is the button's job - which is why
@@ -2816,6 +2936,8 @@ const makeStyles = (colors: ThemeColors) =>
   },
   metaTextMine: { fontSize: fontSizes.micro, color: colors.white, opacity: 0.75 },
   metaTextTheirs: { fontSize: fontSizes.micro, color: colors.smoke },
+  mentionMine: { fontWeight: '700', color: colors.white },
+  mentionTheirs: { fontWeight: '700', color: colors.ember },
   statusMuted: { opacity: 0.75 },
   statusRead: { opacity: 1 },
   dayDivider: { alignItems: 'center', marginVertical: spacing.md },
@@ -2906,6 +3028,20 @@ const makeStyles = (colors: ThemeColors) =>
   replyBarText: { flex: 1 },
   replyBarLabel: { fontSize: fontSizes.caption, fontWeight: '700', color: colors.ember },
   replyBarSnippet: { fontSize: fontSizes.caption, color: colors.smoke, marginTop: 1 },
+  mentionList: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.line,
+    paddingVertical: spacing.xs,
+  },
+  mentionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  mentionName: { flexShrink: 1, fontSize: fontSizes.body, fontWeight: '600', color: colors.ink },
+  mentionUsername: { flexShrink: 1, fontSize: fontSizes.footnote, color: colors.smoke },
   composer: {
     flexDirection: 'row',
     padding: spacing.md,

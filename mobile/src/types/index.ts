@@ -86,6 +86,10 @@ export interface Message {
   deleted_at: string | null;
   reply_to_message_id: string | null;
   reply_to?: ReplyPreview | null;
+  // Ids @mentioned in a group message (see utils/mentions.ts). Optional:
+  // absent on rows from before the column existed and on local pending
+  // copies built without it.
+  mentions?: string[];
 }
 
 export interface MessageReaction {
