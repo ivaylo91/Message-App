@@ -120,6 +120,7 @@ export const makeStyles = (colors: ThemeColors) =>
   },
   loadErrorButtonText: { color: colors.white, fontWeight: '700', fontSize: fontSizes.body },
   list: { flex: 1, paddingHorizontal: 12 },
+  listArea: { flex: 1 },
   rowMine: { alignItems: 'flex-end', marginVertical: 4 },
   // Messages inside a run sit closer together than separate remarks do.
   rowJoined: { marginTop: 2 },

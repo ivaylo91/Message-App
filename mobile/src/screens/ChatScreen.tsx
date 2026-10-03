@@ -5,7 +5,6 @@ import {
   Alert,
   FlatList,
   Keyboard,
-  KeyboardAvoidingView,
   Modal,
   PermissionsAndroid,
   Platform,
@@ -87,6 +86,7 @@ import { makeStyles } from './chat/chatStyles';
 import { LocalMessage } from './chat/types';
 import { MessageBubble, NO_REACTIONS, NO_SEEN_BY, replySenderLabel } from './chat/MessageBubble';
 import { ChatHistorySkeleton, TypingBubble } from './chat/ChatDecorations';
+import { KeyboardAvoidingView, KeyboardGestureArea } from 'react-native-keyboard-controller';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Chat'>;
 
@@ -1590,11 +1590,11 @@ export function ChatScreen({ route, navigation }: Props) {
   );
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={0}
-    >
+    // react-native-keyboard-controller's, not React Native's: it moves the
+    // composer with the keyboard frame by frame instead of jumping once the
+    // keyboard has finished animating, and 'padding' now behaves the same
+    // on Android as on iOS.
+    <KeyboardAvoidingView style={styles.container} behavior="padding">
       <AppWallpaper />
       <View style={[styles.content, { maxWidth: contentWidth }]}>
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
@@ -1733,9 +1733,14 @@ export function ChatScreen({ route, navigation }: Props) {
           ))}
         </ScrollView>
       ) : (
+        // Drag the keyboard down with the list on Android, as in Telegram -
+        // 'ios' means it follows the finger once the finger reaches it.
+        // keyboardDismissMode is the same gesture on iOS.
+        <KeyboardGestureArea style={styles.listArea} interpolator="ios">
         <FlatList
           ref={flatListRef}
           style={styles.list}
+          keyboardDismissMode="interactive"
           data={displayMessages}
           keyExtractor={messageKeyExtractor}
           inverted
@@ -1757,6 +1762,7 @@ export function ChatScreen({ route, navigation }: Props) {
           }}
           renderItem={renderMessage}
         />
+        </KeyboardGestureArea>
       )}
       {isScrolledUp && !isSearchOpen && (
         <Touchable
