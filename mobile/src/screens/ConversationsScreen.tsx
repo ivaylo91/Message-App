@@ -32,7 +32,11 @@ import { usePresence } from '../presence/PresenceContext';
 import { useUnread } from '../unread/UnreadContext';
 import { useTyping } from '../typing/TypingContext';
 import { useMessageStream } from '../messages/MessageStreamContext';
-import { attachmentPreviewText, callStatusPreviewText } from '../utils/messagePreview';
+import {
+  attachmentPreviewText,
+  callStatusPreviewText,
+  formatListTimestamp,
+} from '../utils/messagePreview';
 import { applyIncomingMessage } from '../utils/conversationList';
 import { isMuted } from '../utils/mute';
 import { fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
@@ -53,6 +57,8 @@ interface ConversationRowProps {
   unreadCount: number;
   isTyping: boolean;
   preview: string;
+  // The last message's created_at; null for a conversation with none yet.
+  timestamp: string | null;
   isOpen: boolean;
   onOpen: () => void;
   onClose: () => void;
@@ -74,6 +80,7 @@ function ConversationRow({
   unreadCount,
   isTyping,
   preview,
+  timestamp,
   isOpen,
   onOpen,
   onClose,
@@ -81,7 +88,7 @@ function ConversationRow({
   onLongPress,
   onDelete,
 }: ConversationRowProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const translateX = useRef(new Animated.Value(0)).current;
@@ -153,25 +160,37 @@ function ConversationRow({
                   color={colors.smoke}
                 />
               )}
+              {timestamp && (
+                <Text
+                  style={[styles.rowTime, unreadCount > 0 && !muted && styles.rowTimeUnread]}
+                  numberOfLines={1}
+                >
+                  {formatListTimestamp(timestamp, t, i18n.language)}
+                </Text>
+              )}
             </View>
-            <Text
-              style={[
-                styles.rowPreview,
-                isTyping && styles.rowPreviewTyping,
-                !isTyping && unreadCount > 0 && styles.rowPreviewUnread,
-              ]}
-              numberOfLines={1}
-            >
-              {preview}
-            </Text>
-          </View>
-          {unreadCount > 0 && (
-            <View style={styles.unreadBadge}>
-              <Text style={styles.unreadBadgeText}>
-                {unreadCount > 99 ? '99+' : unreadCount}
+            <View style={styles.rowPreviewLine}>
+              <Text
+                style={[
+                  styles.rowPreview,
+                  isTyping && styles.rowPreviewTyping,
+                  !isTyping && unreadCount > 0 && styles.rowPreviewUnread,
+                ]}
+                numberOfLines={1}
+              >
+                {preview}
               </Text>
+              {unreadCount > 0 && (
+                // Grey rather than ember when muted: the count is still
+                // there to see, but it isn't asking for attention.
+                <View style={[styles.unreadBadge, muted && styles.unreadBadgeMuted]}>
+                  <Text style={styles.unreadBadgeText}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </Text>
+                </View>
+              )}
             </View>
-          )}
+          </View>
         </Touchable>
       </Animated.View>
     </View>
@@ -586,6 +605,7 @@ export function ConversationsScreen({ navigation }: Props) {
               unreadCount={unreadCount}
               isTyping={isTyping}
               preview={isTyping ? t('chat.typing') : previewText(item.messages?.[0])}
+              timestamp={item.messages?.[0]?.created_at ?? null}
               isOpen={openRowId === item.id}
               onOpen={() => setOpenRowId(item.id)}
               onClose={() =>
@@ -733,8 +753,12 @@ const makeStyles = (colors: ThemeColors) =>
   },
   skeletonText: { flex: 1, gap: 7 },
   rowTitleLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  rowTitle: { fontWeight: '700', fontSize: fontSizes.body, color: colors.ink },
-  rowPreview: { color: colors.smoke, marginTop: 2, fontSize: fontSizes.footnote },
+  // flexShrink so a long name truncates instead of pushing the time away.
+  rowTitle: { flexShrink: 1, fontWeight: '700', fontSize: fontSizes.body, color: colors.ink },
+  rowTime: { marginLeft: 'auto', fontSize: fontSizes.caption, color: colors.smoke },
+  rowTimeUnread: { color: colors.ember, fontWeight: '700' },
+  rowPreviewLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: 2 },
+  rowPreview: { flex: 1, color: colors.smoke, fontSize: fontSizes.footnote },
   rowPreviewTyping: { color: colors.sage, fontWeight: '600' },
   rowPreviewUnread: { color: colors.ink, fontWeight: '600' },
   unreadBadge: {
@@ -746,6 +770,7 @@ const makeStyles = (colors: ThemeColors) =>
     alignItems: 'center',
     justifyContent: 'center',
   },
+  unreadBadgeMuted: { backgroundColor: colors.smoke },
   unreadBadgeText: { color: colors.white, fontSize: fontSizes.caption, fontWeight: '700' },
   empty: { alignItems: 'center', marginTop: 64, paddingHorizontal: spacing.xxl },
   emptyIcon: {

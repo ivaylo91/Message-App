@@ -123,6 +123,41 @@ export function formatMessageTime(isoDate: string, locale?: string): string {
   }
 }
 
+// The time on a conversation-list row, as messengers show it: the time
+// for today, "Yesterday", the weekday within the last week, then a short
+// date - with the year only when it isn't this year. Calendar days, not
+// 24-hour spans, so 23:50 yesterday still reads "Yesterday" at 00:10.
+export function formatListTimestamp(
+  isoDate: string,
+  t: TFunction,
+  locale?: string,
+  now: Date = new Date(),
+): string {
+  const date = new Date(isoDate);
+  const startOfDay = (d: Date) =>
+    new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const daysAgo = Math.round((startOfDay(now) - startOfDay(date)) / 86_400_000);
+
+  // A future timestamp (clock skew between devices) is treated as today
+  // rather than shown as a date that hasn't happened yet.
+  if (daysAgo <= 0) return formatMessageTime(isoDate, locale);
+  if (daysAgo === 1) return t('chat.yesterday');
+
+  try {
+    if (daysAgo < 7) {
+      return new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(date);
+    }
+    return new Intl.DateTimeFormat(
+      locale,
+      date.getFullYear() === now.getFullYear()
+        ? { day: 'numeric', month: 'short' }
+        : { day: 'numeric', month: 'numeric', year: '2-digit' },
+    ).format(date);
+  } catch {
+    return isoDate.slice(0, 10);
+  }
+}
+
 // Label for a day divider: "Today"/"Yesterday" for the two most recent
 // days, otherwise the date - with the year included only when it isn't
 // the current one, which is how people actually write dates.

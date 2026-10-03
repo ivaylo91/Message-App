@@ -5,6 +5,7 @@ import {
   fileIconName,
   formatDuration,
   formatLastSeen,
+  formatListTimestamp,
   formatMessageDay,
   formatMessageTime,
   isSameDay,
@@ -198,5 +199,40 @@ describe('messageIdsStartingADay', () => {
   test('handles a single message and an empty list', () => {
     expect(messageIdsStartingADay([at('2026-09-10T18:00:00', 'm1')])).toEqual(new Set(['m1']));
     expect(messageIdsStartingADay([]).size).toBe(0);
+  });
+});
+
+describe('formatListTimestamp', () => {
+  // Local-time constructors, so these hold in any timezone the suite runs in.
+  const now = new Date(2026, 9, 3, 0, 10); // Sat 3 Oct 2026, 00:10
+  const at = (...parts: [number, number, number, number?, number?]) =>
+    new Date(...(parts as [number, number, number, number, number])).toISOString();
+
+  test('today shows the time', () => {
+    expect(formatListTimestamp(at(2026, 9, 3, 0, 5), t, 'en-GB', now)).toBe(
+      formatMessageTime(at(2026, 9, 3, 0, 5), 'en-GB'),
+    );
+  });
+
+  test('goes by calendar day, not the last 24 hours', () => {
+    expect(formatListTimestamp(at(2026, 9, 2, 23, 50), t, 'en-GB', now)).toBe('chat.yesterday');
+  });
+
+  test('within the week shows the weekday', () => {
+    expect(formatListTimestamp(at(2026, 8, 30, 12, 0), t, 'en-GB', now)).toBe('Wed');
+  });
+
+  test('older this year shows day and month, no year', () => {
+    expect(formatListTimestamp(at(2026, 6, 14, 12, 0), t, 'en-GB', now)).toBe('14 Jul');
+  });
+
+  test('a previous year includes the year', () => {
+    expect(formatListTimestamp(at(2025, 11, 31, 12, 0), t, 'en-GB', now)).toBe('31/12/25');
+  });
+
+  test('a timestamp from the future (clock skew) shows as today, not a date', () => {
+    expect(formatListTimestamp(at(2026, 9, 3, 0, 40), t, 'en-GB', now)).toBe(
+      formatMessageTime(at(2026, 9, 3, 0, 40), 'en-GB'),
+    );
   });
 });
