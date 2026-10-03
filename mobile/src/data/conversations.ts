@@ -61,6 +61,21 @@ export async function hideConversation(
 // Mute is per participant, so this only ever writes the caller's own row -
 // which is also all the RLS policy permits (verified: updating another
 // participant's row affects zero rows). Pass null to unmute.
+// null unpins. Like mute, this is the user's own participant row only.
+export async function setConversationPinned(
+  conversationId: string,
+  userId: string,
+  pinnedAt: string | null,
+): Promise<void> {
+  const { error } = await supabase
+    .from('conversation_participants')
+    .update({ pinned_at: pinnedAt })
+    .eq('conversation_id', conversationId)
+    .eq('user_id', userId);
+
+  if (error) throw error;
+}
+
 export async function setConversationMuted(
   conversationId: string,
   userId: string,

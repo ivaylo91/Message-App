@@ -66,3 +66,32 @@ export function applyIncomingMessage(
     needsRefetch: false,
   };
 }
+
+// The most conversations one person can pin. Pinning is only useful while
+// it stays a short list - pin everything and nothing stands out.
+export const MAX_PINNED_CONVERSATIONS = 3;
+
+export function pinnedAtFor(conversation: Conversation, userId: string | null): string | null {
+  return conversation.conversation_participants.find((p) => p.user_id === userId)?.pinned_at ?? null;
+}
+
+// Pinned conversations first, most recently pinned on top; everything else
+// keeps the order it already had (most recent activity first - see
+// applyIncomingMessage). Applied when the list renders rather than baked
+// into the stored order, so it holds after a fresh fetch and after a
+// realtime move-to-front alike. Returns the same array when nothing is
+// pinned, so a memo over it stays cheap.
+export function pinnedFirst(conversations: Conversation[], userId: string | null): Conversation[] {
+  const pinned: Conversation[] = [];
+  const rest: Conversation[] = [];
+  for (const conversation of conversations) {
+    (pinnedAtFor(conversation, userId) ? pinned : rest).push(conversation);
+  }
+  if (pinned.length === 0) return conversations;
+  pinned.sort(
+    (a, b) =>
+      new Date(pinnedAtFor(b, userId) as string).getTime() -
+      new Date(pinnedAtFor(a, userId) as string).getTime(),
+  );
+  return [...pinned, ...rest];
+}

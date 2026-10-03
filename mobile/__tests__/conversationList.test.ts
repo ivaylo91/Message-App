@@ -1,4 +1,4 @@
-import { applyIncomingMessage } from '../src/utils/conversationList';
+import { applyIncomingMessage, pinnedFirst } from '../src/utils/conversationList';
 import { Conversation, Message } from '../src/types';
 
 function conversation(id: string, updatedAt: string, preview?: Message): Conversation {
@@ -150,4 +150,44 @@ test("the user's own message updates the preview too", () => {
 
   expect(conversations[0].id).toBe('b');
   expect(conversations[0].messages?.[0].body).toBe('sent by me');
+});
+
+describe('pinnedFirst', () => {
+  const me = 'me';
+  const withPin = (id: string, pinnedAt: string | null, userId = me): Conversation => ({
+    ...conversation(id, '2026-09-09T12:00:00.000Z'),
+    conversation_participants: [
+      {
+        id: `${id}-p`,
+        conversation_id: id,
+        user_id: userId,
+        last_read_at: null,
+        muted_until: null,
+        pinned_at: pinnedAt,
+        role: 'MEMBER',
+        hidden_at: null,
+        profiles: undefined as never,
+      },
+    ],
+  });
+
+  test('returns the same array when nothing is pinned', () => {
+    const list = [withPin('a', null), withPin('b', null)];
+    expect(pinnedFirst(list, me)).toBe(list);
+  });
+
+  test('puts pinned first, most recently pinned on top, the rest in their existing order', () => {
+    const list = [
+      withPin('a', null),
+      withPin('b', '2026-09-01T10:00:00.000Z'),
+      withPin('c', null),
+      withPin('d', '2026-09-05T10:00:00.000Z'),
+    ];
+    expect(pinnedFirst(list, me).map((c) => c.id)).toEqual(['d', 'b', 'a', 'c']);
+  });
+
+  test("ignores another participant's pin", () => {
+    const list = [withPin('a', null), withPin('b', '2026-09-01T10:00:00.000Z', 'someone-else')];
+    expect(pinnedFirst(list, me).map((c) => c.id)).toEqual(['a', 'b']);
+  });
 });

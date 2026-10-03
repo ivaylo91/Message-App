@@ -22,6 +22,7 @@ import * as profilesData from '../data/profiles';
 import { Avatar } from '../components/Avatar';
 import { Touchable } from '../components/Touchable';
 import { useConfirm } from '../components/ConfirmSheet';
+import { useToast } from '../components/Toast';
 import { Skeleton, SkeletonGroup } from '../components/Skeleton';
 import { AppLogo } from '../components/AppLogo';
 import { FooterNav } from '../components/FooterNav';
@@ -37,7 +38,12 @@ import {
   callStatusPreviewText,
   formatListTimestamp,
 } from '../utils/messagePreview';
-import { applyIncomingMessage } from '../utils/conversationList';
+import {
+  applyIncomingMessage,
+  MAX_PINNED_CONVERSATIONS,
+  pinnedAtFor,
+  pinnedFirst,
+} from '../utils/conversationList';
 import { isMuted } from '../utils/mute';
 import { fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
@@ -52,6 +58,7 @@ const SWIPE_OPEN_THRESHOLD = -40;
 interface ConversationRowProps {
   title: string;
   muted: boolean;
+  pinned: boolean;
   avatarPath: string | null | undefined;
   online: boolean | undefined;
   unreadCount: number;
@@ -75,6 +82,7 @@ interface ConversationRowProps {
 function ConversationRow({
   title,
   muted,
+  pinned,
   avatarPath,
   online,
   unreadCount,
@@ -160,6 +168,15 @@ function ConversationRow({
                   color={colors.smoke}
                 />
               )}
+              {pinned && (
+                <FontAwesome6
+                  name="thumbtack"
+                  iconStyle="solid"
+                  size={11}
+                  color={colors.smoke}
+                  accessibilityLabel={t('conversations.pinned')}
+                />
+              )}
               {timestamp && (
                 <Text
                   style={[styles.rowTime, unreadCount > 0 && !muted && styles.rowTimeUnread]}
@@ -227,6 +244,7 @@ export function ConversationsScreen({ navigation }: Props) {
   const { unreadCounts, refresh: refreshUnreadCounts } = useUnread();
   const { typingConversationIds, watch: watchTyping } = useTyping();
   const { confirm } = useConfirm();
+  const { showToast } = useToast();
   const { subscribe: subscribeToMessages } = useMessageStream();
   const insets = useSafeAreaInsets();
   const { contentWidth } = useContentWidth();
@@ -337,15 +355,46 @@ export function ConversationsScreen({ navigation }: Props) {
   const chooseMute = useMuteChooser();
   const onLongPressConversation = useCallback(
     (conversation: Conversation, title: string) => {
+      if (!userId) return;
       const mine = conversation.conversation_participants.find((p) => p.user_id === userId);
-      void chooseMute(conversation.id, title, mine?.muted_until).then((result) => {
-        // Reload rather than patching in place: muted_until lives on the
-        // participant row the list already carries, so a refetch keeps the
-        // row and the server in step without a second source of truth.
-        if (result !== undefined) void load();
+      const pinned = Boolean(mine?.pinned_at);
+      void confirm({
+        title,
+        cancelLabel: t('chat.cancel'),
+        options: [
+          { id: 'pin', label: pinned ? t('conversations.unpin') : t('conversations.pin') },
+          {
+            id: 'mute',
+            label: isMuted(mine?.muted_until) ? t('conversations.unmute') : t('conversations.mute'),
+          },
+        ],
+      }).then((choice) => {
+        if (choice === 'mute') {
+          void chooseMute(conversation.id, title, mine?.muted_until).then((result) => {
+            // Reload rather than patching in place: these values live on the
+            // participant row the list already carries, so a refetch keeps
+            // the row and the server in step without a second source of truth.
+            if (result !== undefined) void load();
+          });
+          return;
+        }
+        if (choice !== 'pin') return;
+        if (!pinned) {
+          const pinnedCount = conversationsRef.current.filter((c) =>
+            Boolean(pinnedAtFor(c, userId)),
+          ).length;
+          if (pinnedCount >= MAX_PINNED_CONVERSATIONS) {
+            showToast(t('conversations.pinLimitToast', { count: MAX_PINNED_CONVERSATIONS }));
+            return;
+          }
+        }
+        void conversationsData
+          .setConversationPinned(conversation.id, userId, pinned ? null : new Date().toISOString())
+          .then(() => load())
+          .catch(() => showToast(t('conversations.pinFailedToast')));
       });
     },
-    [userId, chooseMute, load],
+    [userId, confirm, t, chooseMute, load, showToast],
   );
 
   const onDeleteConversation = useCallback(
@@ -458,6 +507,10 @@ export function ConversationsScreen({ navigation }: Props) {
         return title.includes(trimmedSearchQuery) || preview.includes(trimmedSearchQuery);
       })
     : conversations;
+  const orderedConversations = useMemo(
+    () => pinnedFirst(filteredConversations, userId),
+    [filteredConversations, userId],
+  );
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + spacing.lg }]}>
@@ -518,7 +571,7 @@ export function ConversationsScreen({ navigation }: Props) {
       </View>
 
       <FlatList
-        data={filteredConversations}
+        data={orderedConversations}
         keyExtractor={(item) => item.id}
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={load} />
@@ -600,6 +653,7 @@ export function ConversationsScreen({ navigation }: Props) {
               muted={isMuted(
                 item.conversation_participants.find((p) => p.user_id === userId)?.muted_until,
               )}
+              pinned={Boolean(pinnedAtFor(item, userId))}
               avatarPath={item.is_group ? null : other?.profiles.avatar_path}
               online={item.is_group ? undefined : other && isOnline(other.user_id)}
               unreadCount={unreadCount}

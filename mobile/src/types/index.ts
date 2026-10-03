@@ -39,6 +39,9 @@ export interface ConversationParticipant {
   // Null = not muted; a future timestamp mutes pushes until it passes.
   // See utils/mute.ts and 20260911_add_conversation_mute.sql.
   muted_until: string | null;
+  // Set when this participant pinned the conversation to the top of their
+  // own list; null when not pinned.
+  pinned_at: string | null;
   profiles: Profile;
 }
 
