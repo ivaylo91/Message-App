@@ -54,7 +54,6 @@ import { Touchable } from '../components/Touchable';
 import { AppWallpaper } from '../components/AppWallpaper';
 import { MediaViewer } from '../components/MediaViewer';
 import { Skeleton, SkeletonGroup } from '../components/Skeleton';
-import { AppLogo } from '../components/AppLogo';
 import { FooterNav } from '../components/FooterNav';
 import { useToast } from '../components/Toast';
 import { useConfirm } from '../components/ConfirmSheet';
@@ -80,6 +79,8 @@ import { haptic } from '../utils/haptics';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { MessageMenu, MessageMenuAction } from '../components/MessageMenu';
 import { SwipeToReply } from '../components/SwipeToReply';
+import { useMuteChooser } from '../hooks/useMuteChooser';
+import { isMuted } from '../utils/mute';
 import { hasLink, linkifyText } from '../utils/linkify';
 import { runPositions, showsSenderName, type RunPosition } from '../utils/messageGrouping';
 import * as draftStorage from '../drafts/draftStorage';
@@ -1642,24 +1643,6 @@ export function ChatScreen({ route, navigation }: Props) {
     [userId, reportTarget, showToast, t],
   );
 
-  const onOpenChatMenu = useCallback(() => {
-    if (!otherParticipant) return;
-    void confirm({
-      title: t('chat.menuTitle'),
-      cancelLabel: t('chat.cancel'),
-      options: [
-        {
-          id: 'block',
-          label: isOtherBlocked ? t('chat.unblock') : t('chat.block'),
-          destructive: !isOtherBlocked,
-        },
-        { id: 'report', label: t('chat.reportTitle') },
-      ],
-    }).then((choice) => {
-      if (choice === 'block') onToggleBlockOther();
-      else if (choice === 'report') onReportUser(otherParticipant.user_id);
-    });
-  }, [otherParticipant, isOtherBlocked, onToggleBlockOther, onReportUser, t, confirm]);
 
   // Newest-first, matching `messages` (see fetchMessages) - queued
   // entries are stored oldest-first so they're reversed before being
@@ -1774,6 +1757,66 @@ export function ChatScreen({ route, navigation }: Props) {
       ? t('conversations.groupChat')
       : otherParticipant?.profiles.display_name) ||
     '…';
+
+  const chooseMute = useMuteChooser();
+  const myMutedUntil = participants.find((p) => p.user_id === userId)?.muted_until;
+
+  const onOpenInfo = useCallback(() => {
+    if (isGroup) navigation.navigate('GroupInfo', { conversationId });
+    else if (otherParticipant) navigation.navigate('ContactInfo', { conversationId });
+  }, [isGroup, otherParticipant, navigation, conversationId]);
+
+  // Search, media and mute live here rather than as header icons - five
+  // icons crowded the name onto three lines. Block and Report only make
+  // sense in a one-to-one chat.
+  const onOpenChatMenu = useCallback(() => {
+    const muted = isMuted(myMutedUntil);
+    void confirm({
+      title: t('chat.menuTitle'),
+      cancelLabel: t('chat.cancel'),
+      options: [
+        { id: 'search', label: t('chat.a11ySearch') },
+        { id: 'media', label: t('chat.a11yGallery') },
+        { id: 'mute', label: muted ? t('conversations.unmute') : t('conversations.mute') },
+        ...(otherParticipant
+          ? [
+              {
+                id: 'block',
+                label: isOtherBlocked ? t('chat.unblock') : t('chat.block'),
+                destructive: !isOtherBlocked,
+              },
+              { id: 'report', label: t('chat.reportTitle') },
+            ]
+          : []),
+      ],
+    }).then((choice) => {
+      if (choice === 'search') setIsSearchOpen(true);
+      else if (choice === 'media')
+        navigation.navigate('MediaGallery', { conversationId, title: displayTitle });
+      else if (choice === 'mute') {
+        void chooseMute(conversationId, displayTitle, myMutedUntil).then((mutedUntil) => {
+          if (mutedUntil === undefined) return;
+          setParticipants((current) =>
+            current.map((p) => (p.user_id === userId ? { ...p, muted_until: mutedUntil } : p)),
+          );
+        });
+      } else if (choice === 'block') onToggleBlockOther();
+      else if (choice === 'report' && otherParticipant) onReportUser(otherParticipant.user_id);
+    });
+  }, [
+    otherParticipant,
+    isOtherBlocked,
+    onToggleBlockOther,
+    onReportUser,
+    t,
+    confirm,
+    myMutedUntil,
+    chooseMute,
+    conversationId,
+    displayTitle,
+    navigation,
+    userId,
+  ]);
 
   // Messenger-style read receipts: for each other participant, the
   // newest message of mine at or before *their* last_read_at is where
@@ -2054,6 +2097,14 @@ export function ChatScreen({ route, navigation }: Props) {
         >
           <FontAwesome6 name="chevron-left" iconStyle="solid" size={18} color={colors.ink} />
         </Touchable>
+        {/* The whole identity block opens the info screen - the modern
+            convention, and what keeps the header down to two icons. */}
+        <Touchable
+          style={styles.headerIdentity}
+          onPress={onOpenInfo}
+          accessibilityRole="button"
+          accessibilityLabel={isGroup ? t('chat.a11yGroupInfo') : t('contactInfo.title')}
+        >
         <Avatar
           name={displayTitle}
           avatarPath={isGroup ? null : otherParticipant?.profiles.avatar_path}
@@ -2063,49 +2114,21 @@ export function ChatScreen({ route, navigation }: Props) {
           }
         />
         <View style={styles.headerNameBlock}>
-          <Text style={styles.headerName}>{displayTitle}</Text>
+          <Text style={styles.headerName} numberOfLines={1}>{displayTitle}</Text>
           {/* Nothing at all for someone who hides their last seen -
               "Offline" would be a claim we can't make, since they may be
               online and simply not announcing it. */}
           {!otherTyping && !isGroup && otherParticipant && (
             isOnline(otherParticipant.user_id) ? (
-              <Text style={styles.headerStatus}>{t('chat.online')}</Text>
+              <Text style={styles.headerStatus} numberOfLines={1}>{t('chat.online')}</Text>
             ) : otherParticipant.profiles.show_last_seen === false ? null : (
-              <Text style={styles.headerStatusOffline}>
+              <Text style={styles.headerStatusOffline} numberOfLines={1}>
                 {formatLastSeen(otherParticipant.profiles.last_seen_at, t)}
               </Text>
             )
           )}
         </View>
-        <Touchable
-          style={styles.callButton}
-          iconButton
-          onPress={() => setIsSearchOpen(true)}
-          accessibilityRole="button"
-          accessibilityLabel={t('chat.a11ySearch')}
-        >
-          <FontAwesome6 name="magnifying-glass" iconStyle="solid" size={16} color={colors.ink} />
         </Touchable>
-        <Touchable
-          style={styles.callButton}
-          iconButton
-          onPress={() => navigation.navigate('MediaGallery', { conversationId, title: displayTitle })}
-          accessibilityRole="button"
-          accessibilityLabel={t('chat.a11yGallery')}
-        >
-          <FontAwesome6 name="images" iconStyle="solid" size={16} color={colors.ink} />
-        </Touchable>
-        {isGroup && (
-          <Touchable
-            style={styles.callButton}
-            iconButton
-            onPress={() => navigation.navigate('GroupInfo', { conversationId })}
-            accessibilityRole="button"
-            accessibilityLabel={t('chat.a11yGroupInfo')}
-          >
-            <FontAwesome6 name="users" iconStyle="solid" size={16} color={colors.ink} />
-          </Touchable>
-        )}
         {!isGroup && otherParticipant && (
           <Touchable
             style={styles.callButton}
@@ -2124,18 +2147,15 @@ export function ChatScreen({ route, navigation }: Props) {
             <FontAwesome6 name="video" iconStyle="solid" size={17} color={colors.ember} />
           </Touchable>
         )}
-        {!isGroup && otherParticipant && (
-          <Touchable
-            style={styles.callButton}
-            iconButton
-            onPress={onOpenChatMenu}
-            accessibilityRole="button"
-            accessibilityLabel={t('chat.a11yMenu')}
-          >
-            <FontAwesome6 name="ellipsis-vertical" iconStyle="solid" size={16} color={colors.ink} />
-          </Touchable>
-        )}
-        <AppLogo size={26} />
+        <Touchable
+          style={styles.callButton}
+          iconButton
+          onPress={onOpenChatMenu}
+          accessibilityRole="button"
+          accessibilityLabel={t('chat.a11yMenu')}
+        >
+          <FontAwesome6 name="ellipsis-vertical" iconStyle="solid" size={16} color={colors.ink} />
+        </Touchable>
       </View>
 
       {!outbox.isOnline && (
@@ -2497,6 +2517,7 @@ const makeStyles = (colors: ThemeColors) =>
     borderBottomColor: colors.line,
   },
   backButton: { paddingHorizontal: 4, paddingVertical: 4 },
+  headerIdentity: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   headerNameBlock: { flex: 1 },
   callButton: { paddingHorizontal: 4, paddingVertical: 4 },
   headerName: { fontWeight: '700', fontSize: fontSizes.body, color: colors.ink },

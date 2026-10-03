@@ -185,6 +185,12 @@
     "loadMoreFailedToast": "Couldn't load older messages.",
     "jumpToMessageFailedToast": "Couldn't open that message."
   },
+  "contactInfo": {
+    "title": "Contact info",
+    "call": "Video call",
+    "media": "Media",
+    "mute": "Mute"
+  },
   "groupInfo": {
     "title": "Group info",
     "nameLabel": "Group name",
