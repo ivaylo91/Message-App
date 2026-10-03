@@ -234,10 +234,16 @@ function ReplyQuote({
   reply,
   userId,
   isMine,
+  onPress,
+  onLongPress,
 }: {
   reply: ReplyPreview;
   userId: string | null;
   isMine: boolean;
+  onPress: () => void;
+  // Forwarded so long-pressing the quote still opens the message menu,
+  // as it would anywhere else on the bubble.
+  onLongPress: () => void;
 }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -247,7 +253,15 @@ function ReplyQuote({
     : reply.body || attachmentPreviewText(reply.attachment_type, reply.attachment_name, t) || '';
 
   return (
-    <View style={[styles.replyQuote, isMine ? styles.replyQuoteMine : styles.replyQuoteTheirs]}>
+    <Touchable
+      style={[styles.replyQuote, isMine ? styles.replyQuoteMine : styles.replyQuoteTheirs]}
+      onPress={onPress}
+      onLongPress={onLongPress}
+      // A deleted original has nothing left to jump to.
+      disabled={Boolean(reply.deleted_at)}
+      accessibilityRole="button"
+      accessibilityHint={t('chat.a11yJumpToOriginal')}
+    >
       <View style={[styles.replyQuoteBar, isMine ? styles.replyQuoteBarMine : styles.replyQuoteBarTheirs]} />
       <View style={styles.replyQuoteContent}>
         <Text
@@ -263,7 +277,7 @@ function ReplyQuote({
           {snippet}
         </Text>
       </View>
-    </View>
+    </Touchable>
   );
 }
 
@@ -483,6 +497,7 @@ interface MessageBubbleProps {
   onTogglePlay: (message: LocalMessage) => void;
   onOpenImage: (path: string) => void;
   onReply: (message: LocalMessage) => void;
+  onJumpToMessage: (messageId: string) => void;
   runPosition: RunPosition;
 }
 
@@ -502,6 +517,7 @@ function MessageBubbleComponent({
   onTogglePlay,
   onOpenImage,
   onReply,
+  onJumpToMessage,
   runPosition,
 }: MessageBubbleProps) {
   const { t, i18n } = useTranslation();
@@ -575,7 +591,13 @@ function MessageBubbleComponent({
           ]}
         >
           {message.reply_to && (
-            <ReplyQuote reply={message.reply_to} userId={userId} isMine={isMine} />
+            <ReplyQuote
+              reply={message.reply_to}
+              userId={userId}
+              isMine={isMine}
+              onPress={() => message.reply_to && onJumpToMessage(message.reply_to.id)}
+              onLongPress={openMenu}
+            />
           )}
           {message.call_status && <CallLogRow message={message} isMine={isMine} />}
           {message.attachment_type === 'image' && message.media_path && (
@@ -1518,17 +1540,23 @@ export function ChatScreen({ route, navigation }: Props) {
     setIsSearching(false);
   }, []);
 
-  // If the tapped result isn't in the ~50 messages already loaded (this
-  // screen doesn't paginate history otherwise), fetch a fresh window
-  // centered on it first - either way, highlighting + scrolling happens
-  // in the effect below once it's actually in `messages`.
-  const onSelectSearchResult = useCallback(
-    async (result: conversationsData.MessageSearchResult) => {
-      onCloseSearch();
-      const alreadyLoaded = messages.some((m) => m.id === result.id);
+  // Brings any message into view and highlights it - shared by in-chat
+  // search results and tapping a reply's quote. If it isn't in the window
+  // already loaded, a fresh window centred on it is fetched first; either
+  // way the highlight + scroll happens in the effect below once it's in
+  // `messages`.
+  //
+  // Reads messages through a ref so this keeps one identity: it is handed
+  // to every bubble, and a new function per message would defeat their
+  // memo.
+  const messagesForJumpRef = useRef(messages);
+  messagesForJumpRef.current = messages;
+  const jumpToMessage = useCallback(
+    async (messageId: string) => {
+      const alreadyLoaded = messagesForJumpRef.current.some((m) => m.id === messageId);
       if (!alreadyLoaded) {
         try {
-          const around = await conversationsData.fetchMessagesAround(conversationId, result.id);
+          const around = await conversationsData.fetchMessagesAround(conversationId, messageId);
           setMessages(around);
           // This replaces the loaded window wholesale rather than
           // extending it, so the reactions it carries are replaced too.
@@ -1537,14 +1565,27 @@ export function ChatScreen({ route, navigation }: Props) {
           );
         } catch {
           // Leave the existing window alone and say so, rather than
-          // closing search and appearing to do nothing.
+          // appearing to do nothing.
           showToast(t('chat.jumpToMessageFailedToast'));
           return;
         }
       }
-      setHighlightedMessageId(result.id);
+      setHighlightedMessageId(messageId);
     },
-    [conversationId, messages, onCloseSearch, showToast, t],
+    [conversationId, showToast, t],
+  );
+
+  const onSelectSearchResult = useCallback(
+    async (result: conversationsData.MessageSearchResult) => {
+      onCloseSearch();
+      await jumpToMessage(result.id);
+    },
+    [onCloseSearch, jumpToMessage],
+  );
+
+  const onJumpToMessage = useCallback(
+    (messageId: string) => void jumpToMessage(messageId),
+    [jumpToMessage],
   );
 
   useEffect(() => {
@@ -2057,6 +2098,7 @@ export function ChatScreen({ route, navigation }: Props) {
         onTogglePlay={onTogglePlay}
         onOpenImage={onOpenImage}
         onReply={onReplyToMessage}
+        onJumpToMessage={onJumpToMessage}
         runPosition={runPositionByMessageId.get(item.id) ?? 'single'}
       />
     ),
@@ -2075,6 +2117,7 @@ export function ChatScreen({ route, navigation }: Props) {
       onTogglePlay,
       onOpenImage,
       onReplyToMessage,
+      onJumpToMessage,
       runPositionByMessageId,
     ],
   );
