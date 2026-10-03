@@ -106,6 +106,13 @@ type Props = NativeStackScreenProps<AppStackParamList, 'Chat'>;
 
 const QUICK_REACTIONS = ['❤️', '👍', '😂', '😮', '😢', '🙏'];
 const NO_REACTED: ReadonlySet<string> = new Set();
+
+type MessageStatus = 'pending' | 'sent' | 'read';
+const STATUS_ICONS: Record<MessageStatus, 'clock' | 'check' | 'check-double'> = {
+  pending: 'clock',
+  sent: 'check',
+  read: 'check-double',
+};
 const NO_ACTIONS: MessageMenuAction[] = [];
 
 // Stands in for a sender who is no longer in the participant list (they
@@ -483,6 +490,8 @@ interface MessageBubbleProps {
   reactions: MessageReaction[];
   userId: string | null;
   isHighlighted: boolean;
+  // Mine only; null on other people's messages.
+  status: MessageStatus | null;
   seenBy: SeenBy;
   bubbleMaxWidth: number;
   isPlaying: boolean;
@@ -508,6 +517,7 @@ function MessageBubbleComponent({
   reactions,
   userId,
   isHighlighted,
+  status,
   seenBy,
   bubbleMaxWidth,
   isPlaying,
@@ -656,6 +666,19 @@ function MessageBubbleComponent({
             <Text style={isMine ? styles.metaTextMine : styles.metaTextTheirs}>
               {formatMessageTime(message.created_at, i18n.language)}
             </Text>
+            {status && (
+              <FontAwesome6
+                name={STATUS_ICONS[status]}
+                iconStyle="solid"
+                size={10}
+                color={colors.white}
+                // Read stands out by being double and fully opaque; a
+                // colour change would fight whichever bubble gradient the
+                // user has picked.
+                style={status === 'read' ? styles.statusRead : styles.statusMuted}
+                accessibilityLabel={t(`chat.status.${status}`)}
+              />
+            )}
           </View>
         </LinearGradient>
       </Touchable>
@@ -1866,8 +1889,13 @@ export function ChatScreen({ route, navigation }: Props) {
   // and groups (participants who've read different amounts each land
   // under their own newest-seen message, stacking together when several
   // people happen to have read up to the same point).
+  //
+  // Groups only: in a one-to-one chat the ticks below already say it, and
+  // an avatar as well was the same fact twice. In a group the avatars add
+  // what ticks can't - who has read how far.
   const seenAvatarsByMessageId = useMemo(() => {
     const result = new Map<string, { name: string; avatarPath: string | null }[]>();
+    if (!isGroup) return result;
     for (const participant of participants) {
       if (participant.user_id === userId || !participant.last_read_at) continue;
       const readAt = new Date(participant.last_read_at).getTime();
@@ -1883,7 +1911,24 @@ export function ChatScreen({ route, navigation }: Props) {
       result.set(seen.id, list);
     }
     return result;
-  }, [participants, messages, userId]);
+  }, [participants, messages, userId, isGroup]);
+
+  // Everything of mine sent at or before this moment has been read by
+  // every other participant - what turns ✓ into ✓✓. Null when anyone
+  // hasn't read anything, or hides their receipts (the server keeps their
+  // last_read_at null - see 20260927_add_privacy_settings.sql), so their
+  // messages stay at a single tick rather than claiming a read we can't
+  // see. There is no separate "delivered" state: nothing records delivery.
+  const readByEveryoneUntilMs = useMemo(() => {
+    const others = participants.filter((p) => p.user_id !== userId);
+    if (others.length === 0) return null;
+    let min = Infinity;
+    for (const participant of others) {
+      if (!participant.last_read_at) return null;
+      min = Math.min(min, new Date(participant.last_read_at).getTime());
+    }
+    return min;
+  }, [participants, userId]);
 
   // The list is inverted, so offset 0 is the newest message at the
   // bottom - scrolling "up" through history moves the offset up.
@@ -2089,6 +2134,16 @@ export function ChatScreen({ route, navigation }: Props) {
         reactions={reactionsByMessageId.get(item.id) ?? NO_REACTIONS}
         userId={userId}
         isHighlighted={item.id === highlightedMessageId}
+        status={
+          item.sender_id !== userId
+            ? null
+            : item._pending
+              ? 'pending'
+              : readByEveryoneUntilMs !== null &&
+                  new Date(item.created_at).getTime() <= readByEveryoneUntilMs
+                ? 'read'
+                : 'sent'
+        }
         bubbleMaxWidth={bubbleMaxWidth}
         isPlaying={playingMessageId === item.id}
         seenBy={seenAvatarsByMessageId.get(item.id) ?? NO_SEEN_BY}
@@ -2108,6 +2163,7 @@ export function ChatScreen({ route, navigation }: Props) {
       senderNames,
       reactionsByMessageId,
       highlightedMessageId,
+      readByEveryoneUntilMs,
       bubbleMaxWidth,
       playingMessageId,
       seenAvatarsByMessageId,
@@ -2760,6 +2816,8 @@ const makeStyles = (colors: ThemeColors) =>
   },
   metaTextMine: { fontSize: fontSizes.micro, color: colors.white, opacity: 0.75 },
   metaTextTheirs: { fontSize: fontSizes.micro, color: colors.smoke },
+  statusMuted: { opacity: 0.75 },
+  statusRead: { opacity: 1 },
   dayDivider: { alignItems: 'center', marginVertical: spacing.md },
   dayDividerText: {
     fontSize: fontSizes.caption,

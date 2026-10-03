@@ -171,6 +171,11 @@
     "a11yCall": "Start video call",
     "a11yMenu": "More options",
     "a11yJumpToOriginal": "Shows the original message",
+    "status": {
+      "pending": "Sending",
+      "sent": "Sent",
+      "read": "Read"
+    },
     "a11yAttachFile": "Attach a file",
     "a11yAttachPhoto": "Attach a photo",
     "a11yRecord": "Record a voice message",
