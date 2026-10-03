@@ -1,10 +1,18 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { notMuted, selectRecipients } from "./recipients.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const FIREBASE_SERVICE_ACCOUNT = Deno.env.get("FIREBASE_SERVICE_ACCOUNT");
 const WEBHOOK_SECRET = Deno.env.get("WEBHOOK_SECRET");
+
+// The type of the client this function actually creates. Not
+// ReturnType<typeof createClient>: with no type arguments that resolves to
+// a client whose schema is `never`, which types every query result as
+// `never` too.
+const createServiceClient = () => createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+type Supabase = ReturnType<typeof createServiceClient>;
 
 interface ServiceAccount {
   project_id: string;
@@ -138,7 +146,7 @@ function genericBodyFor(message: { attachment_type?: string | null }): string {
 
 // Shared by both kinds of push. Returns how many tokens were sent to.
 async function pushToUsers(
-  supabase: ReturnType<typeof createClient>,
+  supabase: Supabase,
   userIds: string[],
   title: string,
   body: string,
@@ -164,18 +172,11 @@ async function pushToUsers(
   return tokens.length;
 }
 
-// Not muted, or the mute has expired - the same rule the message path uses.
-function notMuted(mutedUntil: string | null, now: number): boolean {
-  if (!mutedUntil) return true;
-  const until = new Date(mutedUntil).getTime();
-  return Number.isNaN(until) || until <= now;
-}
-
 // Someone reacted to a message: notify only its author. Deliberately not
 // everyone in the conversation - a reaction concerns the person whose
 // message it was.
 async function handleReaction(
-  supabase: ReturnType<typeof createClient>,
+  supabase: Supabase,
   reaction: {
     message_id: string;
     conversation_id: string;
@@ -242,7 +243,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     const payload = await req.json();
-    const supabaseClient = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+    const supabaseClient = createServiceClient();
 
     // The reaction trigger posts { reaction: ... }; the message trigger
     // posts { record: ... }. Branching on the key keeps both kinds sharing
@@ -269,28 +270,13 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ skipped: true }), { status: 200 });
     }
 
-    // Mute is enforced here rather than on the client: the point is not to
-    // be woken, so the push must not be sent at all. An expired mute is
-    // indistinguishable from no mute, which is why nothing has to clear
-    // old values. Muting is per participant - everyone else in a group
-    // still gets notified.
-    //
-    // An @mention is the exception: being named is the case mute is not
-    // meant to silence, so a mentioned participant is pushed regardless,
-    // with a body saying so. Only ids that are actually participants
-    // count - `participants` is this conversation's, so an id in mentions
-    // for anyone else reaches no one.
-    const now = Date.now();
-    const mentioned = new Set<string>(Array.isArray(message.mentions) ? message.mentions : []);
-    const mentionedIds = participants
-      .filter((p: { user_id: string }) => mentioned.has(p.user_id))
-      .map((p: { user_id: string }) => p.user_id);
-    const recipientIds = participants
-      .filter(
-        (p: { user_id: string; muted_until: string | null }) =>
-          !mentioned.has(p.user_id) && notMuted(p.muted_until, now),
-      )
-      .map((p: { user_id: string }) => p.user_id);
+    // Who gets the usual push and who gets "Mentioned you" - mute and
+    // mention rules live in recipients.ts, with tests.
+    const { regular: recipientIds, mentioned: mentionedIds } = selectRecipients(
+      participants,
+      message.mentions,
+      Date.now(),
+    );
 
     if (!recipientIds.length && !mentionedIds.length) {
       return new Response(JSON.stringify({ skipped: true, reason: "all muted" }), {

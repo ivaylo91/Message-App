@@ -509,12 +509,17 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
     // caller's side ever sets callChannelRef) - the fallback outcome is
     // just to satisfy cleanupCall's signature.
     cleanupCall('declined');
+    // cleanupCall reads only refs and state setters, so the copy from any
+    // render behaves the same - listing it would rebuild this every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   const endCall = useCallback(() => {
     if (statusRef.current === 'idle') return;
     activeChannel()?.send({ type: 'broadcast', event: 'call-end', payload: { from: userId } });
     cleanupCall('missed');
+    // See declineCall.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
   const toggleMute = useCallback(() => {

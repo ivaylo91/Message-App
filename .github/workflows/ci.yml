@@ -1,0 +1,58 @@
+# Runs on every push and pull request. Catches the class of mistake that
+# otherwise only surfaces in a 30-minute EAS build or on a device: type
+# errors, lint errors (missing imports, unused variables), failing tests,
+# and Edge Functions that no longer typecheck.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+# A newer push to the same branch makes an in-progress run pointless.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  mobile:
+    name: App - typecheck, lint, test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # The minimum package.json's engines field allows.
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test -- --ci
+
+  edge-functions:
+    name: Edge Functions - typecheck, test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Typecheck
+        run: deno check supabase/functions/*/index.ts
+
+      - name: Test
+        run: deno test supabase/functions
