@@ -22,7 +22,6 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableWithoutFeedback,
   View,
 } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
@@ -78,6 +77,8 @@ import {
   messageIdsStartingADay,
 } from '../utils/messagePreview';
 import { haptic } from '../utils/haptics';
+import Clipboard from '@react-native-clipboard/clipboard';
+import { MessageMenu, MessageMenuAction } from '../components/MessageMenu';
 import { hasLink, linkifyText } from '../utils/linkify';
 import { runPositions, showsSenderName, type RunPosition } from '../utils/messageGrouping';
 import * as draftStorage from '../drafts/draftStorage';
@@ -102,6 +103,8 @@ import {
 type Props = NativeStackScreenProps<AppStackParamList, 'Chat'>;
 
 const QUICK_REACTIONS = ['❤️', '👍', '😂', '😮', '😢', '🙏'];
+const NO_REACTED: ReadonlySet<string> = new Set();
+const NO_ACTIONS: MessageMenuAction[] = [];
 
 // Stands in for a sender who is no longer in the participant list (they
 // left, or were removed) when building a reply preview - the preview only
@@ -463,7 +466,6 @@ interface MessageBubbleProps {
   senderName: string | null;
   reactions: MessageReaction[];
   userId: string | null;
-  isPickerOpen: boolean;
   isHighlighted: boolean;
   seenBy: SeenBy;
   bubbleMaxWidth: number;
@@ -472,16 +474,12 @@ interface MessageBubbleProps {
   // a divider above itself. A string rather than a date, so it stays
   // comparable by value and the memo below still holds.
   dayLabel: string | null;
-  onLongPress: (messageId: string) => void;
-  onDismissPicker: () => void;
+  // Receives where the bubble sits on screen, so the menu can lift it in
+  // place - see MessageMenu.
+  onLongPress: (message: LocalMessage, anchor: { y: number; height: number }) => void;
   onToggleReaction: (messageId: string, emoji: string) => void;
-  onEdit: (message: LocalMessage) => void;
-  onDelete: (messageId: string) => void;
-  onReply: (message: LocalMessage) => void;
-  onReport: (message: LocalMessage) => void;
   onTogglePlay: (message: LocalMessage) => void;
   onOpenImage: (path: string) => void;
-  onForward: (message: LocalMessage) => void;
   runPosition: RunPosition;
 }
 
@@ -491,22 +489,15 @@ function MessageBubbleComponent({
   senderName,
   reactions,
   userId,
-  isPickerOpen,
   isHighlighted,
   seenBy,
   bubbleMaxWidth,
   isPlaying,
   dayLabel,
   onLongPress,
-  onDismissPicker,
   onToggleReaction,
-  onEdit,
-  onDelete,
-  onReply,
-  onReport,
   onTogglePlay,
   onOpenImage,
-  onForward,
   runPosition,
 }: MessageBubbleProps) {
   const { t, i18n } = useTranslation();
@@ -516,6 +507,13 @@ function MessageBubbleComponent({
     () => summarizeReactions(reactions, userId),
     [reactions, userId],
   );
+
+  const bubbleRef = useRef<View>(null);
+  const openMenu = useCallback(() => {
+    const node = bubbleRef.current;
+    if (!node) return;
+    node.measureInWindow((_x, y, _width, height) => onLongPress(message, { y, height }));
+  }, [message, onLongPress]);
 
   // Flatten the corner facing a neighbour in the same run, on the sender's
   // own side - which is what turns a stack of identical rounded islands
@@ -549,10 +547,10 @@ function MessageBubbleComponent({
       {senderName && showsSenderName(runPosition) && (
         <Text style={styles.senderLabel}>{senderName}</Text>
       )}
-      <Touchable
-        onLongPress={() => onLongPress(message.id)}
-        onPress={onDismissPicker}
-      >
+      {/* collapsable={false}: Android drops plain wrapper views from the
+          native tree, and a dropped view can't be measured. */}
+      <View ref={bubbleRef} collapsable={false}>
+      <Touchable onLongPress={openMenu}>
         <LinearGradient
           colors={isMine ? [...gradients.mine] : [...gradients.theirs]}
           start={{ x: 0, y: 0 }}
@@ -575,7 +573,7 @@ function MessageBubbleComponent({
               // or photos would be the one message type you can't react
               // to, reply to or delete.
               onPress={() => onOpenImage(message.media_path as string)}
-              onLongPress={() => onLongPress(message.id)}
+              onLongPress={openMenu}
               disabled={message._pending}
               accessibilityRole="imagebutton"
               accessibilityLabel={t('chat.a11yOpenPhoto')}
@@ -628,6 +626,7 @@ function MessageBubbleComponent({
           </View>
         </LinearGradient>
       </Touchable>
+      </View>
 
       {summary.length > 0 && (
         <View style={styles.reactionRow}>
@@ -639,58 +638,6 @@ function MessageBubbleComponent({
             />
           ))}
         </View>
-      )}
-
-      {isPickerOpen && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={[styles.picker, { maxWidth: bubbleMaxWidth }]}
-          contentContainerStyle={styles.pickerContent}
-        >
-          {QUICK_REACTIONS.map((emoji) => (
-            <Touchable
-              key={emoji}
-              onPress={() => onToggleReaction(message.id, emoji)}
-              style={styles.pickerEmoji}
-            >
-              <Text style={styles.pickerEmojiText}>{emoji}</Text>
-            </Touchable>
-          ))}
-          {!message._pending && (
-            <Touchable onPress={() => onReply(message)} style={styles.pickerEmoji}>
-              <Text style={styles.pickerActionText}>{t('chat.reply')}</Text>
-            </Touchable>
-          )}
-          {/* Text and attachments alike - an attachment is copied into the
-              target conversation's folder on send (see
-              copyMediaToConversation). A pending message has no server
-              copy yet to forward. */}
-          {(message.body || message.media_path) && !message._pending && (
-            <Touchable onPress={() => onForward(message)} style={styles.pickerEmoji}>
-              <Text style={styles.pickerActionText}>{t('chat.forward')}</Text>
-            </Touchable>
-          )}
-          {isMine && message.body && (
-            <Touchable onPress={() => onEdit(message)} style={styles.pickerEmoji}>
-              <Text style={styles.pickerActionText}>{t('chat.edit')}</Text>
-            </Touchable>
-          )}
-          {isMine && (
-            <Touchable onPress={() => onDelete(message.id)} style={styles.pickerEmoji}>
-              <Text style={[styles.pickerActionText, styles.pickerDeleteText]}>
-                {t('chat.delete')}
-              </Text>
-            </Touchable>
-          )}
-          {!isMine && !message._pending && (
-            <Touchable onPress={() => onReport(message)} style={styles.pickerEmoji}>
-              <Text style={[styles.pickerActionText, styles.pickerDeleteText]}>
-                {t('chat.reportTitle')}
-              </Text>
-            </Touchable>
-          )}
-        </ScrollView>
       )}
 
       {seenBy.length > 0 && (
@@ -846,7 +793,11 @@ export function ChatScreen({ route, navigation }: Props) {
   );
   const [isGroup, setIsGroup] = useState(false);
   const [draft, setDraft] = useState('');
-  const [pickerMessageId, setPickerMessageId] = useState<string | null>(null);
+  const [menuTarget, setMenuTarget] = useState<{
+    message: LocalMessage;
+    anchorY: number;
+    anchorHeight: number;
+  } | null>(null);
   const [editingMessageId, setEditingMessageId] = useState<string | null>(
     null,
   );
@@ -1444,7 +1395,7 @@ export function ChatScreen({ route, navigation }: Props) {
     async (messageId: string, emoji: string) => {
       if (!userId) return;
       haptic('select');
-      setPickerMessageId(null);
+      setMenuTarget(null);
       // Read through the ref rather than depending on `reactions`
       // directly: that dependency gave this callback a new identity on
       // every incoming reaction, which changed a prop on every bubble
@@ -1476,7 +1427,7 @@ export function ChatScreen({ route, navigation }: Props) {
 
   const onEditMessage = useCallback((message: Message) => {
     if (!message.body) return;
-    setPickerMessageId(null);
+    setMenuTarget(null);
     setReplyingTo(null);
     setEditingMessageId(message.id);
     setDraft(message.body);
@@ -1489,7 +1440,7 @@ export function ChatScreen({ route, navigation }: Props) {
 
   const onReplyToMessage = useCallback(
     (message: LocalMessage) => {
-      setPickerMessageId(null);
+      setMenuTarget(null);
       setEditingMessageId(null);
       const profile = participants.find(
         (p) => p.user_id === message.sender_id,
@@ -1512,7 +1463,7 @@ export function ChatScreen({ route, navigation }: Props) {
 
   const onDeleteMessage = useCallback(
     (messageId: string) => {
-      setPickerMessageId(null);
+      setMenuTarget(null);
       void confirm({
         title: t('chat.deleteConfirmTitle'),
         message: t('chat.deleteConfirmMessage'),
@@ -1770,21 +1721,19 @@ export function ChatScreen({ route, navigation }: Props) {
     return labels;
   }, [displayMessages, t, i18n.language]);
 
-  const onTogglePicker = useCallback((messageId: string) => {
-    setPickerMessageId((current) => {
-      const next = current === messageId ? null : messageId;
-      // Only on the way in - a tick when the picker closes would fire on
-      // every dismissing tap elsewhere in the thread.
-      if (next !== null) haptic('press');
-      return next;
-    });
-  }, []);
+  const onOpenMenu = useCallback(
+    (message: LocalMessage, anchor: { y: number; height: number }) => {
+      haptic('press');
+      setMenuTarget({ message, anchorY: anchor.y, anchorHeight: anchor.height });
+    },
+    [],
+  );
 
-  const onDismissPicker = useCallback(() => setPickerMessageId(null), []);
+  const onCloseMenu = useCallback(() => setMenuTarget(null), []);
 
   const onReportMessage = useCallback(
     (message: LocalMessage) => {
-      setPickerMessageId(null);
+      setMenuTarget(null);
       onReportUser(message.sender_id, message.id);
     },
     [onReportUser],
@@ -1876,7 +1825,7 @@ export function ChatScreen({ route, navigation }: Props) {
   // a stale list is worse than a brief spinner.
   const onForward = useCallback(
     (message: LocalMessage) => {
-      setPickerMessageId(null);
+      setMenuTarget(null);
       setForwardingMessage(message);
       setForwardTargets(null);
       if (!userId) return;
@@ -1921,6 +1870,105 @@ export function ChatScreen({ route, navigation }: Props) {
     [forwardingMessage, userId, showToast, t],
   );
 
+  // The menu's contents for the message it's open on. The conditions are
+  // the ones the old strip used; Copy is new.
+  const menu = useMemo(() => {
+    if (!menuTarget) return null;
+    const { message } = menuTarget;
+    const isMine = message.sender_id === userId;
+    const pending = Boolean(message._pending);
+    const actions: MessageMenuAction[] = [];
+    if (!pending) {
+      actions.push({
+        id: 'reply',
+        label: t('chat.reply'),
+        icon: 'reply',
+        onPress: () => onReplyToMessage(message),
+      });
+    }
+    if (message.body) {
+      const body = message.body;
+      actions.push({
+        id: 'copy',
+        label: t('chat.copy'),
+        icon: 'copy',
+        onPress: () => {
+          setMenuTarget(null);
+          Clipboard.setString(body);
+          showToast(t('chat.copiedToast'));
+        },
+      });
+    }
+    if ((message.body || message.media_path) && !pending) {
+      actions.push({
+        id: 'forward',
+        label: t('chat.forward'),
+        icon: 'share',
+        onPress: () => onForward(message),
+      });
+    }
+    if (isMine && message.body) {
+      actions.push({
+        id: 'edit',
+        label: t('chat.edit'),
+        icon: 'pen',
+        onPress: () => onEditMessage(message),
+      });
+    }
+    if (isMine) {
+      actions.push({
+        id: 'delete',
+        label: t('chat.delete'),
+        icon: 'trash',
+        destructive: true,
+        onPress: () => onDeleteMessage(message.id),
+      });
+    }
+    if (!isMine && !pending) {
+      actions.push({
+        id: 'report',
+        label: t('chat.reportTitle'),
+        icon: 'flag',
+        destructive: true,
+        onPress: () => onReportMessage(message),
+      });
+    }
+    const reactedEmojis = new Set(
+      (reactionsByMessageId.get(message.id) ?? NO_REACTIONS)
+        .filter((r) => r.user_id === userId)
+        .map((r) => r.emoji),
+    );
+    const previewText =
+      message.body ||
+      attachmentPreviewText(message.attachment_type, message.attachment_name, t) ||
+      callStatusPreviewText(message.call_status, message.attachment_duration_ms, t) ||
+      '';
+    return {
+      target: {
+        anchorY: menuTarget.anchorY,
+        anchorHeight: menuTarget.anchorHeight,
+        isMine,
+        previewText,
+      },
+      // A message still sending has nothing on the server to react to.
+      reactions: pending ? [] : QUICK_REACTIONS,
+      reactedEmojis,
+      actions,
+      messageId: message.id,
+    };
+  }, [
+    menuTarget,
+    userId,
+    t,
+    showToast,
+    reactionsByMessageId,
+    onReplyToMessage,
+    onForward,
+    onEditMessage,
+    onDeleteMessage,
+    onReportMessage,
+  ]);
+
   const forwardTargetTitle = useCallback(
     (conversation: Conversation) => {
       if (conversation.is_group) return conversation.name ?? t('conversations.groupChat');
@@ -1945,22 +1993,15 @@ export function ChatScreen({ route, navigation }: Props) {
         }
         reactions={reactionsByMessageId.get(item.id) ?? NO_REACTIONS}
         userId={userId}
-        isPickerOpen={pickerMessageId === item.id}
         isHighlighted={item.id === highlightedMessageId}
         bubbleMaxWidth={bubbleMaxWidth}
         isPlaying={playingMessageId === item.id}
         seenBy={seenAvatarsByMessageId.get(item.id) ?? NO_SEEN_BY}
         dayLabel={dayLabelsByMessageId.get(item.id) ?? null}
-        onLongPress={onTogglePicker}
-        onDismissPicker={onDismissPicker}
+        onLongPress={onOpenMenu}
         onToggleReaction={onToggleReactionForMessage}
-        onEdit={onEditMessage}
-        onDelete={onDeleteMessage}
-        onReply={onReplyToMessage}
-        onReport={onReportMessage}
         onTogglePlay={onTogglePlay}
         onOpenImage={onOpenImage}
-        onForward={onForward}
         runPosition={runPositionByMessageId.get(item.id) ?? 'single'}
       />
     ),
@@ -1969,22 +2010,15 @@ export function ChatScreen({ route, navigation }: Props) {
       isGroup,
       senderNames,
       reactionsByMessageId,
-      pickerMessageId,
       highlightedMessageId,
       bubbleMaxWidth,
       playingMessageId,
       seenAvatarsByMessageId,
       dayLabelsByMessageId,
-      onTogglePicker,
-      onDismissPicker,
+      onOpenMenu,
       onToggleReactionForMessage,
-      onEditMessage,
-      onDeleteMessage,
-      onReplyToMessage,
-      onReportMessage,
       onTogglePlay,
       onOpenImage,
-      onForward,
       runPositionByMessageId,
     ],
   );
@@ -1996,7 +2030,6 @@ export function ChatScreen({ route, navigation }: Props) {
       keyboardVerticalOffset={0}
     >
       <AppWallpaper />
-      <TouchableWithoutFeedback onPress={() => setPickerMessageId(null)}>
       <View style={[styles.content, { maxWidth: contentWidth }]}>
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
         <Touchable
@@ -2339,6 +2372,15 @@ export function ChatScreen({ route, navigation }: Props) {
         onClose={() => setViewerPath(null)}
       />
 
+      <MessageMenu
+        target={menu?.target ?? null}
+        reactions={menu?.reactions ?? QUICK_REACTIONS}
+        reactedEmojis={menu?.reactedEmojis ?? NO_REACTED}
+        actions={menu?.actions ?? NO_ACTIONS}
+        onReact={(emoji) => menu && onToggleReactionForMessage(menu.messageId, emoji)}
+        onClose={onCloseMenu}
+      />
+
       <Modal
         visible={forwardingMessage !== null}
         transparent
@@ -2424,7 +2466,6 @@ export function ChatScreen({ route, navigation }: Props) {
         </View>
       </Modal>
       </View>
-      </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
 }
@@ -2697,26 +2738,6 @@ const makeStyles = (colors: ThemeColors) =>
   },
   reactionPillMine: { borderColor: colors.ember },
   reactionPillText: { fontSize: fontSizes.footnote },
-  picker: {
-    backgroundColor: colors.paper2,
-    borderRadius: radii.xl,
-    marginTop: 6,
-    shadowColor: colors.ink,
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 3,
-  },
-  pickerContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-  },
-  pickerEmoji: { paddingHorizontal: 6 },
-  pickerEmojiText: { fontSize: fontSizes.title },
-  pickerActionText: { fontSize: fontSizes.body, color: colors.ember, fontWeight: '600' },
-  pickerDeleteText: { color: colors.danger },
   seenAvatar: { marginTop: 4, flexDirection: 'row', gap: 2 },
   typingBubble: {
     flexDirection: 'row',

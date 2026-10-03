@@ -157,6 +157,8 @@
     "jumpToLatest": "Към последните",
     "a11yOpenPhoto": "Отваряне на снимката",
     "forward": "Препращане",
+    "copy": "Копиране",
+    "copiedToast": "Копирано в клипборда.",
     "forwardTitle": "Препращане към",
     "forwardedToast": "Съобщението е препратено.",
     "forwardFailedTitle": "Съобщението не беше препратено",

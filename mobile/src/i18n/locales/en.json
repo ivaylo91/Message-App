@@ -157,6 +157,8 @@
     "jumpToLatest": "Jump to latest",
     "a11yOpenPhoto": "Open photo",
     "forward": "Forward",
+    "copy": "Copy",
+    "copiedToast": "Copied to clipboard.",
     "forwardTitle": "Forward to",
     "forwardedToast": "Message forwarded.",
     "forwardFailedTitle": "Couldn't forward message",
