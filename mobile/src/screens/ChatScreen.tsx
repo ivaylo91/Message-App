@@ -79,6 +79,7 @@ import {
 import { haptic } from '../utils/haptics';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { MessageMenu, MessageMenuAction } from '../components/MessageMenu';
+import { SwipeToReply } from '../components/SwipeToReply';
 import { hasLink, linkifyText } from '../utils/linkify';
 import { runPositions, showsSenderName, type RunPosition } from '../utils/messageGrouping';
 import * as draftStorage from '../drafts/draftStorage';
@@ -480,6 +481,7 @@ interface MessageBubbleProps {
   onToggleReaction: (messageId: string, emoji: string) => void;
   onTogglePlay: (message: LocalMessage) => void;
   onOpenImage: (path: string) => void;
+  onReply: (message: LocalMessage) => void;
   runPosition: RunPosition;
 }
 
@@ -498,6 +500,7 @@ function MessageBubbleComponent({
   onToggleReaction,
   onTogglePlay,
   onOpenImage,
+  onReply,
   runPosition,
 }: MessageBubbleProps) {
   const { t, i18n } = useTranslation();
@@ -549,6 +552,13 @@ function MessageBubbleComponent({
       )}
       {/* collapsable={false}: Android drops plain wrapper views from the
           native tree, and a dropped view can't be measured. */}
+      {/* Same rule as the menu's Reply: a message still sending has no
+          server row yet to reply to. */}
+      <SwipeToReply
+        enabled={!message._pending}
+        onReply={() => onReply(message)}
+        iconColor={colors.smoke}
+      >
       <View ref={bubbleRef} collapsable={false}>
       <Touchable onLongPress={openMenu}>
         <LinearGradient
@@ -627,6 +637,7 @@ function MessageBubbleComponent({
         </LinearGradient>
       </Touchable>
       </View>
+      </SwipeToReply>
 
       {summary.length > 0 && (
         <View style={styles.reactionRow}>
@@ -2002,6 +2013,7 @@ export function ChatScreen({ route, navigation }: Props) {
         onToggleReaction={onToggleReactionForMessage}
         onTogglePlay={onTogglePlay}
         onOpenImage={onOpenImage}
+        onReply={onReplyToMessage}
         runPosition={runPositionByMessageId.get(item.id) ?? 'single'}
       />
     ),
@@ -2019,6 +2031,7 @@ export function ChatScreen({ route, navigation }: Props) {
       onToggleReactionForMessage,
       onTogglePlay,
       onOpenImage,
+      onReplyToMessage,
       runPositionByMessageId,
     ],
   );
