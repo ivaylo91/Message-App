@@ -5,8 +5,9 @@
  */
 
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, StatusBar, View } from 'react-native';
+import { ActivityIndicator, StatusBar, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider } from './src/auth/AuthContext';
 import { PresenceProvider } from './src/presence/PresenceContext';
 import { MessageStreamProvider } from './src/messages/MessageStreamContext';
@@ -71,12 +72,20 @@ function AppContent() {
 
 function App() {
   return (
-    <SafeAreaProvider>
-      <ThemeProvider>
-        <AppContent />
-      </ThemeProvider>
-    </SafeAreaProvider>
+    // Outermost: gestures (swipe-to-reply, the message menu) only work
+    // inside it, including in modals and sheets rendered from below.
+    <GestureHandlerRootView style={styles.root}>
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <AppContent />
+        </ThemeProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  root: { flex: 1 },
+});
 
 export default App;
