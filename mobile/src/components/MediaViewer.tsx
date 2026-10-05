@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next';
 import * as mediaData from '../data/media';
 import { fontSizes, spacing } from '../theme/tokens';
 import { Touchable } from './Touchable';
+import { ZoomableImage } from './ZoomableImage';
 
 // Full-screen photo viewer. Before this, tapping a photo in a chat did
 // nothing at all, and tapping one in the media gallery handed the
@@ -24,8 +25,9 @@ import { Touchable } from './Touchable';
 //
 // Paging is a horizontal FlatList with pagingEnabled rather than a
 // gesture library: swiping between photos is exactly what that does,
-// and it needs no native dependency. Pinch-to-zoom is the one thing
-// genuinely missing, and it *would* need react-native-gesture-handler.
+// and it needs no native dependency. Zoom (pinch, pan, double tap) is
+// layered on each page by ZoomableImage, which turns the pager off while
+// a photo is zoomed so a swipe moves around the photo instead.
 interface MediaViewerProps {
   // Every photo in the current context (the loaded chat history, or the
   // gallery's photos tab), so the viewer can page between them.
@@ -35,7 +37,19 @@ interface MediaViewerProps {
   onClose: () => void;
 }
 
-function ViewerPage({ path, width }: { path: string; width: number }) {
+function ViewerPage({
+  path,
+  width,
+  height,
+  active,
+  onZoomChange,
+}: {
+  path: string;
+  width: number;
+  height: number;
+  active: boolean;
+  onZoomChange: (zoomed: boolean) => void;
+}) {
   const [url, setUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -57,13 +71,15 @@ function ViewerPage({ path, width }: { path: string; width: number }) {
   return (
     <View style={[styles.page, { width }]}>
       {url ? (
-        <FastImage
-          source={{ uri: url }}
-          style={styles.image}
-          // contain, not cover: this is the view where seeing the whole
-          // photo matters more than filling the frame.
-          resizeMode={FastImage.resizeMode.contain}
-        />
+        <ZoomableImage width={width} height={height} active={active} onZoomChange={onZoomChange}>
+          <FastImage
+            source={{ uri: url }}
+            style={styles.image}
+            // contain, not cover: this is the view where seeing the whole
+            // photo matters more than filling the frame.
+            resizeMode={FastImage.resizeMode.contain}
+          />
+        </ZoomableImage>
       ) : (
         <ActivityIndicator color="#fff" />
       )}
@@ -74,7 +90,7 @@ function ViewerPage({ path, width }: { path: string; width: number }) {
 export function MediaViewer({ paths, initialPath, onClose }: MediaViewerProps) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
   const listRef = useRef<FlatList<string>>(null);
 
   const initialIndex = useMemo(() => {
@@ -83,6 +99,9 @@ export function MediaViewer({ paths, initialPath, onClose }: MediaViewerProps) {
   }, [paths, initialPath]);
 
   const [index, setIndex] = useState(initialIndex);
+  // While the current photo is zoomed, a swipe moves around it rather than
+  // to the next photo.
+  const [isZoomed, setIsZoomed] = useState(false);
 
   // Re-sync when a different photo is opened while the component stays
   // mounted - the Modal is rendered by a screen that never unmounts.
@@ -94,6 +113,7 @@ export function MediaViewer({ paths, initialPath, onClose }: MediaViewerProps) {
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
       const page = Math.round(event.nativeEvent.contentOffset.x / width);
       setIndex(page);
+      setIsZoomed(false);
     },
     [width],
   );
@@ -108,8 +128,16 @@ export function MediaViewer({ paths, initialPath, onClose }: MediaViewerProps) {
   );
 
   const renderItem = useCallback(
-    ({ item }: { item: string }) => <ViewerPage path={item} width={width} />,
-    [width],
+    ({ item, index: itemIndex }: { item: string; index: number }) => (
+      <ViewerPage
+        path={item}
+        width={width}
+        height={height}
+        active={itemIndex === index}
+        onZoomChange={setIsZoomed}
+      />
+    ),
+    [width, height, index],
   );
 
   return (
@@ -129,6 +157,10 @@ export function MediaViewer({ paths, initialPath, onClose }: MediaViewerProps) {
           renderItem={renderItem}
           horizontal
           pagingEnabled
+          scrollEnabled={!isZoomed}
+          // renderItem depends on which page is current (to reset the
+          // others' zoom); extraData makes the list re-render on a change.
+          extraData={index}
           showsHorizontalScrollIndicator={false}
           initialScrollIndex={initialIndex}
           getItemLayout={getItemLayout}
