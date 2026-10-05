@@ -576,11 +576,21 @@ export function ConversationsScreen({ navigation }: Props) {
         refreshControl={
           <RefreshControl refreshing={isRefreshing} onRefresh={load} />
         }
+        // While searching, both sections read the same way - a heading,
+        // then results or a one-line "nothing here". The full-size empty
+        // state used to fill this spot when no conversation matched,
+        // pushing the message results that did match halfway down the
+        // screen.
         ListHeaderComponent={
-          trimmedSearchQuery && filteredConversations.length > 0 ? (
-            <Text style={styles.sectionHeading}>
-              {t('conversations.conversationsSection')}
-            </Text>
+          trimmedSearchQuery ? (
+            <View>
+              <Text style={styles.sectionHeading}>
+                {t('conversations.conversationsSection')}
+              </Text>
+              {filteredConversations.length === 0 && (
+                <Text style={styles.sectionHint}>{t('conversations.noSearchResults')}</Text>
+              )}
+            </View>
           ) : null
         }
         ListFooterComponent={
@@ -677,35 +687,24 @@ export function ConversationsScreen({ navigation }: Props) {
           // while the list is still arriving states something untrue.
           !hasLoadedOnce ? (
             <ConversationListSkeleton />
-          ) : (
+          ) : trimmedSearchQuery ? null : (
           <View style={styles.empty}>
             <View style={styles.emptyIcon}>
-              <FontAwesome6
-                name={trimmedSearchQuery ? 'magnifying-glass' : 'comments'}
-                iconStyle="solid"
-                size={26}
-                color={colors.smoke}
-              />
+              <FontAwesome6 name="comments" iconStyle="solid" size={26} color={colors.smoke} />
             </View>
-            {trimmedSearchQuery ? (
-              <Text style={styles.emptyTitle}>{t('conversations.noSearchResults')}</Text>
-            ) : (
-              <>
-                <Text style={styles.emptyTitle}>{t('conversations.noConversationsYet')}</Text>
-                <Text style={styles.emptyHint}>{t('conversations.startConversationHint')}</Text>
-                {/* An empty list should offer the way out of being empty,
-                    rather than only describing the situation. */}
-                <Touchable
-                  style={styles.emptyAction}
-                  onPress={() => navigation.navigate('NewChat')}
-                  accessibilityRole="button"
-                >
-                  <Text style={styles.emptyActionText}>
-                    {t('conversations.startFirstChat')}
-                  </Text>
-                </Touchable>
-              </>
-            )}
+            <Text style={styles.emptyTitle}>{t('conversations.noConversationsYet')}</Text>
+            <Text style={styles.emptyHint}>{t('conversations.startConversationHint')}</Text>
+            {/* An empty list should offer the way out of being empty,
+                rather than only describing the situation. */}
+            <Touchable
+              style={styles.emptyAction}
+              onPress={() => navigation.navigate('NewChat')}
+              accessibilityRole="button"
+            >
+              <Text style={styles.emptyActionText}>
+                {t('conversations.startFirstChat')}
+              </Text>
+            </Touchable>
           </View>
           )
         }
