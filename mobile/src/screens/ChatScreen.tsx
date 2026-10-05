@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
+import type { NativeScrollEvent, NativeSyntheticEvent, ViewToken } from 'react-native';
+import Reanimated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import {
   ActivityIndicator,
   Alert,
@@ -1448,13 +1449,68 @@ export function ChatScreen({ route, navigation }: Props) {
 
   // The list is inverted, so offset 0 is the newest message at the
   // bottom - scrolling "up" through history moves the offset up.
-  const onScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    const scrolledUp = event.nativeEvent.contentOffset.y > SCROLL_TO_BOTTOM_THRESHOLD;
-    isScrolledUpRef.current = scrolledUp;
-    setIsScrolledUp(scrolledUp);
-    // Back at the newest messages means they've all been seen.
-    if (!scrolledUp) setUnseenCount(0);
-  }, []);
+  // The date of the messages at the top of the screen, floated over the
+  // list while scrolling back through history - so you know where you are
+  // without hunting for the last day divider. Fades out once scrolling
+  // stops.
+  const [floatingDay, setFloatingDay] = useState<string | null>(null);
+  const dayPillOpacity = useSharedValue(0);
+  const dayPillStyle = useAnimatedStyle(() => ({ opacity: dayPillOpacity.value }));
+  const dayPillTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showDayPill = useCallback(
+    (visible: boolean) => {
+      if (dayPillTimerRef.current) clearTimeout(dayPillTimerRef.current);
+      dayPillOpacity.value = withTiming(visible ? 1 : 0, { duration: visible ? 120 : 200 });
+      if (visible) {
+        dayPillTimerRef.current = setTimeout(() => {
+          dayPillOpacity.value = withTiming(0, { duration: 300 });
+        }, 1500);
+      }
+    },
+    [dayPillOpacity],
+  );
+  useEffect(
+    () => () => {
+      if (dayPillTimerRef.current) clearTimeout(dayPillTimerRef.current);
+    },
+    [],
+  );
+
+  // Read through refs: FlatList requires onViewableItemsChanged to keep
+  // one identity for its whole life.
+  const tRef = useRef(t);
+  tRef.current = t;
+  const languageRef = useRef(i18n.language);
+  languageRef.current = i18n.language;
+  const onViewableItemsChanged = useRef(
+    ({ viewableItems }: { viewableItems: ViewToken<LocalMessage>[] }) => {
+      // The list is inverted: the highest index on screen is the oldest
+      // message showing, i.e. the one at the top.
+      let top: LocalMessage | null = null;
+      let topIndex = -1;
+      for (const token of viewableItems) {
+        if (token.index !== null && token.index > topIndex) {
+          topIndex = token.index;
+          top = token.item;
+        }
+      }
+      if (top) setFloatingDay(formatMessageDay(top.created_at, tRef.current, languageRef.current));
+    },
+  ).current;
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 10 }).current;
+
+  const onScroll = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      const scrolledUp = event.nativeEvent.contentOffset.y > SCROLL_TO_BOTTOM_THRESHOLD;
+      isScrolledUpRef.current = scrolledUp;
+      setIsScrolledUp(scrolledUp);
+      // At the newest messages the day divider is right there already.
+      showDayPill(scrolledUp);
+      // Back at the newest messages means they've all been seen.
+      if (!scrolledUp) setUnseenCount(0);
+    },
+    [showDayPill],
+  );
 
   // Oldest-first, so paging left-to-right in the viewer runs in the
   // same direction as scrolling down through the conversation. Limited
@@ -1907,7 +1963,14 @@ export function ChatScreen({ route, navigation }: Props) {
             );
           }}
           renderItem={renderMessage}
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={viewabilityConfig}
         />
+        {floatingDay && (
+          <Reanimated.View style={[styles.dayPill, dayPillStyle]} pointerEvents="none">
+            <Text style={styles.dayDividerText}>{floatingDay}</Text>
+          </Reanimated.View>
+        )}
         </KeyboardGestureArea>
       )}
       {isScrolledUp && !isSearchOpen && (

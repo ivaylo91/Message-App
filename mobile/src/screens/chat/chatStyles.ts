@@ -265,6 +265,7 @@ export const makeStyles = (colors: ThemeColors) =>
   statusMuted: { opacity: 0.75 },
   statusRead: { opacity: 1 },
   dayDivider: { alignItems: 'center', marginVertical: spacing.md },
+  dayPill: { position: 'absolute', top: spacing.sm, alignSelf: 'center' },
   dayDividerText: {
     fontSize: fontSizes.caption,
     fontWeight: '700',
