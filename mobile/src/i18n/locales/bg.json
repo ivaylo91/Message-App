@@ -160,6 +160,7 @@
     "today": "Днес",
     "yesterday": "Вчера",
     "jumpToLatest": "Към последните",
+    "jumpToLatestWithCount": "Към най-новите ({{n}} нови)",
     "a11yOpenPhoto": "Отваряне на снимката",
     "forward": "Препращане",
     "copy": "Копиране",

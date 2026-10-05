@@ -160,6 +160,7 @@
     "today": "Today",
     "yesterday": "Yesterday",
     "jumpToLatest": "Jump to latest",
+    "jumpToLatestWithCount": "Jump to latest ({{n}} new)",
     "a11yOpenPhoto": "Open photo",
     "forward": "Forward",
     "copy": "Copy",

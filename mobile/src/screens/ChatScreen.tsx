@@ -178,11 +178,19 @@ export function ChatScreen({ route, navigation }: Props) {
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const bubbleMaxWidth = Math.min(windowWidth * 0.8, MAX_BUBBLE_WIDTH);
   const [messages, setMessages] = useState<LocalMessage[]>([]);
+  // For callbacks that need the current list without taking it as a
+  // dependency (which would give them a new identity on every message).
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
   const [hasMoreMessages, setHasMoreMessages] = useState(true);
   const [isLoadingMoreMessages, setIsLoadingMoreMessages] = useState(false);
   const [didLoadFail, setDidLoadFail] = useState(false);
   const [hasLoadedMessages, setHasLoadedMessages] = useState(false);
   const [isScrolledUp, setIsScrolledUp] = useState(false);
+  const isScrolledUpRef = useRef(false);
+  // Messages from others that arrived while scrolled up into history -
+  // the count on the jump-to-latest button.
+  const [unseenCount, setUnseenCount] = useState(0);
   const [viewerPath, setViewerPath] = useState<string | null>(null);
   const [forwardingMessage, setForwardingMessage] = useState<LocalMessage | null>(null);
   const [forwardTargets, setForwardTargets] = useState<Conversation[] | null>(null);
@@ -320,6 +328,16 @@ export function ChatScreen({ route, navigation }: Props) {
 
   const upsertMessage = useCallback(
     (incoming: Message) => {
+      // Counted here rather than inside the updater below, which React may
+      // run twice. Realtime can redeliver, so only a message not already
+      // loaded counts.
+      if (
+        isScrolledUpRef.current &&
+        incoming.sender_id !== userId &&
+        !messagesRef.current.some((m) => m.id === incoming.id)
+      ) {
+        setUnseenCount((count) => count + 1);
+      }
       setMessages((current) => {
         if (current.some((m) => m.id === incoming.id)) return current;
         // Realtime postgres_changes payloads carry raw columns only, so a
@@ -353,7 +371,7 @@ export function ChatScreen({ route, navigation }: Props) {
       });
       markRead();
     },
-    [markRead],
+    [markRead, userId],
   );
 
   // Split out of the focus effect so the retry button can call it too.
@@ -965,11 +983,9 @@ export function ChatScreen({ route, navigation }: Props) {
   // Reads messages through a ref so this keeps one identity: it is handed
   // to every bubble, and a new function per message would defeat their
   // memo.
-  const messagesForJumpRef = useRef(messages);
-  messagesForJumpRef.current = messages;
   const jumpToMessage = useCallback(
     async (messageId: string) => {
-      const alreadyLoaded = messagesForJumpRef.current.some((m) => m.id === messageId);
+      const alreadyLoaded = messagesRef.current.some((m) => m.id === messageId);
       if (!alreadyLoaded) {
         try {
           const around = await conversationsData.fetchMessagesAround(conversationId, messageId);
@@ -1342,7 +1358,11 @@ export function ChatScreen({ route, navigation }: Props) {
   // The list is inverted, so offset 0 is the newest message at the
   // bottom - scrolling "up" through history moves the offset up.
   const onScroll = useCallback((event: NativeSyntheticEvent<NativeScrollEvent>) => {
-    setIsScrolledUp(event.nativeEvent.contentOffset.y > SCROLL_TO_BOTTOM_THRESHOLD);
+    const scrolledUp = event.nativeEvent.contentOffset.y > SCROLL_TO_BOTTOM_THRESHOLD;
+    isScrolledUpRef.current = scrolledUp;
+    setIsScrolledUp(scrolledUp);
+    // Back at the newest messages means they've all been seen.
+    if (!scrolledUp) setUnseenCount(0);
   }, []);
 
   // Oldest-first, so paging left-to-right in the viewer runs in the
@@ -1770,9 +1790,18 @@ export function ChatScreen({ route, navigation }: Props) {
           iconButton
           onPress={onJumpToLatest}
           accessibilityRole="button"
-          accessibilityLabel={t('chat.jumpToLatest')}
+          accessibilityLabel={
+            unseenCount > 0
+              ? t('chat.jumpToLatestWithCount', { n: unseenCount })
+              : t('chat.jumpToLatest')
+          }
         >
           <FontAwesome6 name="chevron-down" iconStyle="solid" size={14} color={colors.ink} />
+          {unseenCount > 0 && (
+            <View style={styles.jumpBadge}>
+              <Text style={styles.jumpBadgeText}>{unseenCount > 99 ? '99+' : unseenCount}</Text>
+            </View>
+          )}
         </Touchable>
       )}
       {editingMessageId && (
