@@ -19,6 +19,7 @@ import type { AppStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
 import * as conversationsData from '../data/conversations';
 import * as profilesData from '../data/profiles';
+import * as draftStorage from '../drafts/draftStorage';
 import { Avatar } from '../components/Avatar';
 import { Touchable } from '../components/Touchable';
 import { useConfirm } from '../components/ConfirmSheet';
@@ -68,6 +69,9 @@ interface ConversationRowProps {
   preview: string;
   // The last message's created_at; null for a conversation with none yet.
   timestamp: string | null;
+  // Unsent text saved for this conversation, shown instead of the last
+  // message so it isn't forgotten.
+  draft: string | null;
   isOpen: boolean;
   onOpen: () => void;
   onClose: () => void;
@@ -92,6 +96,7 @@ function ConversationRow({
   isTyping,
   preview,
   timestamp,
+  draft,
   isOpen,
   onOpen,
   onClose,
@@ -199,7 +204,15 @@ function ConversationRow({
                 ]}
                 numberOfLines={1}
               >
-                {preview}
+                {/* Someone typing beats a draft: it's what's happening now. */}
+                {draft && !isTyping ? (
+                  <>
+                    <Text style={styles.rowDraftLabel}>{t('conversations.draftPrefix')} </Text>
+                    {draft.replace(/\s+/g, ' ').trim()}
+                  </>
+                ) : (
+                  preview
+                )}
               </Text>
               {unreadCount > 0 ? (
                 // Grey rather than ember when muted: the count is still
@@ -459,6 +472,15 @@ export function ConversationsScreen({ navigation }: Props) {
     }, [load]),
   );
 
+  // Re-read on every focus: coming back from a chat is exactly when a
+  // draft has just been written or cleared.
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  useFocusEffect(
+    useCallback(() => {
+      void draftStorage.loadAllDrafts().then(setDrafts);
+    }, []),
+  );
+
   // Anything that arrived while the app was away was missed by both the
   // focus effect above and the realtime subscription below - see
   // useAppForeground.
@@ -703,6 +725,7 @@ export function ConversationsScreen({ navigation }: Props) {
               isTyping={isTyping}
               preview={isTyping ? t('chat.typing') : previewText(item.messages?.[0])}
               timestamp={item.messages?.[0]?.created_at ?? null}
+              draft={drafts[item.id] ?? null}
               isOpen={openRowId === item.id}
               onOpen={() => setOpenRowId(item.id)}
               onClose={() =>
@@ -846,6 +869,7 @@ const makeStyles = (colors: ThemeColors) =>
   rowPreviewLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: 2 },
   rowPreview: { flex: 1, color: colors.smoke, fontSize: fontSizes.footnote },
   rowPreviewTyping: { color: colors.sage, fontWeight: '600' },
+  rowDraftLabel: { color: colors.ember, fontWeight: '700' },
   rowPreviewUnread: { color: colors.ink, fontWeight: '600' },
   unreadBadge: {
     minWidth: 22,

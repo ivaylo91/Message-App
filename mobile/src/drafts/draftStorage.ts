@@ -38,3 +38,20 @@ export async function saveDraft(conversationId: string, body: string): Promise<v
 export async function clearDraft(conversationId: string): Promise<void> {
   await saveDraft(conversationId, '');
 }
+
+// Every saved draft, keyed by conversation id - for the conversation list,
+// which shows "Draft: ..." in place of the last message. One read for the
+// whole list rather than one per row. Whitespace-only drafts don't count.
+export async function loadAllDrafts(): Promise<Record<string, string>> {
+  try {
+    const keys = (await AsyncStorage.getAllKeys()).filter((key) => key.startsWith(KEY_PREFIX));
+    if (keys.length === 0) return {};
+    const drafts: Record<string, string> = {};
+    for (const [key, value] of Object.entries(await AsyncStorage.getMany(keys))) {
+      if (value?.trim()) drafts[key.slice(KEY_PREFIX.length)] = value;
+    }
+    return drafts;
+  } catch {
+    return {};
+  }
+}

@@ -73,6 +73,7 @@
     "pinLimitToast": "You can pin up to {{count}} chats.",
     "pinFailedToast": "Couldn't update pin. Try again.",
     "markUnread": "Mark as unread",
+    "draftPrefix": "Draft:",
     "markRead": "Mark as read",
     "markedUnread": "Marked as unread",
     "markUnreadFailedToast": "Couldn't update. Try again.",
