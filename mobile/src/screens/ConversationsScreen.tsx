@@ -62,6 +62,8 @@ interface ConversationRowProps {
   avatarPath: string | null | undefined;
   online: boolean | undefined;
   unreadCount: number;
+  // Flagged with "Mark as unread" - shown as a dot when there's no count.
+  markedUnread: boolean;
   isTyping: boolean;
   preview: string;
   // The last message's created_at; null for a conversation with none yet.
@@ -86,6 +88,7 @@ function ConversationRow({
   avatarPath,
   online,
   unreadCount,
+  markedUnread,
   isTyping,
   preview,
   timestamp,
@@ -97,6 +100,7 @@ function ConversationRow({
   onDelete,
 }: ConversationRowProps) {
   const { t, i18n } = useTranslation();
+  const showsUnread = unreadCount > 0 || markedUnread;
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const translateX = useRef(new Animated.Value(0)).current;
@@ -179,7 +183,7 @@ function ConversationRow({
               )}
               {timestamp && (
                 <Text
-                  style={[styles.rowTime, unreadCount > 0 && !muted && styles.rowTimeUnread]}
+                  style={[styles.rowTime, showsUnread && !muted && styles.rowTimeUnread]}
                   numberOfLines={1}
                 >
                   {formatListTimestamp(timestamp, t, i18n.language)}
@@ -191,13 +195,13 @@ function ConversationRow({
                 style={[
                   styles.rowPreview,
                   isTyping && styles.rowPreviewTyping,
-                  !isTyping && unreadCount > 0 && styles.rowPreviewUnread,
+                  !isTyping && showsUnread && styles.rowPreviewUnread,
                 ]}
                 numberOfLines={1}
               >
                 {preview}
               </Text>
-              {unreadCount > 0 && (
+              {unreadCount > 0 ? (
                 // Grey rather than ember when muted: the count is still
                 // there to see, but it isn't asking for attention.
                 <View style={[styles.unreadBadge, muted && styles.unreadBadgeMuted]}>
@@ -205,7 +209,12 @@ function ConversationRow({
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </Text>
                 </View>
-              )}
+              ) : markedUnread ? (
+                <View
+                  style={[styles.unreadDot, muted && styles.unreadBadgeMuted]}
+                  accessibilityLabel={t('conversations.markedUnread')}
+                />
+              ) : null}
             </View>
           </View>
         </Touchable>
@@ -241,7 +250,11 @@ export function ConversationsScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const { userId } = useAuth();
   const { isOnline } = usePresence();
-  const { unreadCounts, refresh: refreshUnreadCounts } = useUnread();
+  const {
+    unreadCounts,
+    refresh: refreshUnreadCounts,
+    markConversationRead,
+  } = useUnread();
   const { typingConversationIds, watch: watchTyping } = useTyping();
   const { confirm } = useConfirm();
   const { showToast } = useToast();
@@ -358,10 +371,15 @@ export function ConversationsScreen({ navigation }: Props) {
       if (!userId) return;
       const mine = conversation.conversation_participants.find((p) => p.user_id === userId);
       const pinned = Boolean(mine?.pinned_at);
+      const hasUnread = Boolean(mine?.marked_unread) || (unreadCounts[conversation.id] ?? 0) > 0;
       void confirm({
         title,
         cancelLabel: t('chat.cancel'),
         options: [
+          {
+            id: 'unread',
+            label: hasUnread ? t('conversations.markRead') : t('conversations.markUnread'),
+          },
           { id: 'pin', label: pinned ? t('conversations.unpin') : t('conversations.pin') },
           {
             id: 'mute',
@@ -369,6 +387,18 @@ export function ConversationsScreen({ navigation }: Props) {
           },
         ],
       }).then((choice) => {
+        if (choice === 'unread') {
+          // Mark as read goes through the same path as opening the chat,
+          // which also clears the flag; mark as unread only sets the flag -
+          // the messages themselves stay read.
+          const request = hasUnread
+            ? Promise.resolve(markConversationRead(conversation.id))
+            : conversationsData.setConversationMarkedUnread(conversation.id, userId, true);
+          void request
+            .then(() => load())
+            .catch(() => showToast(t('conversations.markUnreadFailedToast')));
+          return;
+        }
         if (choice === 'mute') {
           void chooseMute(conversation.id, title, mine?.muted_until).then((result) => {
             // Reload rather than patching in place: these values live on the
@@ -394,7 +424,7 @@ export function ConversationsScreen({ navigation }: Props) {
           .catch(() => showToast(t('conversations.pinFailedToast')));
       });
     },
-    [userId, confirm, t, chooseMute, load, showToast],
+    [userId, confirm, t, chooseMute, load, showToast, unreadCounts, markConversationRead],
   );
 
   const onDeleteConversation = useCallback(
@@ -667,6 +697,9 @@ export function ConversationsScreen({ navigation }: Props) {
               avatarPath={item.is_group ? null : other?.profiles.avatar_path}
               online={item.is_group ? undefined : other && isOnline(other.user_id)}
               unreadCount={unreadCount}
+              markedUnread={Boolean(
+                item.conversation_participants.find((p) => p.user_id === userId)?.marked_unread,
+              )}
               isTyping={isTyping}
               preview={isTyping ? t('chat.typing') : previewText(item.messages?.[0])}
               timestamp={item.messages?.[0]?.created_at ?? null}
@@ -824,6 +857,7 @@ const makeStyles = (colors: ThemeColors) =>
     justifyContent: 'center',
   },
   unreadBadgeMuted: { backgroundColor: colors.smoke },
+  unreadDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: colors.ember },
   unreadBadgeText: { color: colors.white, fontSize: fontSizes.caption, fontWeight: '700' },
   empty: { alignItems: 'center', marginTop: 64, paddingHorizontal: spacing.xxl },
   emptyIcon: {

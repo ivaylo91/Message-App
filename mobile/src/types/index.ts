@@ -42,6 +42,9 @@ export interface ConversationParticipant {
   // Set when this participant pinned the conversation to the top of their
   // own list; null when not pinned.
   pinned_at: string | null;
+  // "Mark as unread" - cleared whenever the conversation is marked read.
+  // Optional: absent on rows fetched before the column existed.
+  marked_unread?: boolean;
   profiles: Profile;
 }
 

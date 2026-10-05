@@ -432,7 +432,23 @@ export async function markConversationRead(
 ): Promise<void> {
   const { error } = await supabase
     .from('conversation_participants')
-    .update({ last_read_at: new Date().toISOString() })
+    // Reading a conversation also clears "Mark as unread" - opening the
+    // chat is what the flag was a reminder to do.
+    .update({ last_read_at: new Date().toISOString(), marked_unread: false })
+    .eq('conversation_id', conversationId)
+    .eq('user_id', userId);
+
+  if (error) throw error;
+}
+
+export async function setConversationMarkedUnread(
+  conversationId: string,
+  userId: string,
+  markedUnread: boolean,
+): Promise<void> {
+  const { error } = await supabase
+    .from('conversation_participants')
+    .update({ marked_unread: markedUnread })
     .eq('conversation_id', conversationId)
     .eq('user_id', userId);
 
