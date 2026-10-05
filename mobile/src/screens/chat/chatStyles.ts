@@ -141,6 +141,10 @@ export const makeStyles = (colors: ThemeColors) =>
     height: 220,
     borderRadius: 14,
   },
+  // Two tiles and their gap make the same 220 a single photo takes.
+  album: { width: 220, flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
+  albumTile: { width: 108, height: 108, borderRadius: 10 },
+  albumTileWide: { width: 220, height: 108, borderRadius: 10 },
   mediaLoading: {
     backgroundColor: colors.line,
     justifyContent: 'center',

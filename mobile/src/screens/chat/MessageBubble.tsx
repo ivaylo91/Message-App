@@ -147,7 +147,11 @@ function ReplyQuote({
   );
 }
 
-function MediaImage({ path }: { path: string }) {
+// `style` only ever resizes (album tiles), so it's typed as exactly that -
+// valid for both the FastImage and its loading placeholder.
+type MediaSize = { width: number; height: number; borderRadius: number };
+
+function MediaImage({ path, style }: { path: string; style?: MediaSize }) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [url, setUrl] = useState<string | null>(null);
@@ -167,7 +171,7 @@ function MediaImage({ path }: { path: string }) {
     // placeholder is that shape rather than a spinner floating inside it.
     return (
       <SkeletonGroup>
-        <View style={[styles.media, styles.mediaLoading]} />
+        <View style={[styles.media, styles.mediaLoading, style]} />
       </SkeletonGroup>
     );
   }
@@ -175,7 +179,7 @@ function MediaImage({ path }: { path: string }) {
   return (
     <FastImage
       source={{ uri: url }}
-      style={styles.media}
+      style={[styles.media, style]}
       resizeMode={FastImage.resizeMode.cover}
     />
   );
@@ -481,6 +485,9 @@ interface MessageBubbleProps {
   reactions: MessageReaction[];
   userId: string | null;
   isHighlighted: boolean;
+  // Set on the photo an album is anchored to: every photo in the album,
+  // oldest first (see utils/photoAlbums). The others aren't rendered.
+  album: LocalMessage[] | null;
   // Draw the "New messages" divider above this message.
   unreadDivider: boolean;
   // Mine only; null on other people's messages.
@@ -516,6 +523,7 @@ function MessageBubbleComponent({
   reactions,
   userId,
   isHighlighted,
+  album,
   unreadDivider,
   status,
   mentionNames,
@@ -553,11 +561,16 @@ function MessageBubbleComponent({
   );
 
   const bubbleRef = useRef<View>(null);
-  const openMenu = useCallback(() => {
-    const node = bubbleRef.current;
-    if (!node) return;
-    node.measureInWindow((_x, y, _width, height) => onLongPress(message, { y, height }));
-  }, [message, onLongPress]);
+  // The menu is for `target` - this message, or one photo in an album.
+  const openMenuFor = useCallback(
+    (target: LocalMessage) => {
+      const node = bubbleRef.current;
+      if (!node) return;
+      node.measureInWindow((_x, y, _width, height) => onLongPress(target, { y, height }));
+    },
+    [onLongPress],
+  );
+  const openMenu = useCallback(() => openMenuFor(message), [openMenuFor, message]);
 
   // Flatten the corner facing a neighbour in the same run, on the sender's
   // own side - which is what turns a stack of identical rounded islands
@@ -631,7 +644,31 @@ function MessageBubbleComponent({
             />
           )}
           {message.call_status && <CallLogRow message={message} isMine={isMine} />}
-          {message.attachment_type === 'image' && message.media_path && (
+          {album ? (
+            <View style={styles.album}>
+              {album.map((photo, i) => (
+                <Touchable
+                  key={photo.id}
+                  // Each tile is still its own message: tap opens that
+                  // photo, long-press opens that photo's menu.
+                  onPress={() => onOpenImage(photo.media_path as string)}
+                  onLongPress={() => openMenuFor(photo)}
+                  accessibilityRole="imagebutton"
+                  accessibilityLabel={t('chat.a11yOpenPhoto')}
+                >
+                  <MediaImage
+                    path={photo.media_path as string}
+                    style={
+                      // An odd one out at the end takes the full width.
+                      album.length % 2 === 1 && i === album.length - 1
+                        ? styles.albumTileWide
+                        : styles.albumTile
+                    }
+                  />
+                </Touchable>
+              ))}
+            </View>
+          ) : message.attachment_type === 'image' && message.media_path && (
             <Touchable
               // Long-press still has to reach the bubble's own handler,
               // or photos would be the one message type you can't react

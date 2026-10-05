@@ -62,6 +62,7 @@ import {
 } from '../utils/messagePreview';
 import { haptic } from '../utils/haptics';
 import { unreadDividerMessageId } from '../utils/unreadDivider';
+import { groupPhotoAlbums } from '../utils/photoAlbums';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { MessageMenu, MessageMenuAction } from '../components/MessageMenu';
 import { useMuteChooser } from '../hooks/useMuteChooser';
@@ -1469,6 +1470,8 @@ export function ChatScreen({ route, navigation }: Props) {
     return result;
   }, [participants, displayMessages]);
 
+  const photoAlbums = useMemo(() => groupPhotoAlbums(displayMessages), [displayMessages]);
+
   const readByEveryoneUntilMs = useMemo(() => {
     const others = participants.filter((p) => p.user_id !== userId);
     if (others.length === 0) return null;
@@ -1731,9 +1734,12 @@ export function ChatScreen({ route, navigation }: Props) {
   );
 
   const renderMessage = useCallback(
-    ({ item }: { item: LocalMessage }) => (
+    ({ item }: { item: LocalMessage }) =>
+      // Shown inside its album's bubble instead.
+      photoAlbums.hiddenIds.has(item.id) ? null : (
       <MessageBubble
         message={item}
+        album={photoAlbums.albumsByAnchorId.get(item.id) ?? null}
         isMine={item.sender_id === userId}
         senderName={
           isGroup && item.sender_id !== userId
@@ -1780,6 +1786,7 @@ export function ChatScreen({ route, navigation }: Props) {
       senderNames,
       reactionsByMessageId,
       highlightedMessageId,
+      photoAlbums,
       unreadDividerId,
       mentionNamesByMessageId,
       readByEveryoneUntilMs,
