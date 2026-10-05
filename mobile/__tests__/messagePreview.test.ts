@@ -6,6 +6,7 @@ import {
   formatDuration,
   formatLastSeen,
   formatListTimestamp,
+  typingLabel,
   formatMessageDay,
   formatMessageTime,
   isSameDay,
@@ -234,5 +235,17 @@ describe('formatListTimestamp', () => {
     expect(formatListTimestamp(at(2026, 9, 3, 0, 40), t, 'en-GB', now)).toBe(
       formatMessageTime(at(2026, 9, 3, 0, 40), 'en-GB'),
     );
+  });
+});
+
+describe('typingLabel', () => {
+  test('nobody typing is null', () => {
+    expect(typingLabel([], t)).toBeNull();
+  });
+
+  test('names one, two, or the first and a count', () => {
+    expect(typingLabel(['Ana'], t)).toBe('chat.typingOne:{"name":"Ana"}');
+    expect(typingLabel(['Ana', 'Ivo'], t)).toBe('chat.typingTwo:{"a":"Ana","b":"Ivo"}');
+    expect(typingLabel(['Ana', 'Ivo', 'Mia'], t)).toBe('chat.typingMany:{"name":"Ana","n":2}');
   });
 });

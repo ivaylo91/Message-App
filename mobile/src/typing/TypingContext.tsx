@@ -52,9 +52,12 @@ function typingTopic(conversationId: string): string {
 
 interface TypingContextValue {
   // Conversations where someone *other than this user* is currently
-  // typing. Same shape for 1:1 and groups - who is typing isn't tracked,
-  // only that somebody is.
+  // typing - enough for the conversation list.
   typingConversationIds: Set<string>;
+  // Who, per conversation - what a group chat names ("Ana is typing").
+  // Each person expires on their own, so one person stopping doesn't
+  // hide another who is still typing.
+  typingUserIds: Record<string, string[]>;
   // Declares interest in these conversations' typing broadcasts for as
   // long as the caller is mounted. Returns the matching unwatch - call it
   // from the effect's cleanup.
@@ -64,14 +67,17 @@ interface TypingContextValue {
 
 const TypingContext = createContext<TypingContextValue>({
   typingConversationIds: new Set(),
+  typingUserIds: {},
   watch: () => () => {},
   sendTyping: () => {},
 });
 
 export function TypingProvider({ children }: { children: React.ReactNode }) {
   const { userId } = useAuth();
-  const [typingConversationIds, setTypingConversationIds] = useState<Set<string>>(
-    new Set(),
+  const [typingUserIds, setTypingUserIds] = useState<Record<string, string[]>>({});
+  const typingConversationIds = useMemo(
+    () => new Set(Object.keys(typingUserIds)),
+    [typingUserIds],
   );
   // The union of every mounted caller's interest, as a stable sorted
   // array - the reconciling effect below keys off it.
@@ -121,38 +127,53 @@ export function TypingProvider({ children }: { children: React.ReactNode }) {
     [syncWatchedIds],
   );
 
-  const markTyping = useCallback((conversationId: string) => {
-    setTypingConversationIds((current) => {
-      if (current.has(conversationId)) return current;
-      const next = new Set(current);
-      next.add(conversationId);
+  // Timeouts are keyed per person within a conversation.
+  const timeoutKey = (conversationId: string, typistId: string) => `${conversationId}|${typistId}`;
+
+  const removeTypist = useCallback((conversationId: string, typistId: string) => {
+    setTypingUserIds((current) => {
+      const list = current[conversationId];
+      if (!list?.includes(typistId)) return current;
+      const next = { ...current };
+      const remaining = list.filter((id) => id !== typistId);
+      if (remaining.length) next[conversationId] = remaining;
+      else delete next[conversationId];
       return next;
     });
-
-    const existing = timeoutsRef.current.get(conversationId);
-    if (existing) clearTimeout(existing);
-    timeoutsRef.current.set(
-      conversationId,
-      setTimeout(() => {
-        timeoutsRef.current.delete(conversationId);
-        setTypingConversationIds((current) => {
-          if (!current.has(conversationId)) return current;
-          const next = new Set(current);
-          next.delete(conversationId);
-          return next;
-        });
-      }, TYPING_INDICATOR_TIMEOUT_MS),
-    );
   }, []);
 
+  const markTyping = useCallback(
+    (conversationId: string, typistId: string) => {
+      setTypingUserIds((current) => {
+        const list = current[conversationId] ?? [];
+        if (list.includes(typistId)) return current;
+        return { ...current, [conversationId]: [...list, typistId] };
+      });
+
+      const key = timeoutKey(conversationId, typistId);
+      const existing = timeoutsRef.current.get(key);
+      if (existing) clearTimeout(existing);
+      timeoutsRef.current.set(
+        key,
+        setTimeout(() => {
+          timeoutsRef.current.delete(key);
+          removeTypist(conversationId, typistId);
+        }, TYPING_INDICATOR_TIMEOUT_MS),
+      );
+    },
+    [removeTypist],
+  );
+
   const clearTyping = useCallback((conversationId: string) => {
-    const timeout = timeoutsRef.current.get(conversationId);
-    if (timeout) clearTimeout(timeout);
-    timeoutsRef.current.delete(conversationId);
-    setTypingConversationIds((current) => {
-      if (!current.has(conversationId)) return current;
-      const next = new Set(current);
-      next.delete(conversationId);
+    for (const [key, timeout] of [...timeoutsRef.current]) {
+      if (!key.startsWith(`${conversationId}|`)) continue;
+      clearTimeout(timeout);
+      timeoutsRef.current.delete(key);
+    }
+    setTypingUserIds((current) => {
+      if (!(conversationId in current)) return current;
+      const next = { ...current };
+      delete next[conversationId];
       return next;
     });
   }, []);
@@ -171,7 +192,9 @@ export function TypingProvider({ children }: { children: React.ReactNode }) {
         .channel(typingTopic(conversationId), { config: { private: true } })
         .on('broadcast', { event: 'typing' }, ({ payload }) => {
           if (payload?.userId === userIdRef.current) return;
-          markTyping(conversationId);
+          // Every build has always sent userId; the fallback only keeps a
+          // malformed payload from being dropped entirely.
+          markTyping(conversationId, typeof payload?.userId === 'string' ? payload.userId : 'unknown');
         })
         .subscribe();
       channelsRef.current.set(conversationId, channel);
@@ -226,8 +249,8 @@ export function TypingProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo<TypingContextValue>(
-    () => ({ typingConversationIds, watch, sendTyping }),
-    [typingConversationIds, watch, sendTyping],
+    () => ({ typingConversationIds, typingUserIds, watch, sendTyping }),
+    [typingConversationIds, typingUserIds, watch, sendTyping],
   );
 
   return <TypingContext.Provider value={value}>{children}</TypingContext.Provider>;

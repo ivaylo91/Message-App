@@ -204,3 +204,13 @@ export function messageIdsStartingADay(
   }
   return ids;
 }
+
+// "Ana is typing…", "Ana and Ivo are typing…", "Ana and 2 others are
+// typing…" - for a group, where who matters. Null when nobody is. Worded
+// so no string needs plural rules (see chat.typingMany).
+export function typingLabel(names: string[], t: TFunction): string | null {
+  if (names.length === 0) return null;
+  if (names.length === 1) return t('chat.typingOne', { name: names[0] });
+  if (names.length === 2) return t('chat.typingTwo', { a: names[0], b: names[1] });
+  return t('chat.typingMany', { name: names[0], n: names.length - 1 });
+}

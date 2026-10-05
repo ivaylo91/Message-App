@@ -48,10 +48,12 @@ function Watcher({ ids }: { ids: string[] }) {
 }
 
 let observed: Set<string> = new Set();
+let observedUsers: Record<string, string[]> = {};
 
 function Observer() {
-  const { typingConversationIds } = useTyping();
+  const { typingConversationIds, typingUserIds } = useTyping();
   observed = typingConversationIds;
+  observedUsers = typingUserIds;
   return null;
 }
 
@@ -168,4 +170,40 @@ test('broadcasts from other users mark the conversation, own ones do not', () =>
     channel.handlers.forEach((h: any) => h({ payload: { userId: 'someone-else' } }));
   });
   expect(observed.has('conv-a')).toBe(true);
+});
+
+test('tracks who is typing, and each person expires on their own', () => {
+  act(() => {
+    create(
+      <TypingProvider>
+        <Watcher ids={['conv-a']} />
+        <Observer />
+      </TypingProvider>,
+    );
+  });
+  const channel = mockChannels.get('messages:conv-a:typing');
+  const typing = (userId: string) =>
+    act(() => {
+      channel.handlers.forEach((h: any) => h({ payload: { userId } }));
+    });
+
+  typing('ana');
+  act(() => {
+    jest.advanceTimersByTime(2000);
+  });
+  typing('ivo');
+  expect(observedUsers['conv-a']).toEqual(['ana', 'ivo']);
+
+  // Ana's 3s runs out first; Ivo, who typed later, is still shown.
+  act(() => {
+    jest.advanceTimersByTime(1500);
+  });
+  expect(observedUsers['conv-a']).toEqual(['ivo']);
+  expect(observed.has('conv-a')).toBe(true);
+
+  act(() => {
+    jest.advanceTimersByTime(2000);
+  });
+  expect(observedUsers['conv-a']).toBeUndefined();
+  expect(observed.has('conv-a')).toBe(false);
 });

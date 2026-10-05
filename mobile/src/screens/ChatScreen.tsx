@@ -57,6 +57,7 @@ import {
   formatLastSeen,
   formatMessageDay,
   messageIdsStartingADay,
+  typingLabel,
 } from '../utils/messagePreview';
 import { haptic } from '../utils/haptics';
 import Clipboard from '@react-native-clipboard/clipboard';
@@ -170,7 +171,7 @@ export function ChatScreen({ route, navigation }: Props) {
   const { isOnline } = usePresence();
   const { markConversationRead } = useUnread();
   const outbox = useOutbox();
-  const { typingConversationIds, watch: watchTyping, sendTyping } = useTyping();
+  const { typingConversationIds, typingUserIds, watch: watchTyping, sendTyping } = useTyping();
   const { startCall } = useCall();
   const insets = useSafeAreaInsets();
   const { windowWidth, contentWidth } = useContentWidth();
@@ -614,6 +615,14 @@ export function ChatScreen({ route, navigation }: Props) {
   useEffect(() => watchTyping([conversationId]), [watchTyping, conversationId]);
 
   const otherTyping = typingConversationIds.has(conversationId);
+  const typingIds = typingUserIds[conversationId];
+  const typingHeaderLabel = useMemo(() => {
+    if (!typingIds?.length) return null;
+    const names = typingIds
+      .map((id) => participants.find((p) => p.user_id === id)?.profiles.display_name)
+      .filter((name): name is string => Boolean(name));
+    return typingLabel(names, t);
+  }, [typingIds, participants, t]);
 
   // Restore whatever was left unsent here. Guarded on the id the load
   // was started for, so switching conversations quickly can't drop an
@@ -1723,6 +1732,13 @@ export function ChatScreen({ route, navigation }: Props) {
         />
         <View style={styles.headerNameBlock}>
           <Text style={styles.headerName} numberOfLines={1}>{displayTitle}</Text>
+          {/* Typing replaces the status line while it lasts - named in a
+              group, where who matters; just "Typing..." one-to-one. */}
+          {otherTyping && (
+            <Text style={styles.headerStatus} numberOfLines={1}>
+              {isGroup ? typingHeaderLabel ?? t('chat.typing') : t('chat.typing')}
+            </Text>
+          )}
           {/* Nothing at all for someone who hides their last seen -
               "Offline" would be a claim we can't make, since they may be
               online and simply not announcing it. */}
