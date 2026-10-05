@@ -209,7 +209,7 @@ export function GroupInfoScreen({ route, navigation }: Props) {
           <FlatList
             data={participants}
             keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={[styles.listContent, { paddingBottom: spacing.xxl + insets.bottom }]}
             ListHeaderComponent={
               <View>
                 <Text style={styles.label}>{t('groupInfo.nameLabel')}</Text>

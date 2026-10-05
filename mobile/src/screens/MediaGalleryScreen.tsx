@@ -233,7 +233,7 @@ export function MediaGalleryScreen({ route, navigation }: Props) {
             numColumns={GRID_COLUMNS}
             keyExtractor={(item) => item.id}
             columnWrapperStyle={styles.gridRow}
-            contentContainerStyle={styles.gridContent}
+            contentContainerStyle={[styles.gridContent, { paddingBottom: spacing.xl + insets.bottom }]}
             renderItem={({ item }) => (
               <PhotoThumbnail
                 path={item.media_path}
@@ -249,7 +249,7 @@ export function MediaGalleryScreen({ route, navigation }: Props) {
           <FlatList
             data={items}
             keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.filesContent}
+            contentContainerStyle={[styles.filesContent, { paddingBottom: spacing.xl + insets.bottom }]}
             renderItem={({ item }) => <FileRow item={item} />}
             onEndReached={onLoadMore}
             onEndReachedThreshold={0.5}

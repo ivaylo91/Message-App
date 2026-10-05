@@ -33,7 +33,17 @@ function AppContent() {
 
   return (
     <>
-      <StatusBar barStyle={scheme === 'dark' ? 'light-content' : 'dark-content'} />
+      {/* Transparent and drawn over: the app paints its own background
+          behind the status bar (edge to edge - see edgeToEdgeEnabled in
+          android/gradle.properties), so the bar always matches the app's
+          theme. Previously the system painted it from the phone's own
+          light/dark setting - white behind white icons when the phone was
+          light and the app dark. */}
+      <StatusBar
+        barStyle={scheme === 'dark' ? 'light-content' : 'dark-content'}
+        translucent
+        backgroundColor="transparent"
+      />
       {isI18nReady ? (
         <ToastProvider>
           <ConfirmSheetProvider>

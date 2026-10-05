@@ -124,7 +124,7 @@ export function ContactInfoScreen({ route, navigation }: Props) {
             <Skeleton width={100} height={13} />
           </SkeletonGroup>
         ) : (
-          <ScrollView contentContainerStyle={styles.scroll}>
+          <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: spacing.xxl + insets.bottom }]}>
             <View style={styles.profile}>
               <Avatar
                 name={name}
