@@ -740,6 +740,20 @@ export function ChatScreen({ route, navigation }: Props) {
     haptic('select');
   };
 
+  // The empty chat's one-tap opener. Through the outbox like any send, so
+  // it shows at once and survives being offline.
+  const onSendWave = () => {
+    haptic('tap');
+    outbox.queueMessage({
+      conversationId,
+      tempId: `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      body: '👋',
+      replyToMessageId: null,
+      replyToPreview: null,
+    });
+    markRead();
+  };
+
   const onPickImage = async () => {
     if (!userId) return;
     const result = await launchImageLibrary({
@@ -1846,6 +1860,24 @@ export function ChatScreen({ route, navigation }: Props) {
             </Touchable>
           ))}
         </ScrollView>
+      ) : displayMessages.length === 0 ? (
+        // A brand-new conversation used to be a blank screen. Says who
+        // you're talking to and offers the easiest possible first move.
+        <View style={styles.loadError}>
+          <Text style={styles.emptyChatEmoji}>👋</Text>
+          <Text style={styles.loadErrorTitle}>
+            {isGroup ? t('chat.emptyGroupTitle') : t('chat.emptyChatTitle', { name: displayTitle })}
+          </Text>
+          <Text style={styles.loadErrorHint}>{t('chat.emptyChatHint')}</Text>
+          <Touchable
+            style={styles.loadErrorButton}
+            onPress={onSendWave}
+            pressScale
+            accessibilityRole="button"
+          >
+            <Text style={styles.loadErrorButtonText}>{t('chat.sendWave')}</Text>
+          </Touchable>
+        </View>
       ) : (
         // Drag the keyboard down with the list on Android, as in Telegram -
         // 'ios' means it follows the finger once the finger reaches it.

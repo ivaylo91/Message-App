@@ -110,6 +110,7 @@ export const makeStyles = (colors: ThemeColors) =>
     paddingHorizontal: spacing.xxl,
   },
   loadErrorTitle: { color: colors.ink, fontWeight: '700', fontSize: fontSizes.body },
+  emptyChatEmoji: { fontSize: 48, marginBottom: spacing.xs },
   loadErrorHint: { color: colors.smoke, fontSize: fontSizes.footnote, textAlign: 'center' },
   loadErrorButton: {
     marginTop: spacing.sm,
