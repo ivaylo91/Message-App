@@ -118,6 +118,7 @@
     "deleteConfirmTitle": "Delete message?",
     "deleteConfirmMessage": "This cannot be undone.",
     "typing": "Typing...",
+    "newMessages": "New messages",
     "emptyChatTitle": "Say hi to {{name}}",
     "emptyGroupTitle": "Say hi to the group",
     "emptyChatHint": "No messages yet. Start the conversation.",

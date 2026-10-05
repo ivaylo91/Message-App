@@ -61,6 +61,7 @@ import {
   typingLabel,
 } from '../utils/messagePreview';
 import { haptic } from '../utils/haptics';
+import { unreadDividerMessageId } from '../utils/unreadDivider';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { MessageMenu, MessageMenuAction } from '../components/MessageMenu';
 import { useMuteChooser } from '../hooks/useMuteChooser';
@@ -130,6 +131,9 @@ const SEARCH_DEBOUNCE_MS = 300;
 // Roughly a screenful of history before the jump-to-latest button is
 // worth offering.
 const SCROLL_TO_BOTTOM_THRESHOLD = 400;
+// Unread messages beyond roughly a screenful - past this, a chat opens at
+// the "New messages" divider instead of at the bottom.
+const UNREAD_SCROLL_THRESHOLD = 6;
 
 
 // An outbox entry hasn't reached the server at all yet (still queued,
@@ -170,7 +174,16 @@ export function ChatScreen({ route, navigation }: Props) {
   const { showToast } = useToast();
   const { confirm } = useConfirm();
   const { isOnline } = usePresence();
-  const { markConversationRead } = useUnread();
+  const { markConversationRead, unreadCounts } = useUnread();
+  // How much was unread when the chat was opened. Taken on the first
+  // render, before opening the chat marks it read and the count drops to
+  // zero - it's what places the "New messages" divider.
+  const unreadAtOpenRef = useRef<number | null>(null);
+  if (unreadAtOpenRef.current === null) {
+    unreadAtOpenRef.current = unreadCounts[conversationId] ?? 0;
+  }
+  const [unreadDividerId, setUnreadDividerId] = useState<string | null>(null);
+  const dividerPlacedRef = useRef(false);
   const outbox = useOutbox();
   const { typingConversationIds, typingUserIds, watch: watchTyping, sendTyping } = useTyping();
   const { startCall } = useCall();
@@ -1123,6 +1136,26 @@ export function ChatScreen({ route, navigation }: Props) {
     };
   }, [highlightedMessageId, messages]);
 
+  // Placed once, when the first page has loaded, and left where it is
+  // for as long as the chat stays open - it marks where you'd got to when
+  // you arrived, not a moving line. Not when arriving at a specific
+  // message from search, which has its own place to be.
+  useEffect(() => {
+    if (dividerPlacedRef.current || !hasLoadedMessages || messages.length === 0) return;
+    dividerPlacedRef.current = true;
+    if (route.params.highlightMessageId) return;
+    const id = unreadDividerMessageId(messages, unreadAtOpenRef.current ?? 0, userId);
+    setUnreadDividerId(id);
+    // More unread than fits on a screen: open at the divider rather than
+    // at the bottom, so reading starts where it should.
+    const item = id ? messages.find((m) => m.id === id) : undefined;
+    if (item && (unreadAtOpenRef.current ?? 0) > UNREAD_SCROLL_THRESHOLD) {
+      setTimeout(() => {
+        flatListRef.current?.scrollToItem({ item, animated: false, viewPosition: 0.5 });
+      }, 100);
+    }
+  }, [hasLoadedMessages, messages, userId, route.params.highlightMessageId]);
+
   const otherParticipant = useMemo(
     () => participants.find((p) => p.user_id !== userId),
     [participants, userId],
@@ -1710,6 +1743,7 @@ export function ChatScreen({ route, navigation }: Props) {
         reactions={reactionsByMessageId.get(item.id) ?? NO_REACTIONS}
         userId={userId}
         isHighlighted={item.id === highlightedMessageId}
+        unreadDivider={item.id === unreadDividerId}
         mentionNames={mentionNamesByMessageId.get(item.id) ?? NO_MENTION_NAMES}
         status={
           item.sender_id !== userId
@@ -1746,6 +1780,7 @@ export function ChatScreen({ route, navigation }: Props) {
       senderNames,
       reactionsByMessageId,
       highlightedMessageId,
+      unreadDividerId,
       mentionNamesByMessageId,
       readByEveryoneUntilMs,
       bubbleMaxWidth,

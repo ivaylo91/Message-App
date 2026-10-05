@@ -118,6 +118,7 @@
     "deleteConfirmTitle": "Изтриване на съобщение?",
     "deleteConfirmMessage": "Това действие не може да бъде отменено.",
     "typing": "Пише...",
+    "newMessages": "Нови съобщения",
     "emptyChatTitle": "Поздравете {{name}}",
     "emptyGroupTitle": "Поздравете групата",
     "emptyChatHint": "Все още няма съобщения. Започнете разговора.",

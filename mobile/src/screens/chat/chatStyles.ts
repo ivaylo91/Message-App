@@ -272,6 +272,14 @@ export const makeStyles = (colors: ThemeColors) =>
   statusMuted: { opacity: 0.75 },
   statusRead: { opacity: 1 },
   dayDivider: { alignItems: 'center', marginVertical: spacing.md },
+  unreadDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginVertical: spacing.md,
+  },
+  unreadDividerLine: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: colors.ember },
+  unreadDividerText: { fontSize: fontSizes.caption, fontWeight: '700', color: colors.ember },
   dayPill: { position: 'absolute', top: spacing.sm, alignSelf: 'center' },
   dayDividerText: {
     fontSize: fontSizes.caption,

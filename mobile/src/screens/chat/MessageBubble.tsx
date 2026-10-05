@@ -481,6 +481,8 @@ interface MessageBubbleProps {
   reactions: MessageReaction[];
   userId: string | null;
   isHighlighted: boolean;
+  // Draw the "New messages" divider above this message.
+  unreadDivider: boolean;
   // Mine only; null on other people's messages.
   status: MessageStatus | null;
   // Display names of the people this message @mentions, for highlighting.
@@ -514,6 +516,7 @@ function MessageBubbleComponent({
   reactions,
   userId,
   isHighlighted,
+  unreadDivider,
   status,
   mentionNames,
   seenBy,
@@ -582,6 +585,13 @@ function MessageBubbleComponent({
       {dayLabel && (
         <View style={styles.dayDivider}>
           <Text style={styles.dayDividerText}>{dayLabel}</Text>
+        </View>
+      )}
+      {unreadDivider && (
+        <View style={styles.unreadDivider} accessibilityRole="header">
+          <View style={styles.unreadDividerLine} />
+          <Text style={styles.unreadDividerText}>{t('chat.newMessages')}</Text>
+          <View style={styles.unreadDividerLine} />
         </View>
       )}
       <View style={isMine ? styles.rowMine : styles.rowTheirs}>
