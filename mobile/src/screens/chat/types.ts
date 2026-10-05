@@ -12,3 +12,7 @@ export const STATUS_ICONS: Record<MessageStatus, 'clock' | 'check' | 'check-doub
   sent: 'check',
   read: 'check-double',
 };
+
+// Voice message playback speeds, cycled by tapping the speed chip.
+export const PLAYBACK_SPEEDS = [1, 1.5, 2] as const;
+export type PlaybackSpeed = (typeof PLAYBACK_SPEEDS)[number];

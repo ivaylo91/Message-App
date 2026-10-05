@@ -83,7 +83,7 @@ import {
 } from '../types';
 
 import { makeStyles } from './chat/chatStyles';
-import { LocalMessage } from './chat/types';
+import { LocalMessage, PLAYBACK_SPEEDS, type PlaybackSpeed } from './chat/types';
 import { MessageBubble, NO_REACTIONS, NO_SEEN_BY, replySenderLabel } from './chat/MessageBubble';
 import { ChatHistorySkeleton, TypingBubble } from './chat/ChatDecorations';
 import { KeyboardAvoidingView, KeyboardGestureArea } from 'react-native-keyboard-controller';
@@ -222,6 +222,13 @@ export function ChatScreen({ route, navigation }: Props) {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [playingMessageId, setPlayingMessageId] = useState<string | null>(null);
+  // Where the playing voice message is, in ms - drives its progress bars.
+  const [playbackPositionMs, setPlaybackPositionMs] = useState(0);
+  // Kept across messages for the session, as messengers do: someone who
+  // listens at 1.5x tends to want the next one at 1.5x too.
+  const [playbackSpeed, setPlaybackSpeed] = useState<PlaybackSpeed>(1);
+  const playbackSpeedRef = useRef<PlaybackSpeed>(1);
+  playbackSpeedRef.current = playbackSpeed;
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -315,6 +322,11 @@ export function ChatScreen({ route, navigation }: Props) {
       }
       try {
         Sound.removePlaybackEndListener();
+      } catch {
+        // no listener was ever attached
+      }
+      try {
+        Sound.removePlayBackListener();
       } catch {
         // no listener was ever attached
       }
@@ -836,28 +848,79 @@ export function ChatScreen({ route, navigation }: Props) {
     }
   };
 
+  const stopPlayback = useCallback(async () => {
+    await Sound.stopPlayer();
+    Sound.removePlaybackEndListener();
+    Sound.removePlayBackListener();
+    setPlayingMessageId(null);
+    setPlaybackPositionMs(0);
+  }, []);
+
+  // Resolves once playback has started (or failed), so a seek can follow.
+  const startPlayback = useCallback(async (message: LocalMessage) => {
+    if (!message.media_path) return false;
+    try {
+      const url = await mediaData.getMediaSignedUrl(message.media_path);
+      await Sound.startPlayer(url);
+      // Position updates ten times a second: smooth enough for 24 bars,
+      // without re-rendering the list any faster than that.
+      Sound.setSubscriptionDuration(0.1);
+      Sound.addPlayBackListener((e) => setPlaybackPositionMs(e.currentPosition));
+      Sound.addPlaybackEndListener(() => {
+        Sound.removePlaybackEndListener();
+        Sound.removePlayBackListener();
+        setPlayingMessageId(null);
+        setPlaybackPositionMs(0);
+      });
+      if (playbackSpeedRef.current !== 1) {
+        await Sound.setPlaybackSpeed(playbackSpeedRef.current);
+      }
+      setPlaybackPositionMs(0);
+      setPlayingMessageId(message.id);
+      return true;
+    } catch {
+      setPlayingMessageId(null);
+      return false;
+    }
+  }, []);
+
   const onTogglePlayback = useCallback(async (message: LocalMessage) => {
     if (!message.media_path) return;
 
     if (playingMessageId) {
-      await Sound.stopPlayer();
-      Sound.removePlaybackEndListener();
-      setPlayingMessageId(null);
+      await stopPlayback();
       if (playingMessageId === message.id) return;
     }
+    await startPlayback(message);
+  }, [playingMessageId, stopPlayback, startPlayback]);
 
-    try {
-      const url = await mediaData.getMediaSignedUrl(message.media_path);
-      await Sound.startPlayer(url);
-      Sound.addPlaybackEndListener(() => {
-        Sound.removePlaybackEndListener();
-        setPlayingMessageId(null);
-      });
-      setPlayingMessageId(message.id);
-    } catch {
-      setPlayingMessageId(null);
-    }
-  }, [playingMessageId]);
+  // Tapping the waveform: jump to that point - starting the message first
+  // if it isn't the one playing.
+  const onSeekAudio = useCallback(
+    async (message: LocalMessage, fraction: number) => {
+      const durationMs = message.attachment_duration_ms ?? 0;
+      if (!durationMs) return;
+      const targetMs = Math.max(0, Math.min(1, fraction)) * durationMs;
+      if (playingMessageId !== message.id) {
+        if (playingMessageId) await stopPlayback();
+        if (!(await startPlayback(message))) return;
+      }
+      try {
+        await Sound.seekToPlayer(targetMs);
+        setPlaybackPositionMs(targetMs);
+      } catch {
+        // A failed seek leaves playback running from where it was.
+      }
+    },
+    [playingMessageId, stopPlayback, startPlayback],
+  );
+
+  const onCyclePlaybackSpeed = useCallback(() => {
+    const next = PLAYBACK_SPEEDS[(PLAYBACK_SPEEDS.indexOf(playbackSpeedRef.current) + 1) % PLAYBACK_SPEEDS.length];
+    setPlaybackSpeed(next);
+    haptic('select');
+    void Sound.setPlaybackSpeed(next).catch(() => {});
+  }, []);
 
   const onToggleReaction = useCallback(
     async (messageId: string, emoji: string) => {
@@ -1214,6 +1277,11 @@ export function ChatScreen({ route, navigation }: Props) {
   const onTogglePlay = useCallback(
     (message: LocalMessage) => void onTogglePlayback(message),
     [onTogglePlayback],
+  );
+
+  const onSeek = useCallback(
+    (message: LocalMessage, fraction: number) => void onSeekAudio(message, fraction),
+    [onSeekAudio],
   );
 
   const senderNames = useMemo(() => {
@@ -1576,6 +1644,12 @@ export function ChatScreen({ route, navigation }: Props) {
         }
         bubbleMaxWidth={bubbleMaxWidth}
         isPlaying={playingMessageId === item.id}
+        // Zero for every bubble but the playing one, so only that one's
+        // props change as it plays and the rest keep their memo.
+        playbackPositionMs={playingMessageId === item.id ? playbackPositionMs : 0}
+        playbackSpeed={playbackSpeed}
+        onSeekAudio={onSeek}
+        onCyclePlaybackSpeed={onCyclePlaybackSpeed}
         seenBy={seenAvatarsByMessageId.get(item.id) ?? NO_SEEN_BY}
         dayLabel={dayLabelsByMessageId.get(item.id) ?? null}
         onLongPress={onOpenMenu}
@@ -1597,6 +1671,10 @@ export function ChatScreen({ route, navigation }: Props) {
       readByEveryoneUntilMs,
       bubbleMaxWidth,
       playingMessageId,
+      playbackPositionMs,
+      playbackSpeed,
+      onSeek,
+      onCyclePlaybackSpeed,
       seenAvatarsByMessageId,
       dayLabelsByMessageId,
       onOpenMenu,

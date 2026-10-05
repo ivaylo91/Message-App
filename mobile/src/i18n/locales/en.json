@@ -177,6 +177,10 @@
     "a11yCall": "Start video call",
     "a11yMenu": "More options",
     "a11yJumpToOriginal": "Shows the original message",
+    "a11yPlay": "Play voice message",
+    "a11yPause": "Pause voice message",
+    "a11yVoiceSeek": "Voice message. Tap to jump to a point",
+    "a11yPlaybackSpeed": "Playback speed {{speed}}x. Tap to change",
     "status": {
       "pending": "Sending",
       "sent": "Sent",

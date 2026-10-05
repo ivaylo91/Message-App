@@ -31,7 +31,7 @@ import { radii } from '../../theme/tokens';
 import { useTheme } from '../../theme/ThemeContext';
 import { MessageReaction, ReplyPreview } from '../../types';
 import { makeStyles } from './chatStyles';
-import { LocalMessage, MessageStatus, STATUS_ICONS } from './types';
+import { LocalMessage, MessageStatus, STATUS_ICONS, type PlaybackSpeed } from './types';
 
 interface ReactionSummary {
   emoji: string;
@@ -180,54 +180,104 @@ function AudioMessageBubble({
   message,
   isMine,
   isPlaying,
+  positionMs,
+  speed,
   onTogglePlay,
+  onSeek,
+  onCycleSpeed,
+  onLongPress,
 }: {
   message: LocalMessage;
   isMine: boolean;
   isPlaying: boolean;
+  positionMs: number;
+  speed: PlaybackSpeed;
   onTogglePlay: () => void;
+  onSeek: (fraction: number) => void;
+  onCycleSpeed: () => void;
+  // Forwarded so long-pressing the voice row still opens the message menu.
+  onLongPress: () => void;
 }) {
+  const { t } = useTranslation();
   const { colors, gradients } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const totalSeconds = Math.round((message.attachment_duration_ms ?? 0) / 1000);
+  const durationMs = message.attachment_duration_ms ?? 0;
+  const totalSeconds = Math.round(durationMs / 1000);
+  const progress = isPlaying && durationMs > 0 ? Math.min(1, positionMs / durationMs) : 0;
   const waveform = useMemo(
     () => waveformHeights(message.id, WAVEFORM_BAR_COUNT),
     [message.id],
   );
+  const [waveformWidth, setWaveformWidth] = useState(0);
+  const barColor = isMine ? colors.white : colors.ink;
 
   return (
-    <Touchable
-      style={styles.audioRow}
-      onPress={onTogglePlay}
-      disabled={message._pending}
-    >
-      <View style={[styles.iconCircle, isMine ? styles.iconCircleMine : styles.iconCircleTheirs]}>
-        <FontAwesome6
-          name={isPlaying ? 'pause' : 'play'}
-          iconStyle="solid"
-          size={13}
-          color={isMine ? gradients.mine[0] : colors.white}
-        />
-      </View>
-      <View style={styles.waveform}>
-        {waveform.map((height, i) => (
-          <View
-            key={i}
-            style={[
-              styles.waveformBar,
-              {
-                height,
-                backgroundColor: isMine ? colors.white : colors.ink,
-                opacity: isMine ? 0.85 : 0.5,
-              },
-            ]}
+    <View style={styles.audioRow}>
+      <Touchable
+        onPress={onTogglePlay}
+        onLongPress={onLongPress}
+        disabled={message._pending}
+        iconButton
+        accessibilityRole="button"
+        accessibilityLabel={isPlaying ? t('chat.a11yPause') : t('chat.a11yPlay')}
+      >
+        <View style={[styles.iconCircle, isMine ? styles.iconCircleMine : styles.iconCircleTheirs]}>
+          <FontAwesome6
+            name={isPlaying ? 'pause' : 'play'}
+            iconStyle="solid"
+            size={13}
+            color={isMine ? gradients.mine[0] : colors.white}
           />
-        ))}
-      </View>
+        </View>
+      </Touchable>
+      {/* Tap anywhere on the bars to jump there. A tap rather than a drag:
+          dragging sideways on a bubble is already swipe-to-reply. */}
+      <Touchable
+        style={styles.waveform}
+        onLayout={(e) => setWaveformWidth(e.nativeEvent.layout.width)}
+        onPress={(e) => {
+          if (waveformWidth > 0) onSeek(e.nativeEvent.locationX / waveformWidth);
+        }}
+        onLongPress={onLongPress}
+        disabled={message._pending || durationMs === 0}
+        ripple={null}
+        accessibilityRole="button"
+        accessibilityLabel={t('chat.a11yVoiceSeek')}
+      >
+        {waveform.map((height, i) => {
+          // Played bars at full strength, the rest dimmed.
+          const played = isPlaying && i / WAVEFORM_BAR_COUNT < progress;
+          return (
+            <View
+              key={i}
+              style={[
+                styles.waveformBar,
+                {
+                  height,
+                  backgroundColor: barColor,
+                  opacity: !isPlaying ? (isMine ? 0.85 : 0.5) : played ? 1 : 0.35,
+                },
+              ]}
+            />
+          );
+        })}
+      </Touchable>
       <Text style={isMine ? styles.bubbleTextMine : styles.bubbleTextTheirs}>
-        {formatDuration(totalSeconds)}
+        {formatDuration(isPlaying ? Math.floor(positionMs / 1000) : totalSeconds)}
       </Text>
-    </Touchable>
+      {isPlaying && (
+        <Touchable
+          style={[styles.speedChip, isMine ? styles.speedChipMine : styles.speedChipTheirs]}
+          onPress={onCycleSpeed}
+          accessibilityRole="button"
+          accessibilityLabel={t('chat.a11yPlaybackSpeed', { speed })}
+        >
+          <Text style={isMine ? styles.speedChipTextMine : styles.speedChipTextTheirs}>
+            {speed}×
+          </Text>
+        </Touchable>
+      )}
+    </View>
   );
 }
 
@@ -351,6 +401,8 @@ interface MessageBubbleProps {
   seenBy: SeenBy;
   bubbleMaxWidth: number;
   isPlaying: boolean;
+  playbackPositionMs: number;
+  playbackSpeed: PlaybackSpeed;
   // Set only on a message that opens a new calendar day, so it renders
   // a divider above itself. A string rather than a date, so it stays
   // comparable by value and the memo below still holds.
@@ -360,6 +412,8 @@ interface MessageBubbleProps {
   onLongPress: (message: LocalMessage, anchor: { y: number; height: number }) => void;
   onToggleReaction: (messageId: string, emoji: string) => void;
   onTogglePlay: (message: LocalMessage) => void;
+  onSeekAudio: (message: LocalMessage, fraction: number) => void;
+  onCyclePlaybackSpeed: () => void;
   onOpenImage: (path: string) => void;
   onReply: (message: LocalMessage) => void;
   onJumpToMessage: (messageId: string) => void;
@@ -378,10 +432,14 @@ function MessageBubbleComponent({
   seenBy,
   bubbleMaxWidth,
   isPlaying,
+  playbackPositionMs,
+  playbackSpeed,
   dayLabel,
   onLongPress,
   onToggleReaction,
   onTogglePlay,
+  onSeekAudio,
+  onCyclePlaybackSpeed,
   onOpenImage,
   onReply,
   onJumpToMessage,
@@ -486,7 +544,12 @@ function MessageBubbleComponent({
               message={message}
               isMine={isMine}
               isPlaying={isPlaying}
+              positionMs={playbackPositionMs}
+              speed={playbackSpeed}
               onTogglePlay={() => onTogglePlay(message)}
+              onSeek={(fraction) => onSeekAudio(message, fraction)}
+              onCycleSpeed={onCyclePlaybackSpeed}
+              onLongPress={openMenu}
             />
           )}
           {message.attachment_type === 'file' && (

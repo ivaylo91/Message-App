@@ -151,6 +151,17 @@ export const makeStyles = (colors: ThemeColors) =>
     gap: spacing.sm,
     minWidth: 200,
   },
+  speedChip: {
+    minWidth: 34,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: radii.pill,
+    alignItems: 'center',
+  },
+  speedChipMine: { backgroundColor: 'rgba(255,255,255,0.22)' },
+  speedChipTheirs: { backgroundColor: colors.line },
+  speedChipTextMine: { fontSize: fontSizes.caption, fontWeight: '700', color: colors.white },
+  speedChipTextTheirs: { fontSize: fontSizes.caption, fontWeight: '700', color: colors.ink },
   callLogRow: {
     flexDirection: 'row',
     alignItems: 'center',
