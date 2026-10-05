@@ -30,7 +30,11 @@ import { showsSenderName, type RunPosition } from '../../utils/messageGrouping';
 import { radii } from '../../theme/tokens';
 import { useTheme } from '../../theme/ThemeContext';
 import { MessageReaction, ReplyPreview } from '../../types';
-import { fetchLinkPreview, type LinkPreview } from '../../data/linkPreviews';
+import {
+  fetchLinkPreview,
+  linkPreviewImageSource,
+  type LinkPreview,
+} from '../../data/linkPreviews';
 import { makeStyles } from './chatStyles';
 import { LocalMessage, MessageStatus, STATUS_ICONS, type PlaybackSpeed } from './types';
 
@@ -297,12 +301,24 @@ function LinkPreviewCard({
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [preview, setPreview] = useState<LinkPreview | null>(null);
+  const [imageSource, setImageSource] = useState<{
+    uri: string;
+    headers: Record<string, string>;
+  } | null>(null);
+  const [imageFailed, setImageFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     setPreview(null);
-    void fetchLinkPreview(url).then((result) => {
-      if (!cancelled) setPreview(result);
+    setImageSource(null);
+    setImageFailed(false);
+    void fetchLinkPreview(url).then(async (result) => {
+      if (cancelled) return;
+      setPreview(result);
+      if (result?.imageUrl) {
+        const source = await linkPreviewImageSource(result.imageUrl);
+        if (!cancelled) setImageSource(source);
+      }
     });
     return () => {
       cancelled = true;
@@ -320,6 +336,16 @@ function LinkPreviewCard({
       accessibilityRole="link"
       accessibilityLabel={preview.title}
     >
+      {/* A page whose image won't load just shows its text - the card
+          doesn't keep an empty box for it. */}
+      {imageSource && !imageFailed && (
+        <FastImage
+          source={imageSource}
+          style={styles.linkCardImage}
+          resizeMode={FastImage.resizeMode.cover}
+          onError={() => setImageFailed(true)}
+        />
+      )}
       {site && (
         <Text style={isMine ? styles.linkCardSiteMine : styles.linkCardSiteTheirs} numberOfLines={1}>
           {site}

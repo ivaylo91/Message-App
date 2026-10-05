@@ -67,6 +67,7 @@ Deno.test("extractPreview: prefers Open Graph, decodes entities, either attribut
     title: "Café & Co",
     description: 'Best "coffee" in town!',
     siteName: "Example",
+    imageUrl: null,
   });
 });
 
@@ -78,6 +79,7 @@ Deno.test("extractPreview: falls back to <title> and the description meta", () =
     title: "Plain page",
     description: "A page.",
     siteName: null,
+    imageUrl: null,
   });
 });
 
@@ -87,6 +89,7 @@ Deno.test("extractPreview: nothing useful gives an empty preview", () => {
     title: null,
     description: null,
     siteName: null,
+    imageUrl: null,
   });
 });
 
@@ -95,4 +98,19 @@ Deno.test("extractPreview: long text is cut with an ellipsis", () => {
   const result = extractPreview(`<meta property="og:description" content="${long}">`, "https://x.test");
   assertEquals(result.description?.length, 200);
   assertEquals(result.description?.endsWith("…"), true);
+});
+
+Deno.test("extractPreview: og:image is resolved against the page and must be fetchable", () => {
+  const page = "https://example.com/blog/post";
+  const image = (tag: string) => extractPreview(tag, page).imageUrl;
+  assertEquals(image('<meta property="og:image" content="/img/og.png">'), "https://example.com/img/og.png");
+  assertEquals(
+    image('<meta property="og:image" content="https://cdn.example.com/a.jpg?w=1&amp;h=2">'),
+    "https://cdn.example.com/a.jpg?w=1&h=2",
+  );
+  assertEquals(image('<meta name="twitter:image" content="https://cdn.example.com/t.png">'), "https://cdn.example.com/t.png");
+  // Same rules as any fetch: no other schemes, no odd ports.
+  assertEquals(image('<meta property="og:image" content="file:///etc/passwd">'), null);
+  assertEquals(image('<meta property="og:image" content="http://example.com:6379/x.png">'), null);
+  assertEquals(image("<title>no image</title>"), null);
 });

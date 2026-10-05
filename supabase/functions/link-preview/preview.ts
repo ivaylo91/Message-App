@@ -7,6 +7,9 @@ export interface LinkPreview {
   title: string | null;
   description: string | null;
   siteName: string | null;
+  // The page's own preview image (og:image), made absolute. Never loaded
+  // by the phone directly - see the image route in index.ts.
+  imageUrl: string | null;
 }
 
 // Only ordinary web URLs. No credentials in the URL (they'd be sent to the
@@ -116,6 +119,7 @@ export function extractPreview(html: string, url: string): LinkPreview {
     if (key && value !== undefined && !(key in meta)) meta[key] = value;
   }
   const titleTag = html.match(/<title\b[^>]*>([\s\S]*?)<\/title>/i)?.[1];
+  const rawImage = meta["og:image:secure_url"] ?? meta["og:image"] ?? meta["twitter:image"];
 
   return {
     url,
@@ -125,5 +129,20 @@ export function extractPreview(html: string, url: string): LinkPreview {
       200,
     ),
     siteName: clean(meta["og:site_name"], 60),
+    imageUrl: resolveImageUrl(rawImage, url),
   };
+}
+
+// og:image is often relative ("/og.png"); it's resolved against the page.
+// Only something that would itself pass parseFetchableUrl is kept, so the
+// image route never even considers a URL the page fetch would refuse.
+function resolveImageUrl(raw: string | undefined, pageUrl: string): string | null {
+  if (!raw) return null;
+  let absolute: string;
+  try {
+    absolute = new URL(decodeEntities(raw.trim()), pageUrl).toString();
+  } catch {
+    return null;
+  }
+  return parseFetchableUrl(absolute)?.toString() ?? null;
 }

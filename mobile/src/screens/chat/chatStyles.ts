@@ -160,6 +160,13 @@ export const makeStyles = (colors: ThemeColors) =>
     borderRadius: radii.sm,
     gap: 2,
   },
+  // Open Graph images are designed at 1.91:1.
+  linkCardImage: {
+    width: '100%',
+    aspectRatio: 1.91,
+    borderRadius: radii.sm,
+    marginBottom: spacing.xs,
+  },
   linkCardMine: { borderLeftColor: colors.white, backgroundColor: 'rgba(255,255,255,0.14)' },
   linkCardTheirs: { borderLeftColor: colors.ember, backgroundColor: colors.line },
   linkCardSiteMine: { fontSize: fontSizes.caption, fontWeight: '700', color: colors.white, opacity: 0.85 },
