@@ -30,6 +30,7 @@ import { showsSenderName, type RunPosition } from '../../utils/messageGrouping';
 import { radii } from '../../theme/tokens';
 import { useTheme } from '../../theme/ThemeContext';
 import { MessageReaction, ReplyPreview } from '../../types';
+import { fetchLinkPreview, type LinkPreview } from '../../data/linkPreviews';
 import { makeStyles } from './chatStyles';
 import { LocalMessage, MessageStatus, STATUS_ICONS, type PlaybackSpeed } from './types';
 
@@ -281,6 +282,66 @@ function AudioMessageBubble({
   );
 }
 
+// The preview card under a message that contains a link - the first link,
+// as messengers do. Renders nothing until there's something to show, and
+// nothing at all for a page without a title.
+function LinkPreviewCard({
+  url,
+  isMine,
+  onLongPress,
+}: {
+  url: string;
+  isMine: boolean;
+  onLongPress: () => void;
+}) {
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const [preview, setPreview] = useState<LinkPreview | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setPreview(null);
+    void fetchLinkPreview(url).then((result) => {
+      if (!cancelled) setPreview(result);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [url]);
+
+  if (!preview) return null;
+  const site = preview.siteName ?? hostnameOf(url);
+
+  return (
+    <Touchable
+      style={[styles.linkCard, isMine ? styles.linkCardMine : styles.linkCardTheirs]}
+      onPress={() => void Linking.openURL(url).catch(() => {})}
+      onLongPress={onLongPress}
+      accessibilityRole="link"
+      accessibilityLabel={preview.title}
+    >
+      {site && (
+        <Text style={isMine ? styles.linkCardSiteMine : styles.linkCardSiteTheirs} numberOfLines={1}>
+          {site}
+        </Text>
+      )}
+      <Text style={isMine ? styles.linkCardTitleMine : styles.linkCardTitleTheirs} numberOfLines={2}>
+        {preview.title}
+      </Text>
+      {preview.description && (
+        <Text style={isMine ? styles.linkCardTextMine : styles.linkCardTextTheirs} numberOfLines={2}>
+          {preview.description}
+        </Text>
+      )}
+    </Touchable>
+  );
+}
+
+function hostnameOf(url: string): string | null {
+  const match = url.match(/^https?:\/\/([^/?#]+)/i);
+  return match ? match[1].replace(/^www\./i, '') : null;
+}
+
 function CallLogRow({ message, isMine }: { message: LocalMessage; isMine: boolean }) {
   const { t } = useTranslation();
   const { colors } = useTheme();
@@ -453,6 +514,15 @@ function MessageBubbleComponent({
     [reactions, userId],
   );
 
+  // The first link in the body, if any - the one a preview is shown for.
+  const previewUrl = useMemo(
+    () =>
+      message.body && hasLink(message.body)
+        ? linkifyText(message.body).find((segment) => segment.url)?.url ?? null
+        : null,
+    [message.body],
+  );
+
   const bubbleRef = useRef<View>(null);
   const openMenu = useCallback(() => {
     const node = bubbleRef.current;
@@ -584,6 +654,9 @@ function MessageBubbleComponent({
                 ),
               )}
             </Text>
+          )}
+          {previewUrl && !message._pending && (
+            <LinkPreviewCard url={previewUrl} isMine={isMine} onLongPress={openMenu} />
           )}
           <View style={styles.metaRow}>
             {message.edited_at && (
