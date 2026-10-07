@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import LinearGradient from 'react-native-linear-gradient';
-import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
+import { Icon } from '../components/Icon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { setLanguage, SUPPORTED_LANGUAGES, SupportedLanguage } from '../i18n';
@@ -288,7 +288,7 @@ export function ProfileScreen({ navigation }: Props) {
       <View style={[styles.content, { maxWidth: contentWidth }]}>
         <View style={styles.header}>
           <Touchable style={styles.cancelButton} onPress={() => navigation.goBack()}>
-            <FontAwesome6 name="xmark" iconStyle="solid" size={13} color={colors.danger} />
+            <Icon name="xmark" size={13} color={colors.danger} />
             <Text style={styles.cancelText}>{t('profile.cancel')}</Text>
           </Touchable>
           <Text style={styles.title}>{t('profile.title')}</Text>
@@ -301,9 +301,8 @@ export function ProfileScreen({ navigation }: Props) {
               <ActivityIndicator size="small" color={colors.sage} />
             ) : (
               <>
-                <FontAwesome6
+                <Icon
                   name="check"
-                  iconStyle="solid"
                   size={13}
                   color={canSave ? colors.sage : colors.smoke}
                 />
@@ -332,7 +331,7 @@ export function ProfileScreen({ navigation }: Props) {
               {isUploadingPhoto ? (
                 <ActivityIndicator size="small" color={colors.white} />
               ) : (
-                <FontAwesome6 name="camera" iconStyle="solid" size={13} color={colors.white} />
+                <Icon name="camera" size={13} color={colors.white} />
               )}
             </View>
           </Touchable>
@@ -484,7 +483,7 @@ export function ProfileScreen({ navigation }: Props) {
                     style={styles.bubbleSwatch}
                   >
                     {isSelected && (
-                      <FontAwesome6 name="check" iconStyle="solid" size={14} color={colors.white} />
+                      <Icon name="check" size={14} color={colors.white} />
                     )}
                   </LinearGradient>
                 </Touchable>
@@ -513,15 +512,14 @@ export function ProfileScreen({ navigation }: Props) {
 
         <View style={styles.legalSection}>
           <Touchable style={styles.legalRow} onPress={() => void Linking.openURL(PRIVACY_POLICY_URL)}>
-            <FontAwesome6
+            <Icon
               name="shield-halved"
-              iconStyle="solid"
               size={13}
               color={colors.smoke}
               style={styles.dangerRowIcon}
             />
             <Text style={styles.legalRowText}>{t('profile.privacyPolicy')}</Text>
-            <FontAwesome6 name="arrow-up-right-from-square" iconStyle="solid" size={11} color={colors.smoke} />
+            <Icon name="arrow-up-right-from-square" size={11} color={colors.smoke} />
           </Touchable>
         </View>
 
@@ -543,9 +541,8 @@ export function ProfileScreen({ navigation }: Props) {
             }
             accessibilityRole="button"
           >
-            <FontAwesome6
+            <Icon
               name="right-from-bracket"
-              iconStyle="solid"
               size={15}
               color={colors.danger}
               style={styles.dangerRowIcon}
@@ -569,9 +566,8 @@ export function ProfileScreen({ navigation }: Props) {
             {isDeletingAccount ? (
               <ActivityIndicator size="small" color={colors.danger} />
             ) : (
-              <FontAwesome6
+              <Icon
                 name="trash"
-                iconStyle="solid"
                 size={15}
                 color={colors.danger}
                 style={styles.dangerRowIcon}

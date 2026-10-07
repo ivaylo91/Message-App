@@ -11,7 +11,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-na
 import { SPRING_TAP } from '../../theme/motion';
 import FastImage from '@d11/react-native-fast-image';
 import LinearGradient from 'react-native-linear-gradient';
-import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
+import { Icon } from '../../components/Icon';
 import { useTranslation } from 'react-i18next';
 import type { ViewStyle } from 'react-native';
 import * as mediaData from '../../data/media';
@@ -233,9 +233,8 @@ function AudioMessageBubble({
         accessibilityLabel={isPlaying ? t('chat.a11yPause') : t('chat.a11yPlay')}
       >
         <View style={[styles.iconCircle, isMine ? styles.iconCircleMine : styles.iconCircleTheirs]}>
-          <FontAwesome6
+          <Icon
             name={isPlaying ? 'pause' : 'play'}
-            iconStyle="solid"
             size={13}
             color={isMine ? gradients.mine[0] : colors.white}
           />
@@ -385,9 +384,8 @@ function CallLogRow({ message, isMine }: { message: LocalMessage; isMine: boolea
 
   return (
     <View style={styles.callLogRow}>
-      <FontAwesome6
+      <Icon
         name={message.call_status === 'completed' ? 'video' : 'video-slash'}
-        iconStyle="solid"
         size={14}
         color={isMine ? colors.white : colors.ink}
       />
@@ -414,9 +412,8 @@ function FileMessageBubble({ message, isMine }: { message: LocalMessage; isMine:
       disabled={message._pending}
     >
       <View style={[styles.iconCircle, isMine ? styles.iconCircleMine : styles.iconCircleTheirs]}>
-        <FontAwesome6
+        <Icon
           name={fileIconName(message.attachment_mime_type)}
-          iconStyle="solid"
           size={16}
           color={isMine ? colors.ember : colors.white}
         />
@@ -743,9 +740,8 @@ function MessageBubbleComponent({
               {formatMessageTime(message.created_at, i18n.language)}
             </Text>
             {status && (
-              <FontAwesome6
+              <Icon
                 name={STATUS_ICONS[status]}
-                iconStyle="solid"
                 size={10}
                 color={colors.white}
                 // Read stands out by being double and fully opaque; a

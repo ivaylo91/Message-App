@@ -9,7 +9,7 @@ import Animated, {
   Extrapolation,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
-import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
+import { Icon } from './Icon';
 import { haptic } from '../utils/haptics';
 import { SPRING_TAP } from '../theme/motion';
 
@@ -85,7 +85,7 @@ export function SwipeToReply({ enabled, onReply, iconColor, children }: Props) {
     <GestureDetector gesture={pan}>
       <Animated.View>
         <Animated.View style={[styles.icon, iconStyle]} pointerEvents="none">
-          <FontAwesome6 name="reply" iconStyle="solid" size={16} color={iconColor} />
+          <Icon name="reply" size={16} color={iconColor} />
         </Animated.View>
         <Animated.View style={bubbleStyle}>{children}</Animated.View>
       </Animated.View>

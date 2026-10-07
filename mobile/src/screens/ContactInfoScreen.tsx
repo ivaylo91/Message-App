@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
+import { Icon } from '../components/Icon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -16,7 +16,7 @@ import { usePresence } from '../presence/PresenceContext';
 import { useCall } from '../calling/CallContext';
 import { formatLastSeen } from '../utils/messagePreview';
 import { isMuted } from '../utils/mute';
-import { fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
+import { fonts, fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 import { Conversation } from '../types';
 
@@ -112,7 +112,7 @@ export function ContactInfoScreen({ route, navigation }: Props) {
             accessibilityRole="button"
             accessibilityLabel={t('chat.a11yBack')}
           >
-            <FontAwesome6 name="chevron-left" iconStyle="solid" size={18} color={colors.ink} />
+            <Icon name="chevron-left" size={18} color={colors.ink} />
           </Touchable>
           <Text style={styles.headerTitle}>{t('contactInfo.title')}</Text>
         </View>
@@ -149,9 +149,8 @@ export function ContactInfoScreen({ route, navigation }: Props) {
                   accessibilityRole="button"
                   accessibilityLabel={action.label}
                 >
-                  <FontAwesome6
+                  <Icon
                     name={action.icon}
-                    iconStyle="solid"
                     size={18}
                     color={colors.emberText}
                   />
@@ -180,13 +179,13 @@ const makeStyles = (colors: ThemeColors) =>
       paddingBottom: spacing.md,
     },
     backButton: { width: 30, alignItems: 'flex-start' },
-    headerTitle: { fontSize: fontSizes.title, fontWeight: '800', color: colors.ink },
+    headerTitle: { fontSize: fontSizes.title, fontFamily: fonts.display, color: colors.ink },
     scroll: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },
     profile: { alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.lg },
     name: {
       marginTop: spacing.md,
       fontSize: fontSizes.title,
-      fontWeight: '800',
+      fontFamily: fonts.display,
       color: colors.ink,
       textAlign: 'center',
     },

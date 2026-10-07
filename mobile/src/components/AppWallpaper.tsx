@@ -1,6 +1,6 @@
 import React, { memo, useMemo } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
-import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
+import { Icon } from './Icon';
 import { useTheme } from '../theme/ThemeContext';
 
 // A fixed (non-scrolling) wallpaper echoing the doodle-pattern chat
@@ -74,10 +74,9 @@ function AppWallpaperComponent() {
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       {icons.map((icon) => (
-        <FontAwesome6
+        <Icon
           key={icon.key}
           name={icon.name}
-          iconStyle="solid"
           size={ICON_SIZE}
           color={icon.color}
           style={[styles.icon, { top: icon.top, left: icon.left }]}

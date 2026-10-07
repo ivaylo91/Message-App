@@ -3,7 +3,7 @@ import { Image, Linking, Platform, StyleSheet, Text, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { ANDROID_STORE_URL, IOS_STORE_URL } from '../config/env';
 import { Touchable } from '../components/Touchable';
-import { fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
+import { fonts, fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 
 // Rendered by RootNavigator in place of the whole app (auth stack
@@ -49,7 +49,7 @@ const makeStyles = (colors: ThemeColors) =>
     mark: { width: 56, height: 64, marginBottom: spacing.xl },
     title: {
       fontSize: fontSizes.title,
-      fontWeight: '800',
+      fontFamily: fonts.display,
       letterSpacing: -0.2,
       color: colors.ink,
       textAlign: 'center',

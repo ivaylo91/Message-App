@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { elevation, fontSizes, radii, spacing, ThemeColors } from '../../theme/tokens';
+import { elevation, fonts, fontSizes, radii, spacing, ThemeColors } from '../../theme/tokens';
 
 // One sheet for the chat screen and the components split out of it
 // (MessageBubble, ChatDecorations) - they share most of their look, and
@@ -113,6 +113,7 @@ export const makeStyles = (colors: ThemeColors) =>
   },
   loadErrorTitle: { color: colors.ink, fontWeight: '700', fontSize: fontSizes.body },
   emptyChatEmoji: { fontSize: 48, marginBottom: spacing.xs },
+  emptyChatTitle: { fontSize: fontSizes.title, fontFamily: fonts.display, color: colors.ink, textAlign: 'center' },
   loadErrorHint: { color: colors.smoke, fontSize: fontSizes.footnote, textAlign: 'center' },
   loadErrorButton: {
     marginTop: spacing.sm,

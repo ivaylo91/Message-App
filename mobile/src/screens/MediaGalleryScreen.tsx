@@ -8,7 +8,7 @@ import {
   View,
 } from 'react-native';
 import FastImage from '@d11/react-native-fast-image';
-import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
+import { Icon } from '../components/Icon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -95,9 +95,8 @@ function FileRow({ item }: { item: MediaMessage }) {
   return (
     <Touchable style={styles.fileRow} onPress={() => void onOpen()}>
       <View style={styles.fileIconCircle}>
-        <FontAwesome6
+        <Icon
           name={fileIconName(item.attachment_mime_type)}
-          iconStyle="solid"
           size={16}
           color={colors.emberText}
         />
@@ -168,7 +167,7 @@ export function MediaGalleryScreen({ route, navigation }: Props) {
       <View style={[styles.content, { maxWidth: contentWidth }]}>
         <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
           <Touchable style={styles.backButton} onPress={() => navigation.goBack()} iconButton>
-            <FontAwesome6 name="chevron-left" iconStyle="solid" size={18} color={colors.ink} />
+            <Icon name="chevron-left" size={18} color={colors.ink} />
           </Touchable>
           <Text style={styles.headerTitle} numberOfLines={1}>
             {title}
@@ -217,9 +216,8 @@ export function MediaGalleryScreen({ route, navigation }: Props) {
           </SkeletonGroup>
         ) : items.length === 0 ? (
           <View style={styles.emptyState}>
-            <FontAwesome6
+            <Icon
               name={tab === 'photos' ? 'images' : 'paperclip'}
-              iconStyle="solid"
               size={24}
               color={colors.smoke}
             />

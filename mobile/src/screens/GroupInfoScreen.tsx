@@ -8,7 +8,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
+import { Icon } from '../components/Icon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -22,7 +22,7 @@ import { useToast } from '../components/Toast';
 import { useConfirm } from '../components/ConfirmSheet';
 import { Skeleton, SkeletonGroup } from '../components/Skeleton';
 import { useContentWidth } from '../hooks/useContentWidth';
-import { fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
+import { fonts, fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 import { ConversationParticipant, ProfileSearchResult } from '../types';
 
@@ -188,7 +188,7 @@ export function GroupInfoScreen({ route, navigation }: Props) {
             accessibilityRole="button"
             accessibilityLabel={t('chat.a11yBack')}
           >
-            <FontAwesome6 name="chevron-left" iconStyle="solid" size={18} color={colors.ink} />
+            <Icon name="chevron-left" size={18} color={colors.ink} />
           </Touchable>
           <Text style={styles.headerTitle}>{t('groupInfo.title')}</Text>
         </View>
@@ -245,9 +245,8 @@ export function GroupInfoScreen({ route, navigation }: Props) {
                   <>
                     <Text style={styles.label}>{t('groupInfo.addPeopleLabel')}</Text>
                     <View style={styles.searchBar}>
-                      <FontAwesome6
+                      <Icon
                         name="magnifying-glass"
-                        iconStyle="solid"
                         size={13}
                         color={colors.smoke}
                       />
@@ -277,9 +276,8 @@ export function GroupInfoScreen({ route, navigation }: Props) {
                         <Text style={styles.resultName} numberOfLines={1}>
                           {profile.display_name}
                         </Text>
-                        <FontAwesome6
+                        <Icon
                           name="plus"
-                          iconStyle="solid"
                           size={14}
                           color={colors.emberText}
                         />
@@ -313,9 +311,8 @@ export function GroupInfoScreen({ route, navigation }: Props) {
                       accessibilityRole="button"
                       accessibilityLabel={t('groupInfo.removeLabel', { name })}
                     >
-                      <FontAwesome6
+                      <Icon
                         name="user-minus"
-                        iconStyle="solid"
                         size={15}
                         color={colors.danger}
                       />
@@ -330,9 +327,8 @@ export function GroupInfoScreen({ route, navigation }: Props) {
                 onPress={onLeave}
                 accessibilityRole="button"
               >
-                <FontAwesome6
+                <Icon
                   name="right-from-bracket"
-                  iconStyle="solid"
                   size={15}
                   color={colors.danger}
                 />
@@ -358,7 +354,7 @@ const makeStyles = (colors: ThemeColors) =>
       paddingBottom: spacing.md,
     },
     backButton: { width: 30, alignItems: 'flex-start' },
-    headerTitle: { fontSize: fontSizes.title, fontWeight: '800', color: colors.ink },
+    headerTitle: { fontSize: fontSizes.title, fontFamily: fonts.display, color: colors.ink },
     spinner: { marginTop: spacing.xxl },
     listContent: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },
     label: {

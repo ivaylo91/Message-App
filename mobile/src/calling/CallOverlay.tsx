@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Modal, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
+import { Icon } from '../components/Icon';
 import { RTCView } from 'react-native-webrtc';
 import { useCall } from './CallContext';
 import { Touchable } from '../components/Touchable';
@@ -81,43 +81,41 @@ export function CallOverlay() {
                 iconButton
                 onPress={declineCall}
               >
-                <FontAwesome6 name="phone-slash" iconStyle="solid" size={22} color={colors.white} />
+                <Icon name="phone-slash" size={22} color={colors.white} />
               </Touchable>
               <Touchable
                 style={[styles.controlButton, styles.acceptButton]}
                 iconButton
                 onPress={() => void answerCall()}
               >
-                <FontAwesome6 name="phone" iconStyle="solid" size={22} color={colors.white} />
+                <Icon name="phone" size={22} color={colors.white} />
               </Touchable>
             </>
           ) : (
             <>
               <Touchable style={styles.controlButton} onPress={toggleMute} iconButton>
-                <FontAwesome6
+                <Icon
                   name={isMuted ? 'microphone-slash' : 'microphone'}
-                  iconStyle="solid"
                   size={19}
                   color={colors.white}
                 />
               </Touchable>
               <Touchable style={styles.controlButton} onPress={toggleCamera} iconButton>
-                <FontAwesome6
+                <Icon
                   name={isCameraOff ? 'video-slash' : 'video'}
-                  iconStyle="solid"
                   size={19}
                   color={colors.white}
                 />
               </Touchable>
               <Touchable style={styles.controlButton} onPress={switchCamera} iconButton>
-                <FontAwesome6 name="camera-rotate" iconStyle="solid" size={19} color={colors.white} />
+                <Icon name="camera-rotate" size={19} color={colors.white} />
               </Touchable>
               <Touchable
                 style={[styles.controlButton, styles.declineButton]}
                 iconButton
                 onPress={endCall}
               >
-                <FontAwesome6 name="phone-slash" iconStyle="solid" size={22} color={colors.white} />
+                <Icon name="phone-slash" size={22} color={colors.white} />
               </Touchable>
             </>
           )}

@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { radii, spacing, ThemeColors } from '../theme/tokens';
+import { fonts, radii, spacing, ThemeColors } from '../theme/tokens';
 
 export const makeAuthStyles = (colors: ThemeColors) =>
   StyleSheet.create({
@@ -11,7 +11,7 @@ export const makeAuthStyles = (colors: ThemeColors) =>
     },
     title: {
       fontSize: 25,
-      fontWeight: '800',
+      fontFamily: fonts.display,
       letterSpacing: -0.2,
       color: colors.ink,
       marginBottom: 6,

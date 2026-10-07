@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
+import { Icon, type IconName } from './Icon';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,11 +19,6 @@ import { Touchable } from './Touchable';
 import { useTheme } from '../theme/ThemeContext';
 
 export type FooterTab = 'chats' | 'calls' | 'profile';
-
-type SolidIconName = Extract<
-  React.ComponentProps<typeof FontAwesome6>,
-  { iconStyle: 'solid' }
->['name'];
 
 interface FooterNavProps {
   active?: FooterTab;
@@ -45,7 +40,7 @@ export function FooterNav({ active }: FooterNavProps) {
 
   const items: Array<{
     key: FooterTab;
-    icon: SolidIconName;
+    icon: IconName;
     label: string;
     onPress: () => void;
     badgeCount?: number;
@@ -100,9 +95,8 @@ export function FooterNav({ active }: FooterNavProps) {
             accessibilityState={{ selected: isActive }}
           >
             <View style={styles.iconWrap}>
-              <FontAwesome6
+              <Icon
                 name={item.icon}
-                iconStyle="solid"
                 size={19}
                 color={isActive ? colors.emberText : colors.smoke}
               />

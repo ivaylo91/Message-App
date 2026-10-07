@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
+import { Icon } from '../components/Icon';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
@@ -130,7 +130,7 @@ export function RegisterScreen({ navigation }: Props) {
         {isSubmitting ? (
           <ActivityIndicator color={colors.white} size="small" />
         ) : (
-          <FontAwesome6 name="user-plus" iconStyle="solid" size={16} color={colors.white} />
+          <Icon name="user-plus" size={16} color={colors.white} />
         )}
         <Text style={s.primaryButtonText}>{t('auth.register.submit')}</Text>
       </Touchable>

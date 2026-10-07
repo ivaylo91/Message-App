@@ -160,6 +160,16 @@ export function initialsFor(name: string): string {
 // is never capped and scales fully with the phone's setting.
 export const MAX_FONT_SCALE_TIGHT = 1.3;
 
+// The display face, for screen titles and a few large greetings only -
+// running text stays in the system font, which covers every script and
+// reads best small. Nunito ExtraBold: rounded like Hearth's bubbles and
+// icons, with full Cyrillic. Bundled from src/assets/fonts (see
+// react-native.config.js). It *is* the 800 weight, so styles using it set
+// no fontWeight - Android would otherwise fake a bolder one on top.
+export const fonts = {
+  display: 'Nunito-ExtraBold',
+} as const;
+
 export const radii = {
   sm: 8,
   md: 13,

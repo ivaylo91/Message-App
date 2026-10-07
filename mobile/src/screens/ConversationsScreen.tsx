@@ -12,7 +12,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
+import { Icon } from '../components/Icon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
@@ -51,7 +51,7 @@ import {
   pinnedFirst,
 } from '../utils/conversationList';
 import { isMuted } from '../utils/mute';
-import { fontSizes, MAX_FONT_SCALE_TIGHT, radii, spacing, ThemeColors } from '../theme/tokens';
+import { fonts, fontSizes, MAX_FONT_SCALE_TIGHT, radii, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 import { SPRING_TAP } from '../theme/motion';
 import { Conversation, Message, Profile } from '../types';
@@ -167,7 +167,7 @@ function ConversationRow({
         accessibilityRole="button"
         accessibilityLabel={t('conversations.a11yDelete')}
       >
-        <FontAwesome6 name="trash" iconStyle="solid" size={18} color={colors.white} />
+        <Icon name="trash" size={18} color={colors.white} />
       </Touchable>
       <GestureDetector gesture={pan}>
       <Animated.View style={[styles.rowForeground, rowStyle]}>
@@ -179,17 +179,15 @@ function ConversationRow({
                 {title}
               </Text>
               {muted && (
-                <FontAwesome6
+                <Icon
                   name="bell-slash"
-                  iconStyle="solid"
                   size={12}
                   color={colors.smoke}
                 />
               )}
               {pinned && (
-                <FontAwesome6
+                <Icon
                   name="thumbtack"
-                  iconStyle="solid"
                   size={11}
                   color={colors.smoke}
                   accessibilityLabel={t('conversations.pinned')}
@@ -628,13 +626,13 @@ export function ConversationsScreen({ navigation }: Props) {
             accessibilityRole="button"
             accessibilityLabel={t('conversations.a11yNewChat')}
           >
-            <FontAwesome6 name="pen-to-square" iconStyle="solid" size={15} color={colors.ink} />
+            <Icon name="pen-to-square" size={15} color={colors.ink} />
           </Touchable>
         </View>
       </View>
 
       <View style={styles.searchBar}>
-        <FontAwesome6 name="magnifying-glass" iconStyle="solid" size={13} color={colors.smoke} />
+        <Icon name="magnifying-glass" size={13} color={colors.smoke} />
         <TextInput
           style={styles.searchInput}
           placeholder={t('conversations.searchPlaceholder')}
@@ -649,7 +647,7 @@ export function ConversationsScreen({ navigation }: Props) {
             accessibilityRole="button"
             accessibilityLabel={t('conversations.a11yClearSearch')}
           >
-            <FontAwesome6 name="xmark" iconStyle="solid" size={13} color={colors.smoke} />
+            <Icon name="xmark" size={13} color={colors.smoke} />
           </Touchable>
         )}
       </View>
@@ -811,7 +809,7 @@ export function ConversationsScreen({ navigation }: Props) {
           ) : (
           <View style={styles.empty}>
             <View style={styles.emptyIcon}>
-              <FontAwesome6 name="comments" iconStyle="solid" size={26} color={colors.smoke} />
+              <Icon name="comments" size={26} color={colors.smoke} />
             </View>
             <Text style={styles.emptyTitle}>{t('conversations.noConversationsYet')}</Text>
             <Text style={styles.emptyHint}>{t('conversations.startConversationHint')}</Text>
@@ -848,7 +846,7 @@ const makeStyles = (colors: ThemeColors) =>
     justifyContent: 'space-between',
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  headerTitle: { fontSize: fontSizes.display, fontWeight: '800', letterSpacing: -0.3, color: colors.ink },
+  headerTitle: { fontSize: fontSizes.display, fontFamily: fonts.display, letterSpacing: -0.3, color: colors.ink },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   iconButton: {
     width: 34,

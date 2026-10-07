@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import type { NativeScrollEvent, NativeSyntheticEvent } from 'react-native';
 import FastImage from '@d11/react-native-fast-image';
-import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
+import { Icon } from './Icon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import * as mediaData from '../data/media';
@@ -175,7 +175,7 @@ export function MediaViewer({ paths, initialPath, onClose }: MediaViewerProps) {
             accessibilityRole="button"
             accessibilityLabel={t('mediaGallery.a11yCloseViewer')}
           >
-            <FontAwesome6 name="xmark" iconStyle="solid" size={18} color="#fff" />
+            <Icon name="xmark" size={18} color="#fff" />
           </Touchable>
           {paths.length > 1 && (
             <Text style={styles.counter}>{`${index + 1} / ${paths.length}`}</Text>

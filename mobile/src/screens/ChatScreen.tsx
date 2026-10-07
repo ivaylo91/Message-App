@@ -21,7 +21,7 @@ import {
   pick,
 } from '@react-native-documents/picker';
 import Sound, { type RecordBackType } from 'react-native-nitro-sound';
-import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
+import { Icon } from '../components/Icon';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -1837,7 +1837,7 @@ export function ChatScreen({ route, navigation }: Props) {
           accessibilityRole="button"
           accessibilityLabel={t('chat.a11yBack')}
         >
-          <FontAwesome6 name="chevron-left" iconStyle="solid" size={18} color={colors.ink} />
+          <Icon name="chevron-left" size={18} color={colors.ink} />
         </Touchable>
         {/* The whole identity block opens the info screen - the modern
             convention, and what keeps the header down to two icons. */}
@@ -1893,7 +1893,7 @@ export function ChatScreen({ route, navigation }: Props) {
             accessibilityRole="button"
             accessibilityLabel={t('chat.a11yCall')}
           >
-            <FontAwesome6 name="video" iconStyle="solid" size={17} color={colors.emberText} />
+            <Icon name="video" size={17} color={colors.emberText} />
           </Touchable>
         )}
         <Touchable
@@ -1903,7 +1903,7 @@ export function ChatScreen({ route, navigation }: Props) {
           accessibilityRole="button"
           accessibilityLabel={t('chat.a11yMenu')}
         >
-          <FontAwesome6 name="ellipsis-vertical" iconStyle="solid" size={16} color={colors.ink} />
+          <Icon name="ellipsis-vertical" size={16} color={colors.ink} />
         </Touchable>
       </View>
 
@@ -1915,7 +1915,7 @@ export function ChatScreen({ route, navigation }: Props) {
 
       {isSearchOpen && (
         <View style={styles.searchBar}>
-          <FontAwesome6 name="magnifying-glass" iconStyle="solid" size={14} color={colors.smoke} />
+          <Icon name="magnifying-glass" size={14} color={colors.smoke} />
           <TextInput
             style={styles.searchInput}
             placeholder={t('chat.searchPlaceholder')}
@@ -1929,7 +1929,7 @@ export function ChatScreen({ route, navigation }: Props) {
             accessibilityRole="button"
             accessibilityLabel={t('chat.a11yCloseSearch')}
           >
-            <FontAwesome6 name="xmark" iconStyle="solid" size={16} color={colors.smoke} />
+            <Icon name="xmark" size={16} color={colors.smoke} />
           </Touchable>
         </View>
       )}
@@ -1938,9 +1938,8 @@ export function ChatScreen({ route, navigation }: Props) {
         <ChatHistorySkeleton bubbleMaxWidth={bubbleMaxWidth} />
       ) : didLoadFail && displayMessages.length === 0 ? (
         <View style={styles.loadError}>
-          <FontAwesome6
+          <Icon
             name="cloud-arrow-down"
-            iconStyle="solid"
             size={26}
             color={colors.smoke}
           />
@@ -1976,7 +1975,7 @@ export function ChatScreen({ route, navigation }: Props) {
         // you're talking to and offers the easiest possible first move.
         <View style={styles.loadError}>
           <Text style={styles.emptyChatEmoji}>👋</Text>
-          <Text style={styles.loadErrorTitle}>
+          <Text style={styles.emptyChatTitle}>
             {isGroup ? t('chat.emptyGroupTitle') : t('chat.emptyChatTitle', { name: displayTitle })}
           </Text>
           <Text style={styles.loadErrorHint}>{t('chat.emptyChatHint')}</Text>
@@ -2040,7 +2039,7 @@ export function ChatScreen({ route, navigation }: Props) {
               : t('chat.jumpToLatest')
           }
         >
-          <FontAwesome6 name="chevron-down" iconStyle="solid" size={14} color={colors.ink} />
+          <Icon name="chevron-down" size={14} color={colors.ink} />
           {unseenCount > 0 && (
             <View style={styles.jumpBadge}>
               <Text style={styles.jumpBadgeText} maxFontSizeMultiplier={MAX_FONT_SCALE_TIGHT}>{unseenCount > 99 ? '99+' : unseenCount}</Text>
@@ -2120,7 +2119,7 @@ export function ChatScreen({ route, navigation }: Props) {
               accessibilityRole="button"
               accessibilityLabel={t('chat.a11yDiscardRecording')}
             >
-              <FontAwesome6 name="trash" iconStyle="solid" size={18} color={colors.danger} />
+              <Icon name="trash" size={18} color={colors.danger} />
             </Touchable>
             <View style={styles.recordingIndicator}>
               <View style={styles.recordingDot} />
@@ -2134,7 +2133,7 @@ export function ChatScreen({ route, navigation }: Props) {
               accessibilityRole="button"
               accessibilityLabel={t('chat.a11ySendRecording')}
             >
-              <FontAwesome6 name="paper-plane" iconStyle="solid" size={15} color={colors.white} />
+              <Icon name="paper-plane" size={15} color={colors.white} />
             </Touchable>
           </>
         ) : (
@@ -2154,7 +2153,7 @@ export function ChatScreen({ route, navigation }: Props) {
               {isUploadingAttachment ? (
                 <ActivityIndicator size="small" color={colors.smoke} />
               ) : (
-                <FontAwesome6 name="plus" iconStyle="solid" size={18} color={colors.smoke} />
+                <Icon name="plus" size={18} color={colors.smoke} />
               )}
             </Touchable>
             <TextInput
@@ -2186,11 +2185,10 @@ export function ChatScreen({ route, navigation }: Props) {
                 accessibilityLabel={t('chat.a11ySend')}
               >
                 {editingMessageId ? (
-                  <FontAwesome6 name="check" iconStyle="solid" size={16} color={colors.white} />
+                  <Icon name="check" size={16} color={colors.white} />
                 ) : (
-                  <FontAwesome6
+                  <Icon
                     name="paper-plane"
-                    iconStyle="solid"
                     size={15}
                     color={colors.white}
                   />
@@ -2206,7 +2204,7 @@ export function ChatScreen({ route, navigation }: Props) {
                 accessibilityRole="button"
                 accessibilityLabel={t('chat.a11yRecord')}
               >
-                <FontAwesome6 name="microphone" iconStyle="solid" size={16} color={colors.white} />
+                <Icon name="microphone" size={16} color={colors.white} />
               </Touchable>
             )}
           </>

@@ -8,7 +8,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
+import { Icon } from '../components/Icon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -151,9 +151,8 @@ export function NewGroupScreen({ navigation }: Props) {
                 <Text style={styles.chipName} numberOfLines={1}>
                   {profile.display_name}
                 </Text>
-                <FontAwesome6
+                <Icon
                   name="xmark"
-                  iconStyle="solid"
                   size={9}
                   color={colors.white}
                   style={styles.chipRemove}
@@ -206,9 +205,8 @@ export function NewGroupScreen({ navigation }: Props) {
                 </View>
                 <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
                   {isSelected && (
-                    <FontAwesome6
+                    <Icon
                       name="check"
-                      iconStyle="solid"
                       size={12}
                       color={colors.white}
                     />

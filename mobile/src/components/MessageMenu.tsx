@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Modal, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
 import LinearGradient from 'react-native-linear-gradient';
-import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
+import { Icon } from './Icon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Touchable } from './Touchable';
 import { elevation, fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
@@ -177,9 +177,8 @@ export function MessageMenu({
                   >
                     {action.label}
                   </Text>
-                  <FontAwesome6
+                  <Icon
                     name={action.icon}
-                    iconStyle="solid"
                     size={15}
                     color={action.destructive ? colors.danger : colors.smoke}
                   />

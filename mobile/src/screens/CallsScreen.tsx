@@ -1,6 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import { FlatList, RefreshControl, StyleSheet, Text, View } from 'react-native';
-import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
+import { Icon } from '../components/Icon';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
@@ -15,7 +15,7 @@ import { Skeleton, SkeletonGroup } from '../components/Skeleton';
 import { Touchable } from '../components/Touchable';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { formatDuration, formatListTimestamp } from '../utils/messagePreview';
-import { fontSizes, spacing, ThemeColors } from '../theme/tokens';
+import { fonts, fontSizes, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Calls'>;
@@ -83,12 +83,10 @@ export function CallsScreen({ navigation }: Props) {
             {title}
           </Text>
           <View style={styles.detail}>
-            <FontAwesome6
-              name={outgoing ? 'arrow-up' : 'arrow-down'}
-              iconStyle="solid"
-              size={10}
+            <Icon
+              name={outgoing ? 'arrow-up-right' : 'arrow-down-left'}
+              size={13}
               color={missed ? colors.danger : colors.smoke}
-              style={styles.arrow}
               accessibilityLabel={outgoing ? t('calls.outgoing') : t('calls.incoming')}
             />
             <Text style={[styles.detailText, missed && styles.detailMissed]} numberOfLines={1}>
@@ -112,7 +110,7 @@ export function CallsScreen({ navigation }: Props) {
             accessibilityRole="button"
             accessibilityLabel={t('calls.callBack', { name: title })}
           >
-            <FontAwesome6 name="video" iconStyle="solid" size={17} color={colors.emberText} />
+            <Icon name="video" size={17} color={colors.emberText} />
           </Touchable>
         )}
       </Touchable>
@@ -146,7 +144,7 @@ export function CallsScreen({ navigation }: Props) {
             ListEmptyComponent={
               <View style={styles.empty}>
                 <View style={styles.emptyIcon}>
-                  <FontAwesome6 name="video" iconStyle="solid" size={24} color={colors.smoke} />
+                  <Icon name="video" size={24} color={colors.smoke} />
                 </View>
                 <Text style={styles.emptyTitle}>{t('calls.emptyTitle')}</Text>
                 <Text style={styles.emptyHint}>{t('calls.emptyHint')}</Text>
@@ -167,7 +165,7 @@ const makeStyles = (colors: ThemeColors) =>
     header: { paddingHorizontal: spacing.lg, paddingBottom: spacing.md },
     headerTitle: {
       fontSize: fontSizes.display,
-      fontWeight: '800',
+      fontFamily: fonts.display,
       letterSpacing: -0.3,
       color: colors.ink,
     },
@@ -182,9 +180,6 @@ const makeStyles = (colors: ThemeColors) =>
     name: { fontSize: fontSizes.body, fontWeight: '700', color: colors.ink },
     nameMissed: { color: colors.danger },
     detail: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    // A quarter-turn makes up into ↗ (outgoing) and down into ↙ (incoming),
-    // the usual way call direction is drawn.
-    arrow: { transform: [{ rotate: '45deg' }] },
     detailText: { flexShrink: 1, fontSize: fontSizes.footnote, color: colors.smoke },
     detailMissed: { color: colors.danger },
     callBack: {

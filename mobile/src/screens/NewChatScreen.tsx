@@ -8,7 +8,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
+import { Icon } from '../components/Icon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -107,7 +107,7 @@ export function NewChatScreen({ navigation }: Props) {
               onPress={() => navigation.navigate('NewGroup')}
             >
               <View style={styles.newGroupIcon}>
-                <FontAwesome6 name="users" iconStyle="solid" size={20} color={colors.white} />
+                <Icon name="users" size={20} color={colors.white} />
               </View>
               <View style={styles.rowMain}>
                 <Text style={styles.rowName}>{t('newChat.newGroup')}</Text>

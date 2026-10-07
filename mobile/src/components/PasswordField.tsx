@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
-import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
+import { Icon } from './Icon';
 import { fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
 import { Touchable } from './Touchable';
 import { useTheme } from '../theme/ThemeContext';
@@ -32,9 +32,8 @@ export function PasswordField({ label, value, onChangeText }: PasswordFieldProps
           iconButton
           onPress={() => setVisible((current) => !current)}
         >
-          <FontAwesome6
+          <Icon
             name={visible ? 'eye-slash' : 'eye'}
-            iconStyle="solid"
             size={18}
             color={colors.smoke}
           />
