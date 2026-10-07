@@ -74,8 +74,9 @@ import {
 } from '../utils/mentions';
 import { runPositions } from '../utils/messageGrouping';
 import * as draftStorage from '../drafts/draftStorage';
-import { MAX_BUBBLE_WIDTH, MAX_FONT_SCALE_TIGHT, spacing } from '../theme/tokens';
+import { BUBBLE_GRADIENT_PRESETS, MAX_BUBBLE_WIDTH, MAX_FONT_SCALE_TIGHT, spacing } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
+import { ChatGradientsProvider, loadChatTheme, saveChatTheme } from '../theme/chatTheme';
 import {
   Conversation,
   ConversationParticipant,
@@ -173,6 +174,18 @@ export function ChatScreen({ route, navigation }: Props) {
   const { userId } = useAuth();
   const { showToast } = useToast();
   const { confirm } = useConfirm();
+
+  // This chat's own bubble colour (a preset id), if it has one.
+  const [chatThemeId, setChatThemeId] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void loadChatTheme(conversationId).then((id) => {
+      if (!cancelled) setChatThemeId(id);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [conversationId]);
   const { isOnline } = usePresence();
   const { markConversationRead, unreadCounts } = useUnread();
   // How much was unread when the chat was opened. Taken on the first
@@ -1378,6 +1391,28 @@ export function ChatScreen({ route, navigation }: Props) {
     else if (otherParticipant) navigation.navigate('ContactInfo', { conversationId });
   }, [isGroup, otherParticipant, navigation, conversationId]);
 
+  // Default first, then the six presets; the current choice is ticked.
+  const onChooseChatColor = useCallback(() => {
+    const tick = (selected: boolean) => (selected ? '  ✓' : '');
+    void confirm({
+      title: t('chat.chatColor'),
+      message: t('chat.chatColorHint'),
+      cancelLabel: t('chat.cancel'),
+      options: [
+        { id: 'default', label: t('chat.chatColorDefault') + tick(chatThemeId === null) },
+        ...BUBBLE_GRADIENT_PRESETS.map((preset) => ({
+          id: preset.id,
+          label: t(`profile.bubbleColorNames.${preset.id}`) + tick(chatThemeId === preset.id),
+        })),
+      ],
+    }).then((choice) => {
+      if (choice === null) return;
+      const id = choice === 'default' ? null : choice;
+      setChatThemeId(id);
+      void saveChatTheme(conversationId, id);
+    });
+  }, [confirm, t, chatThemeId, conversationId]);
+
   // Search, media and mute live here rather than as header icons - five
   // icons crowded the name onto three lines. Block and Report only make
   // sense in a one-to-one chat.
@@ -1390,6 +1425,7 @@ export function ChatScreen({ route, navigation }: Props) {
         { id: 'search', label: t('chat.a11ySearch') },
         { id: 'media', label: t('chat.a11yGallery') },
         { id: 'mute', label: muted ? t('conversations.unmute') : t('conversations.mute') },
+        { id: 'color', label: t('chat.chatColor') },
         ...(otherParticipant
           ? [
               {
@@ -1412,7 +1448,8 @@ export function ChatScreen({ route, navigation }: Props) {
             current.map((p) => (p.user_id === userId ? { ...p, muted_until: mutedUntil } : p)),
           );
         });
-      } else if (choice === 'block') onToggleBlockOther();
+      } else if (choice === 'color') onChooseChatColor();
+      else if (choice === 'block') onToggleBlockOther();
       else if (choice === 'report' && otherParticipant) onReportUser(otherParticipant.user_id);
     });
   }, [
@@ -1428,6 +1465,7 @@ export function ChatScreen({ route, navigation }: Props) {
     displayTitle,
     navigation,
     userId,
+    onChooseChatColor,
   ]);
 
   // Messenger-style read receipts: for each other participant, the
@@ -1826,6 +1864,7 @@ export function ChatScreen({ route, navigation }: Props) {
     // composer with the keyboard frame by frame instead of jumping once the
     // keyboard has finished animating, and 'padding' now behaves the same
     // on Android as on iOS.
+    <ChatGradientsProvider value={chatThemeId}>
     <KeyboardAvoidingView style={styles.container} behavior="padding">
       {chatWallpaper && <AppWallpaper />}
       <View style={[styles.content, { maxWidth: contentWidth }]}>
@@ -2312,5 +2351,6 @@ export function ChatScreen({ route, navigation }: Props) {
       </Modal>
       </View>
     </KeyboardAvoidingView>
+    </ChatGradientsProvider>
   );
 }
