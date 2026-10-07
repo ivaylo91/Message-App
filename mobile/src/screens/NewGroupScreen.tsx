@@ -111,7 +111,7 @@ export function NewGroupScreen({ navigation }: Props) {
             disabled={!canCreate || isCreating}
           >
             {isCreating ? (
-              <ActivityIndicator size="small" color={colors.ember} />
+              <ActivityIndicator size="small" color={colors.emberText} />
             ) : (
               <Text style={[styles.createText, !canCreate && styles.createTextDisabled]}>
                 {t('newGroup.create')}
@@ -178,7 +178,7 @@ export function NewGroupScreen({ navigation }: Props) {
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={{ paddingBottom: insets.bottom + spacing.lg }}
         >
-          {isSearching && <ActivityIndicator color={colors.ember} style={styles.spinner} />}
+          {isSearching && <ActivityIndicator color={colors.emberText} style={styles.spinner} />}
           {!isSearching && query.trim() && results.length === 0 && (
             <Text style={styles.emptyText}>{t('newChat.noResults')}</Text>
           )}
@@ -236,10 +236,10 @@ const makeStyles = (colors: ThemeColors) =>
     gap: 6,
   },
   cancelButton: { position: 'absolute', left: spacing.lg, top: 0 },
-  cancelText: { color: colors.ember, fontSize: fontSizes.body, fontWeight: '600' },
+  cancelText: { color: colors.emberText, fontSize: fontSizes.body, fontWeight: '600' },
   title: { fontSize: fontSizes.bodyLg, fontWeight: '700', color: colors.ink },
   createButton: { position: 'absolute', right: spacing.lg, top: 0 },
-  createText: { color: colors.ember, fontSize: fontSizes.body, fontWeight: '700' },
+  createText: { color: colors.emberText, fontSize: fontSizes.body, fontWeight: '700' },
   createTextDisabled: { color: colors.smoke },
   nameField: {
     marginHorizontal: spacing.lg,
@@ -266,7 +266,7 @@ const makeStyles = (colors: ThemeColors) =>
     right: -2,
     fontSize: fontSizes.micro,
     color: colors.white,
-    backgroundColor: colors.smoke,
+    backgroundColor: colors.mutedFill,
     width: 16,
     height: 16,
     borderRadius: 8,

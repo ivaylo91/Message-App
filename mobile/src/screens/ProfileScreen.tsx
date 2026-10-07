@@ -828,7 +828,7 @@ const makeStyles = (colors: ThemeColors) =>
     paddingHorizontal: spacing.lg,
     paddingVertical: 12,
     borderRadius: radii.md,
-    backgroundColor: colors.danger,
+    backgroundColor: colors.dangerFill,
     minWidth: 96,
     alignItems: 'center',
   },

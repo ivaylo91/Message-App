@@ -281,7 +281,7 @@ export function GroupInfoScreen({ route, navigation }: Props) {
                           name="plus"
                           iconStyle="solid"
                           size={14}
-                          color={colors.ember}
+                          color={colors.emberText}
                         />
                       </Touchable>
                     ))}

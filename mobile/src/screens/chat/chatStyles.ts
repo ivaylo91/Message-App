@@ -17,10 +17,12 @@ export const makeStyles = (colors: ThemeColors) =>
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.line,
   },
-  backButton: { paddingHorizontal: 4, paddingVertical: 4 },
+  // 44 px boxes - 56 px of touch area with Touchable's iconButton hit
+  // slop, past the 48 px Android asks for. They were ~24 px (36 with slop).
+  backButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   headerIdentity: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   headerNameBlock: { flex: 1 },
-  callButton: { paddingHorizontal: 4, paddingVertical: 4 },
+  callButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   headerName: { fontWeight: '700', fontSize: fontSizes.body, color: colors.ink },
   headerStatus: { fontSize: fontSizes.caption, fontWeight: '600', color: colors.sage },
   headerStatusOffline: { fontSize: fontSizes.caption, fontWeight: '600', color: colors.smoke },
@@ -29,7 +31,7 @@ export const makeStyles = (colors: ThemeColors) =>
     marginTop: spacing.sm,
     paddingVertical: 6,
     borderRadius: radii.md,
-    backgroundColor: colors.danger,
+    backgroundColor: colors.dangerFill,
     alignItems: 'center',
   },
   offlineBannerText: { color: colors.white, fontSize: fontSizes.caption, fontWeight: '700' },
@@ -174,7 +176,7 @@ export const makeStyles = (colors: ThemeColors) =>
   linkCardMine: { borderLeftColor: colors.white, backgroundColor: 'rgba(255,255,255,0.14)' },
   linkCardTheirs: { borderLeftColor: colors.ember, backgroundColor: colors.line },
   linkCardSiteMine: { fontSize: fontSizes.caption, fontWeight: '700', color: colors.white, opacity: 0.85 },
-  linkCardSiteTheirs: { fontSize: fontSizes.caption, fontWeight: '700', color: colors.ember },
+  linkCardSiteTheirs: { fontSize: fontSizes.caption, fontWeight: '700', color: colors.emberText },
   linkCardTitleMine: { fontSize: fontSizes.footnote, fontWeight: '700', color: colors.white },
   linkCardTitleTheirs: { fontSize: fontSizes.footnote, fontWeight: '700', color: colors.ink },
   linkCardTextMine: { fontSize: fontSizes.caption, color: colors.white, opacity: 0.85 },
@@ -272,7 +274,7 @@ export const makeStyles = (colors: ThemeColors) =>
   metaTextMine: { fontSize: fontSizes.micro, color: colors.white, opacity: 0.75 },
   metaTextTheirs: { fontSize: fontSizes.micro, color: colors.smoke },
   mentionMine: { fontWeight: '700', color: colors.white },
-  mentionTheirs: { fontWeight: '700', color: colors.ember },
+  mentionTheirs: { fontWeight: '700', color: colors.emberText },
   statusMuted: { opacity: 0.75 },
   statusRead: { opacity: 1 },
   dayDivider: { alignItems: 'center', marginVertical: spacing.md },
@@ -283,7 +285,7 @@ export const makeStyles = (colors: ThemeColors) =>
     marginVertical: spacing.md,
   },
   unreadDividerLine: { flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: colors.ember },
-  unreadDividerText: { fontSize: fontSizes.caption, fontWeight: '700', color: colors.ember },
+  unreadDividerText: { fontSize: fontSizes.caption, fontWeight: '700', color: colors.emberText },
   dayPill: { position: 'absolute', top: spacing.sm, alignSelf: 'center' },
   dayDividerText: {
     fontSize: fontSizes.caption,
@@ -319,7 +321,7 @@ export const makeStyles = (colors: ThemeColors) =>
   // maxWidth cap do the truncating only when actually necessary.
   replyQuoteContent: {},
   replyQuoteSenderMine: { fontSize: fontSizes.caption, fontWeight: '700', color: colors.white },
-  replyQuoteSenderTheirs: { fontSize: fontSizes.caption, fontWeight: '700', color: colors.ember },
+  replyQuoteSenderTheirs: { fontSize: fontSizes.caption, fontWeight: '700', color: colors.emberText },
   replyQuoteTextMine: { fontSize: fontSizes.caption, color: 'rgba(255, 255, 255, 0.85)' },
   replyQuoteTextTheirs: { fontSize: fontSizes.caption, color: colors.smoke },
   reactionRow: {
@@ -349,7 +351,7 @@ export const makeStyles = (colors: ThemeColors) =>
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: colors.smoke,
+    backgroundColor: colors.mutedFill,
   },
   editingBar: {
     flexDirection: 'row',
@@ -359,7 +361,7 @@ export const makeStyles = (colors: ThemeColors) =>
     backgroundColor: colors.paper2,
   },
   editingBarText: { fontSize: fontSizes.caption, color: colors.smoke },
-  editingBarCancel: { fontSize: fontSizes.caption, color: colors.ember, fontWeight: '600' },
+  editingBarCancel: { fontSize: fontSizes.caption, color: colors.emberText, fontWeight: '600' },
   replyBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -370,7 +372,7 @@ export const makeStyles = (colors: ThemeColors) =>
     gap: spacing.md,
   },
   replyBarText: { flex: 1 },
-  replyBarLabel: { fontSize: fontSizes.caption, fontWeight: '700', color: colors.ember },
+  replyBarLabel: { fontSize: fontSizes.caption, fontWeight: '700', color: colors.emberText },
   replyBarSnippet: { fontSize: fontSizes.caption, color: colors.smoke, marginTop: 1 },
   mentionList: {
     borderTopWidth: StyleSheet.hairlineWidth,
@@ -428,7 +430,7 @@ export const makeStyles = (colors: ThemeColors) =>
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: colors.danger,
+    backgroundColor: colors.dangerFill,
   },
   recordingTime: { fontSize: fontSizes.body, color: colors.ink, fontWeight: '600' },
   input: {

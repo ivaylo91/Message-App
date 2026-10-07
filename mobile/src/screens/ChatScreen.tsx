@@ -74,7 +74,7 @@ import {
 } from '../utils/mentions';
 import { runPositions } from '../utils/messageGrouping';
 import * as draftStorage from '../drafts/draftStorage';
-import { spacing, MAX_BUBBLE_WIDTH } from '../theme/tokens';
+import { MAX_BUBBLE_WIDTH, MAX_FONT_SCALE_TIGHT, spacing } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 import {
   Conversation,
@@ -1893,7 +1893,7 @@ export function ChatScreen({ route, navigation }: Props) {
             accessibilityRole="button"
             accessibilityLabel={t('chat.a11yCall')}
           >
-            <FontAwesome6 name="video" iconStyle="solid" size={17} color={colors.ember} />
+            <FontAwesome6 name="video" iconStyle="solid" size={17} color={colors.emberText} />
           </Touchable>
         )}
         <Touchable
@@ -1952,7 +1952,7 @@ export function ChatScreen({ route, navigation }: Props) {
         </View>
       ) : isSearchOpen ? (
         <ScrollView style={styles.list} keyboardShouldPersistTaps="handled">
-          {isSearching && <ActivityIndicator color={colors.ember} style={styles.spinner} />}
+          {isSearching && <ActivityIndicator color={colors.emberText} style={styles.spinner} />}
           {!isSearching && searchQuery.trim().length >= 2 && searchResults.length === 0 && (
             <Text style={styles.searchEmptyText}>{t('chat.noSearchResults')}</Text>
           )}
@@ -2043,7 +2043,7 @@ export function ChatScreen({ route, navigation }: Props) {
           <FontAwesome6 name="chevron-down" iconStyle="solid" size={14} color={colors.ink} />
           {unseenCount > 0 && (
             <View style={styles.jumpBadge}>
-              <Text style={styles.jumpBadgeText}>{unseenCount > 99 ? '99+' : unseenCount}</Text>
+              <Text style={styles.jumpBadgeText} maxFontSizeMultiplier={MAX_FONT_SCALE_TIGHT}>{unseenCount > 99 ? '99+' : unseenCount}</Text>
             </View>
           )}
         </Touchable>
@@ -2238,7 +2238,7 @@ export function ChatScreen({ route, navigation }: Props) {
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>{t('chat.forwardTitle')}</Text>
             {forwardTargets === null ? (
-              <ActivityIndicator style={styles.spinner} color={colors.ember} />
+              <ActivityIndicator style={styles.spinner} color={colors.emberText} />
             ) : forwardTargets.length === 0 ? (
               <Text style={styles.modalMessage}>{t('chat.forwardNoTargets')}</Text>
             ) : (

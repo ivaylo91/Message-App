@@ -19,6 +19,15 @@ export interface ThemeColors {
   dusk: string;
   white: string;
   danger: string;
+  // Role tokens, where one colour couldn't serve both jobs. In the dark
+  // theme a violet light enough to read *as text* on the dark page is too
+  // light to carry white text *on top of it*, and the same goes for
+  // danger and the muted grey - no single value passes WCAG AA both ways.
+  // So `ember`, `danger` and `smoke` stay the colours of text and icons,
+  // and these are the fills that sit behind white text.
+  emberText: string;
+  dangerFill: string;
+  mutedFill: string;
 }
 
 export const lightColors: ThemeColors = {
@@ -27,10 +36,12 @@ export const lightColors: ThemeColors = {
   paper2: '#FFFFFF',
   ember: '#7C3AED',
   emberGlow: '#A78BFA',
-  smoke: '#8A776D',
+  // Was #8A776D (3.87:1 on paper - below AA for body text).
+  smoke: '#7A685E',
   char: '#2A1E19',
   line: 'rgba(28, 19, 16, 0.09)',
-  sage: '#7C8F6E',
+  // Was #7C8F6E (3.18:1) - used for 'Online' and typing text.
+  sage: '#5E7350',
   clay: '#B5654A',
   dusk: '#6E7B94',
   white: '#FFF8F2',
@@ -40,13 +51,17 @@ export const lightColors: ThemeColors = {
   // reads better, clearing 4.5:1 against paper where the old value did
   // not manage 3.5:1.
   danger: '#C6392F',
+  emberText: '#7C3AED',
+  dangerFill: '#C6392F',
+  mutedFill: '#7A685E',
 };
 
 export const darkColors: ThemeColors = {
   ink: '#F3ECE4',
   paper: '#15100D',
   paper2: '#231C18',
-  ember: '#8B5CF6',
+  // Was #8B5CF6: white on it was 4.02:1. Text uses emberText instead.
+  ember: '#7C3AED',
   emberGlow: '#C4B5FD',
   smoke: '#A79A91',
   char: '#EDE4DC',
@@ -56,6 +71,9 @@ export const darkColors: ThemeColors = {
   dusk: '#7C8CAD',
   white: '#FFF8F2',
   danger: '#F0685A',
+  emberText: '#A78BFA',
+  dangerFill: '#C6392F',
+  mutedFill: '#6B5E57',
 };
 
 // 'system' defers to the OS setting, which is what this app did
@@ -135,6 +153,12 @@ export function initialsFor(name: string): string {
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
+
+// For text in fixed-size containers - badges, tab labels, chips, the time
+// on a row - which overflow their shape at the largest system font sizes.
+// They still grow by up to 30%; running text (messages, names, previews)
+// is never capped and scales fully with the phone's setting.
+export const MAX_FONT_SCALE_TIGHT = 1.3;
 
 export const radii = {
   sm: 8,

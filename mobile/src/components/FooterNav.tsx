@@ -7,7 +7,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import type { AppStackParamList } from '../navigation/RootNavigator';
 import { useUnread } from '../unread/UnreadContext';
-import { elevation, fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
+import {
+  elevation,
+  fontSizes,
+  MAX_FONT_SCALE_TIGHT,
+  radii,
+  spacing,
+  ThemeColors,
+} from '../theme/tokens';
 import { Touchable } from './Touchable';
 import { useTheme } from '../theme/ThemeContext';
 
@@ -97,11 +104,11 @@ export function FooterNav({ active }: FooterNavProps) {
                 name={item.icon}
                 iconStyle="solid"
                 size={19}
-                color={isActive ? colors.ember : colors.smoke}
+                color={isActive ? colors.emberText : colors.smoke}
               />
               {!!item.badgeCount && (
                 <View style={styles.badge}>
-                  <Text style={styles.badgeText} numberOfLines={1}>
+                  <Text style={styles.badgeText} numberOfLines={1} maxFontSizeMultiplier={MAX_FONT_SCALE_TIGHT}>
                     {item.badgeCount > 99 ? '99+' : item.badgeCount}
                   </Text>
                 </View>
@@ -109,6 +116,7 @@ export function FooterNav({ active }: FooterNavProps) {
             </View>
             <Text
               style={[styles.label, isActive && styles.labelActive]}
+              maxFontSizeMultiplier={MAX_FONT_SCALE_TIGHT}
               numberOfLines={1}
             >
               {item.label}
@@ -165,5 +173,5 @@ const makeStyles = (colors: ThemeColors) =>
     },
     badgeText: { color: colors.white, fontSize: fontSizes.micro, fontWeight: '700' },
     label: { fontSize: fontSizes.micro, fontWeight: '600', color: colors.smoke },
-    labelActive: { color: colors.ember },
+    labelActive: { color: colors.emberText },
   });

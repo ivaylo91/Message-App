@@ -56,7 +56,7 @@ export const makeAuthStyles = (colors: ThemeColors) =>
     forgotPasswordText: {
       fontSize: 13,
       fontWeight: '600',
-      color: colors.ember,
+      color: colors.emberText,
     },
     error: { color: colors.danger, marginBottom: spacing.md },
     info: { color: colors.sage, marginBottom: spacing.md },

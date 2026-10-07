@@ -99,7 +99,7 @@ function FileRow({ item }: { item: MediaMessage }) {
           name={fileIconName(item.attachment_mime_type)}
           iconStyle="solid"
           size={16}
-          color={colors.ember}
+          color={colors.emberText}
         />
       </View>
       <View style={styles.fileTextBlock}>

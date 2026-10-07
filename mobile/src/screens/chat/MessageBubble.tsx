@@ -29,7 +29,7 @@ import { SwipeToReply } from '../../components/SwipeToReply';
 import { splitMentions } from '../../utils/mentions';
 import { hasLink, linkifyText } from '../../utils/linkify';
 import { showsSenderName, type RunPosition } from '../../utils/messageGrouping';
-import { radii } from '../../theme/tokens';
+import { MAX_FONT_SCALE_TIGHT, radii } from '../../theme/tokens';
 import { useTheme } from '../../theme/ThemeContext';
 import { MessageReaction, ReplyPreview } from '../../types';
 import {
@@ -283,7 +283,10 @@ function AudioMessageBubble({
           accessibilityRole="button"
           accessibilityLabel={t('chat.a11yPlaybackSpeed', { speed })}
         >
-          <Text style={isMine ? styles.speedChipTextMine : styles.speedChipTextTheirs}>
+          <Text
+            style={isMine ? styles.speedChipTextMine : styles.speedChipTextTheirs}
+            maxFontSizeMultiplier={MAX_FONT_SCALE_TIGHT}
+          >
             {speed}×
           </Text>
         </Touchable>

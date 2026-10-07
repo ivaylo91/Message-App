@@ -153,7 +153,7 @@ export function ContactInfoScreen({ route, navigation }: Props) {
                     name={action.icon}
                     iconStyle="solid"
                     size={18}
-                    color={colors.ember}
+                    color={colors.emberText}
                   />
                   <Text style={styles.actionLabel} numberOfLines={1}>
                     {action.label}

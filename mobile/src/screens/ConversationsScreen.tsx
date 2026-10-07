@@ -51,7 +51,7 @@ import {
   pinnedFirst,
 } from '../utils/conversationList';
 import { isMuted } from '../utils/mute';
-import { fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
+import { fontSizes, MAX_FONT_SCALE_TIGHT, radii, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 import { SPRING_TAP } from '../theme/motion';
 import { Conversation, Message, Profile } from '../types';
@@ -198,6 +198,7 @@ function ConversationRow({
               {timestamp && (
                 <Text
                   style={[styles.rowTime, showsUnread && !muted && styles.rowTimeUnread]}
+                  maxFontSizeMultiplier={MAX_FONT_SCALE_TIGHT}
                   numberOfLines={1}
                 >
                   {formatListTimestamp(timestamp, t, i18n.language)}
@@ -227,7 +228,7 @@ function ConversationRow({
                 // Grey rather than ember when muted: the count is still
                 // there to see, but it isn't asking for attention.
                 <View style={[styles.unreadBadge, muted && styles.unreadBadgeMuted]}>
-                  <Text style={styles.unreadBadgeText}>
+                  <Text style={styles.unreadBadgeText} maxFontSizeMultiplier={MAX_FONT_SCALE_TIGHT}>
                     {unreadCount > 99 ? '99+' : unreadCount}
                   </Text>
                 </View>
@@ -669,7 +670,10 @@ export function ConversationsScreen({ navigation }: Props) {
                 accessibilityRole="tab"
                 accessibilityState={{ selected }}
               >
-                <Text style={[styles.filterText, selected && styles.filterTextSelected]}>
+                <Text
+                  style={[styles.filterText, selected && styles.filterTextSelected]}
+                  maxFontSizeMultiplier={MAX_FONT_SCALE_TIGHT}
+                >
                   {label}
                 </Text>
               </Touchable>
@@ -899,7 +903,7 @@ const makeStyles = (colors: ThemeColors) =>
     top: 0,
     bottom: 0,
     width: SWIPE_DELETE_WIDTH,
-    backgroundColor: colors.danger,
+    backgroundColor: colors.dangerFill,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -949,11 +953,11 @@ const makeStyles = (colors: ThemeColors) =>
   // flexShrink so a long name truncates instead of pushing the time away.
   rowTitle: { flexShrink: 1, fontWeight: '700', fontSize: fontSizes.body, color: colors.ink },
   rowTime: { marginLeft: 'auto', fontSize: fontSizes.caption, color: colors.smoke },
-  rowTimeUnread: { color: colors.ember, fontWeight: '700' },
+  rowTimeUnread: { color: colors.emberText, fontWeight: '700' },
   rowPreviewLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: 2 },
   rowPreview: { flex: 1, color: colors.smoke, fontSize: fontSizes.footnote },
   rowPreviewTyping: { color: colors.sage, fontWeight: '600' },
-  rowDraftLabel: { color: colors.ember, fontWeight: '700' },
+  rowDraftLabel: { color: colors.emberText, fontWeight: '700' },
   rowPreviewUnread: { color: colors.ink, fontWeight: '600' },
   unreadBadge: {
     minWidth: 22,
@@ -964,7 +968,7 @@ const makeStyles = (colors: ThemeColors) =>
     alignItems: 'center',
     justifyContent: 'center',
   },
-  unreadBadgeMuted: { backgroundColor: colors.smoke },
+  unreadBadgeMuted: { backgroundColor: colors.mutedFill },
   unreadDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: colors.ember },
   unreadBadgeText: { color: colors.white, fontSize: fontSizes.caption, fontWeight: '700' },
   empty: { alignItems: 'center', marginTop: 64, paddingHorizontal: spacing.xxl },

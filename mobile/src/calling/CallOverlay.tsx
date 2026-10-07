@@ -164,5 +164,5 @@ const makeStyles = (colors: ThemeColors) =>
       justifyContent: 'center',
     },
     acceptButton: { backgroundColor: colors.sage },
-    declineButton: { backgroundColor: colors.danger },
+    declineButton: { backgroundColor: colors.dangerFill },
   });

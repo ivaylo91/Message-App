@@ -115,7 +115,7 @@ export function NewChatScreen({ navigation }: Props) {
             </Touchable>
           )}
 
-          {isSearching && <ActivityIndicator color={colors.ember} style={styles.spinner} />}
+          {isSearching && <ActivityIndicator color={colors.emberText} style={styles.spinner} />}
 
           {!isSearching && query.trim() && results.length === 0 && (
             <Text style={styles.emptyText}>{t('newChat.noResults')}</Text>
@@ -159,7 +159,7 @@ const makeStyles = (colors: ThemeColors) =>
     justifyContent: 'center',
   },
   cancelButton: { position: 'absolute', left: spacing.lg, top: 0 },
-  cancelText: { color: colors.ember, fontSize: fontSizes.body, fontWeight: '600' },
+  cancelText: { color: colors.emberText, fontSize: fontSizes.body, fontWeight: '600' },
   title: { fontSize: fontSizes.bodyLg, fontWeight: '700', color: colors.ink },
   searchBar: {
     marginHorizontal: spacing.lg,

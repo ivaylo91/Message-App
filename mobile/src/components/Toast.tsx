@@ -111,6 +111,6 @@ const makeStyles = (colors: ThemeColors) =>
       zIndex: 999,
     },
     success: { backgroundColor: colors.sage },
-    error: { backgroundColor: colors.danger },
+    error: { backgroundColor: colors.dangerFill },
     text: { color: colors.white, fontWeight: '700', fontSize: fontSizes.body },
   });

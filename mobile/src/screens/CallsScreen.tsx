@@ -112,7 +112,7 @@ export function CallsScreen({ navigation }: Props) {
             accessibilityRole="button"
             accessibilityLabel={t('calls.callBack', { name: title })}
           >
-            <FontAwesome6 name="video" iconStyle="solid" size={17} color={colors.ember} />
+            <FontAwesome6 name="video" iconStyle="solid" size={17} color={colors.emberText} />
           </Touchable>
         )}
       </Touchable>
