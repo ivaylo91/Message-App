@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
@@ -41,6 +42,9 @@ import {
 } from '../utils/messagePreview';
 import {
   applyIncomingMessage,
+  CHAT_FILTERS,
+  matchesChatFilter,
+  type ChatFilter,
   MAX_PINNED_CONVERSATIONS,
   pinnedAtFor,
   pinnedFirst,
@@ -53,6 +57,12 @@ import { Conversation, Message, Profile } from '../types';
 type Props = NativeStackScreenProps<AppStackParamList, 'Conversations'>;
 
 const MESSAGE_SEARCH_DEBOUNCE_MS = 300;
+const CHAT_FILTER_KEY = 'chatFilter:v1';
+const FILTER_LABEL_KEYS: Record<ChatFilter, string> = {
+  all: 'conversations.filterAll',
+  unread: 'conversations.filterUnread',
+  groups: 'conversations.filterGroups',
+};
 const SWIPE_DELETE_WIDTH = 84;
 const SWIPE_OPEN_THRESHOLD = -40;
 
@@ -268,6 +278,20 @@ export function ConversationsScreen({ navigation }: Props) {
     refresh: refreshUnreadCounts,
     markConversationRead,
   } = useUnread();
+
+  // The selected chip, remembered on this device between visits.
+  const [chatFilter, setChatFilter] = useState<ChatFilter>('all');
+  useEffect(() => {
+    void AsyncStorage.getItem(CHAT_FILTER_KEY)
+      .then((saved) => {
+        if (saved && (CHAT_FILTERS as string[]).includes(saved)) setChatFilter(saved as ChatFilter);
+      })
+      .catch(() => {});
+  }, []);
+  const onSelectFilter = useCallback((filter: ChatFilter) => {
+    setChatFilter(filter);
+    void AsyncStorage.setItem(CHAT_FILTER_KEY, filter).catch(() => {});
+  }, []);
   const { typingConversationIds, watch: watchTyping } = useTyping();
   const { confirm } = useConfirm();
   const { showToast } = useToast();
@@ -552,13 +576,20 @@ export function ConversationsScreen({ navigation }: Props) {
   // two things ConversationRow renders, so a match always makes sense to
   // the person reading the results.
   const trimmedSearchQuery = searchQuery.trim().toLowerCase();
+  // Search looks across every chat, whatever chip is selected - the chips
+  // hide while searching, so a filter can't silently narrow the results.
   const filteredConversations = trimmedSearchQuery
     ? conversations.filter((conversation) => {
         const title = conversationTitle(conversation).toLowerCase();
         const preview = previewText(conversation.messages?.[0]).toLowerCase();
         return title.includes(trimmedSearchQuery) || preview.includes(trimmedSearchQuery);
       })
-    : conversations;
+    : chatFilter === 'all'
+      ? conversations
+      : conversations.filter((c) => matchesChatFilter(c, chatFilter, userId, unreadCounts));
+  const unreadChatCount = conversations.filter((c) =>
+    matchesChatFilter(c, 'unread', userId, unreadCounts),
+  ).length;
   const orderedConversations = useMemo(
     () => pinnedFirst(filteredConversations, userId),
     [filteredConversations, userId],
@@ -621,6 +652,31 @@ export function ConversationsScreen({ navigation }: Props) {
           </Touchable>
         )}
       </View>
+
+      {!trimmedSearchQuery && (
+        <View style={styles.filterRow} accessibilityRole="tablist">
+          {CHAT_FILTERS.map((filter) => {
+            const selected = filter === chatFilter;
+            const label =
+              filter === 'unread' && unreadChatCount > 0
+                ? `${t('conversations.filterUnread')} · ${unreadChatCount}`
+                : t(FILTER_LABEL_KEYS[filter]);
+            return (
+              <Touchable
+                key={filter}
+                style={[styles.filterChip, selected && styles.filterChipSelected]}
+                onPress={() => onSelectFilter(filter)}
+                accessibilityRole="tab"
+                accessibilityState={{ selected }}
+              >
+                <Text style={[styles.filterText, selected && styles.filterTextSelected]}>
+                  {label}
+                </Text>
+              </Touchable>
+            );
+          })}
+        </View>
+      )}
 
       <FlatList
         data={orderedConversations}
@@ -743,7 +799,12 @@ export function ConversationsScreen({ navigation }: Props) {
           // while the list is still arriving states something untrue.
           !hasLoadedOnce ? (
             <ConversationListSkeleton />
-          ) : trimmedSearchQuery ? null : (
+          ) : trimmedSearchQuery ? null : chatFilter !== 'all' ? (
+            // A filter with nothing in it isn't "no conversations yet".
+            <Text style={styles.filterEmpty}>
+              {t(chatFilter === 'unread' ? 'conversations.filterEmptyUnread' : 'conversations.filterEmptyGroups')}
+            </Text>
+          ) : (
           <View style={styles.empty}>
             <View style={styles.emptyIcon}>
               <FontAwesome6 name="comments" iconStyle="solid" size={26} color={colors.smoke} />
@@ -794,6 +855,29 @@ const makeStyles = (colors: ThemeColors) =>
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: colors.line,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  filterChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.paper2,
+  },
+  filterChipSelected: { backgroundColor: colors.ember, borderColor: colors.ember },
+  filterText: { fontSize: fontSizes.footnote, fontWeight: '600', color: colors.smoke },
+  filterTextSelected: { color: colors.white },
+  filterEmpty: {
+    textAlign: 'center',
+    marginTop: spacing.xxl,
+    fontSize: fontSizes.footnote,
+    color: colors.smoke,
   },
   searchBar: {
     flexDirection: 'row',

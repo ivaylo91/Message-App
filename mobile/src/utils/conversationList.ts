@@ -95,3 +95,23 @@ export function pinnedFirst(conversations: Conversation[], userId: string | null
   );
   return [...pinned, ...rest];
 }
+
+// The chips above the chat list.
+export type ChatFilter = 'all' | 'unread' | 'groups';
+export const CHAT_FILTERS: ChatFilter[] = ['all', 'unread', 'groups'];
+
+// "Unread" means anything waiting for you - unread messages, or flagged
+// with Mark as unread - the same rule that bolds a row.
+export function matchesChatFilter(
+  conversation: Conversation,
+  filter: ChatFilter,
+  userId: string | null,
+  unreadCounts: Record<string, number>,
+): boolean {
+  if (filter === 'groups') return conversation.is_group;
+  if (filter === 'unread') {
+    const mine = conversation.conversation_participants.find((p) => p.user_id === userId);
+    return (unreadCounts[conversation.id] ?? 0) > 0 || Boolean(mine?.marked_unread);
+  }
+  return true;
+}

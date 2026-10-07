@@ -1,4 +1,8 @@
-import { applyIncomingMessage, pinnedFirst } from '../src/utils/conversationList';
+import {
+  applyIncomingMessage,
+  matchesChatFilter,
+  pinnedFirst,
+} from '../src/utils/conversationList';
 import { Conversation, Message } from '../src/types';
 
 function conversation(id: string, updatedAt: string, preview?: Message): Conversation {
@@ -189,5 +193,42 @@ describe('pinnedFirst', () => {
   test("ignores another participant's pin", () => {
     const list = [withPin('a', null), withPin('b', '2026-09-01T10:00:00.000Z', 'someone-else')];
     expect(pinnedFirst(list, me).map((c) => c.id)).toEqual(['a', 'b']);
+  });
+});
+
+describe('matchesChatFilter', () => {
+  const me = 'me';
+  const chat = (id: string, opts: { group?: boolean; markedUnread?: boolean } = {}): Conversation => ({
+    ...conversation(id, '2026-09-09T12:00:00.000Z'),
+    is_group: Boolean(opts.group),
+    conversation_participants: [
+      {
+        id: `${id}-p`,
+        conversation_id: id,
+        user_id: me,
+        last_read_at: null,
+        muted_until: null,
+        pinned_at: null,
+        marked_unread: Boolean(opts.markedUnread),
+        role: 'MEMBER',
+        hidden_at: null,
+        profiles: undefined as never,
+      },
+    ],
+  });
+
+  test('all matches everything', () => {
+    expect(matchesChatFilter(chat('a'), 'all', me, {})).toBe(true);
+  });
+
+  test('unread means unread messages or flagged with Mark as unread', () => {
+    expect(matchesChatFilter(chat('a'), 'unread', me, { a: 2 })).toBe(true);
+    expect(matchesChatFilter(chat('b', { markedUnread: true }), 'unread', me, {})).toBe(true);
+    expect(matchesChatFilter(chat('c'), 'unread', me, {})).toBe(false);
+  });
+
+  test('groups means group conversations only', () => {
+    expect(matchesChatFilter(chat('g', { group: true }), 'groups', me, {})).toBe(true);
+    expect(matchesChatFilter(chat('d'), 'groups', me, {})).toBe(false);
   });
 });
