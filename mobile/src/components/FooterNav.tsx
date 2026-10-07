@@ -7,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import type { AppStackParamList } from '../navigation/RootNavigator';
 import { useUnread } from '../unread/UnreadContext';
-import { elevation, fontSizes, spacing, ThemeColors } from '../theme/tokens';
+import { elevation, fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
 import { Touchable } from './Touchable';
 import { useTheme } from '../theme/ThemeContext';
 
@@ -67,13 +67,18 @@ export function FooterNav({ active }: FooterNavProps) {
   ];
 
   return (
-    <View style={[styles.container, { paddingBottom: insets.bottom + spacing.xs }]}>
+    // A capsule floating above the screen's bottom edge, with a pill behind
+    // the current tab - the shape WhatsApp's 2026 redesign and Google's
+    // apps use. It stays in the layout rather than overlapping the content,
+    // so no list has to pad itself to keep its last row reachable.
+    <View style={[styles.container, { paddingBottom: insets.bottom + spacing.sm }]}>
+      <View style={styles.bar}>
       {items.map((item) => {
         const isActive = active === item.key;
         return (
           <Touchable
             key={item.key}
-            style={styles.item}
+            style={[styles.item, isActive && styles.itemActive]}
             iconButton
             // Tapping the tab you're on does nothing, rather than reloading.
             onPress={isActive ? undefined : item.onPress}
@@ -111,6 +116,7 @@ export function FooterNav({ active }: FooterNavProps) {
           </Touchable>
         );
       })}
+      </View>
     </View>
   );
 }
@@ -118,12 +124,30 @@ export function FooterNav({ active }: FooterNavProps) {
 const makeStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     container: {
-      flexDirection: 'row',
-      backgroundColor: colors.paper2,
-      paddingTop: spacing.sm,
-      ...elevation.sm,
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.xs,
+      backgroundColor: colors.paper,
     },
-    item: { flex: 1, alignItems: 'center', gap: 3 },
+    bar: {
+      flexDirection: 'row',
+      padding: 5,
+      gap: 4,
+      borderRadius: radii.pill,
+      backgroundColor: colors.paper2,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: colors.line,
+      ...elevation.md,
+    },
+    item: {
+      flex: 1,
+      alignItems: 'center',
+      gap: 2,
+      paddingVertical: 7,
+      borderRadius: radii.pill,
+    },
+    // The ember at about 12% opacity: a tint, so the icon and label in full
+    // ember stay the strongest thing on it.
+    itemActive: { backgroundColor: `${colors.ember}1F` },
     iconWrap: { position: 'relative' },
     badge: {
       position: 'absolute',
