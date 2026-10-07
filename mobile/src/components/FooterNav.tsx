@@ -6,14 +6,12 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import type { AppStackParamList } from '../navigation/RootNavigator';
-import { useAuth } from '../auth/AuthContext';
 import { useUnread } from '../unread/UnreadContext';
 import { elevation, fontSizes, spacing, ThemeColors } from '../theme/tokens';
 import { Touchable } from './Touchable';
-import { useConfirm } from './ConfirmSheet';
 import { useTheme } from '../theme/ThemeContext';
 
-export type FooterTab = 'notifications' | 'chats' | 'group' | 'exit';
+export type FooterTab = 'chats' | 'calls' | 'profile';
 
 type SolidIconName = Extract<
   React.ComponentProps<typeof FontAwesome6>,
@@ -24,18 +22,17 @@ interface FooterNavProps {
   active?: FooterTab;
 }
 
-// A persistent bottom bar for the app's main screens (Conversations,
-// Chat) - self-contained so any screen can just drop in
-// <FooterNav active="..." /> without wiring up navigation/logout itself.
-// The Notifications tab currently just opens the main chat list (all
-// chats) rather than a separate filtered screen.
+// The bottom bar of the app's top-level screens - and only those: a
+// conversation hides it, as every major messenger does, so the thread gets
+// the height. Three real destinations. It used to also hold Notifications
+// (which opened the same list as Chats), Group (an action - it now lives
+// in the new-chat screen) and Exit (log out, one tap from the busiest tab
+// - now at the bottom of Profile).
 export function FooterNav({ active }: FooterNavProps) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<AppStackParamList>>();
-  const { logout } = useAuth();
-  const { confirm } = useConfirm();
-  const { totalUnread, unreadConversationCount } = useUnread();
+  const { unreadConversationCount } = useUnread();
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
@@ -47,48 +44,25 @@ export function FooterNav({ active }: FooterNavProps) {
     badgeCount?: number;
   }> = [
     {
-      key: 'notifications',
-      icon: 'bell',
-      label: t('footer.notifications'),
-      onPress: () => navigation.navigate('Conversations'),
-      // Unread *messages*, so the bell answers "how much is waiting for
-      // me" the way Messenger's does.
-      badgeCount: totalUnread,
-    },
-    {
       key: 'chats',
       icon: 'comment',
       label: t('footer.chats'),
+      // Conversations is the stack's root, so this goes back to it rather
+      // than stacking another copy.
       onPress: () => navigation.navigate('Conversations'),
-      // Unread *conversations*, not messages - otherwise this would be
-      // the identical number to the bell, printed twice, side by side.
       badgeCount: unreadConversationCount,
     },
     {
-      key: 'group',
-      icon: 'users',
-      label: t('footer.group'),
-      onPress: () => navigation.navigate('NewGroup'),
+      key: 'calls',
+      icon: 'phone',
+      label: t('footer.calls'),
+      onPress: () => navigation.navigate('Calls'),
     },
     {
-      key: 'exit',
-      icon: 'right-from-bracket',
-      label: t('footer.exit'),
-      // Confirmed rather than immediate: this sits in a bar that's on
-      // screen the whole time, one thumb-width from the tab people tap
-      // most, and logging out drops them all the way back to sign-in.
-      onPress: () => {
-        void confirm({
-          title: t('footer.logoutConfirmTitle'),
-          message: t('footer.logoutConfirmMessage'),
-          cancelLabel: t('footer.cancel'),
-          options: [
-            { id: 'logout', label: t('footer.logoutConfirm'), destructive: true },
-          ],
-        }).then((choice) => {
-          if (choice === 'logout') void logout();
-        });
-      },
+      key: 'profile',
+      icon: 'user',
+      label: t('footer.profile'),
+      onPress: () => navigation.navigate('Profile'),
     },
   ];
 
@@ -101,7 +75,8 @@ export function FooterNav({ active }: FooterNavProps) {
             key={item.key}
             style={styles.item}
             iconButton
-            onPress={item.onPress}
+            // Tapping the tab you're on does nothing, rather than reloading.
+            onPress={isActive ? undefined : item.onPress}
             accessibilityRole="button"
             // Without the count folded in, a screen reader announces
             // "Notifications" and says nothing about the 12 sitting on it.

@@ -63,7 +63,7 @@ const PHONE_PATTERN = /^\+?[0-9]{7,15}$/;
 
 export function ProfileScreen({ navigation }: Props) {
   const { t, i18n } = useTranslation();
-  const { userId } = useAuth();
+  const { userId, logout } = useAuth();
   const { confirm } = useConfirm();
   const { setSharesLastSeen } = usePresence();
   const insets = useSafeAreaInsets();
@@ -504,6 +504,39 @@ export function ProfileScreen({ navigation }: Props) {
             />
             <Text style={styles.legalRowText}>{t('profile.privacyPolicy')}</Text>
             <FontAwesome6 name="arrow-up-right-from-square" iconStyle="solid" size={11} color={colors.smoke} />
+          </Touchable>
+        </View>
+
+        {/* Moved here from the bottom bar, where it sat one tap from the
+            tab people use most. Still confirmed - it drops you back to
+            sign-in. */}
+        <View style={styles.legalSection}>
+          <Touchable
+            style={styles.dangerRow}
+            onPress={() =>
+              void confirm({
+                title: t('footer.logoutConfirmTitle'),
+                message: t('footer.logoutConfirmMessage'),
+                cancelLabel: t('footer.cancel'),
+                options: [{ id: 'logout', label: t('footer.logoutConfirm'), destructive: true }],
+              }).then((choice) => {
+                if (choice === 'logout') void logout();
+              })
+            }
+            accessibilityRole="button"
+          >
+            <FontAwesome6
+              name="right-from-bracket"
+              iconStyle="solid"
+              size={15}
+              color={colors.danger}
+              style={styles.dangerRowIcon}
+            />
+            <View style={styles.dangerRowText}>
+              <Text style={[styles.dangerRowTitle, styles.dangerRowTitleDestructive]}>
+                {t('footer.logoutConfirm')}
+              </Text>
+            </View>
           </Touchable>
         </View>
 

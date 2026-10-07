@@ -309,11 +309,21 @@
   "common": {
     "language": "Language"
   },
+  "calls": {
+    "title": "Calls",
+    "missed": "Missed",
+    "noAnswer": "No answer",
+    "declined": "Declined",
+    "incoming": "Incoming",
+    "outgoing": "Outgoing",
+    "callBack": "Video call {{name}}",
+    "emptyTitle": "No calls yet",
+    "emptyHint": "Video calls you make and receive will show up here."
+  },
   "footer": {
-    "notifications": "Notifications",
+    "calls": "Calls",
+    "profile": "Profile",
     "chats": "Chats",
-    "group": "Group",
-    "exit": "Exit",
     "logoutConfirmTitle": "Log out?",
     "logoutConfirmMessage": "You'll need to sign in again to read your messages.",
     "logoutConfirm": "Log out",

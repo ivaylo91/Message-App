@@ -526,3 +526,33 @@ export async function removeConversationParticipant(
 
   if (error) throw error;
 }
+
+export interface CallLogEntry {
+  id: string;
+  conversation_id: string;
+  // Only the caller's side logs a call (see CallContext), so the sender is
+  // always the person who placed it.
+  sender_id: string;
+  call_status: CallStatus;
+  attachment_duration_ms: number | null;
+  created_at: string;
+  conversations: Pick<Conversation, 'id' | 'is_group' | 'name' | 'conversation_participants'>;
+}
+
+// The Calls tab: call-summary messages across every conversation, newest
+// first. Calls already live in the conversations as messages, so this is a
+// view onto those rather than a separate history - nothing new is stored.
+export async function fetchCallLog(): Promise<CallLogEntry[]> {
+  const { data, error } = await supabase
+    .from('messages')
+    .select(
+      `id, conversation_id, sender_id, call_status, attachment_duration_ms, created_at, conversations!inner(id, is_group, name, conversation_participants(user_id, profiles(${PROFILE_COLUMNS})))`,
+    )
+    .not('call_status', 'is', null)
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false })
+    .limit(100);
+
+  if (error) throw error;
+  return data as unknown as CallLogEntry[];
+}

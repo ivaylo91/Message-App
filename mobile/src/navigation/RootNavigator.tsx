@@ -27,6 +27,7 @@ import { ProfileScreen } from '../screens/ProfileScreen';
 import { MediaGalleryScreen } from '../screens/MediaGalleryScreen';
 import { GroupInfoScreen } from '../screens/GroupInfoScreen';
 import { ContactInfoScreen } from '../screens/ContactInfoScreen';
+import { CallsScreen } from '../screens/CallsScreen';
 
 export type AuthStackParamList = {
   Welcome: undefined;
@@ -40,6 +41,7 @@ export type AppStackParamList = {
   NewChat: undefined;
   NewGroup: undefined;
   Profile: undefined;
+  Calls: undefined;
   // highlightMessageId jumps straight to a message - used by global
   // search, which can land on a message far outside the newest page.
   Chat: { conversationId: string; title: string; highlightMessageId?: string };
@@ -97,6 +99,7 @@ function AppNavigator() {
         component={ProfileScreen}
         options={{ presentation: 'modal' }}
       />
+      <AppStack.Screen name="Calls" component={CallsScreen} />
       <AppStack.Screen name="Chat" component={ChatScreen} />
       <AppStack.Screen name="MediaGallery" component={MediaGalleryScreen} />
       <AppStack.Screen name="GroupInfo" component={GroupInfoScreen} />

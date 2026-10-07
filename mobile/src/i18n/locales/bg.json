@@ -309,11 +309,21 @@
   "common": {
     "language": "Език"
   },
+  "calls": {
+    "title": "Обаждания",
+    "missed": "Пропуснато",
+    "noAnswer": "Без отговор",
+    "declined": "Отказано",
+    "incoming": "Входящо",
+    "outgoing": "Изходящо",
+    "callBack": "Видео разговор с {{name}}",
+    "emptyTitle": "Все още няма обаждания",
+    "emptyHint": "Видео разговорите, които провеждате и получавате, ще се показват тук."
+  },
   "footer": {
-    "notifications": "Известия",
+    "calls": "Обаждания",
+    "profile": "Профил",
     "chats": "Чатове",
-    "group": "Група",
-    "exit": "Изход",
     "logoutConfirmTitle": "Изход от профила?",
     "logoutConfirmMessage": "Ще трябва да влезете отново, за да четете съобщенията си.",
     "logoutConfirm": "Изход",

@@ -40,7 +40,6 @@ import { Avatar } from '../components/Avatar';
 import { Touchable } from '../components/Touchable';
 import { AppWallpaper } from '../components/AppWallpaper';
 import { MediaViewer } from '../components/MediaViewer';
-import { FooterNav } from '../components/FooterNav';
 import { useToast } from '../components/Toast';
 import { useConfirm } from '../components/ConfirmSheet';
 import { useCall } from '../calling/CallContext';
@@ -2204,7 +2203,6 @@ export function ChatScreen({ route, navigation }: Props) {
           </>
         )}
       </View>
-      {!isKeyboardVisible && <FooterNav active="chats" />}
 
       <MediaViewer
         paths={imagePaths}
