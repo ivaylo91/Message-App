@@ -6,7 +6,9 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { Animated, Linking, Text, View } from 'react-native';
+import { Linking, Text, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import { SPRING_TAP } from '../../theme/motion';
 import FastImage from '@d11/react-native-fast-image';
 import LinearGradient from 'react-native-linear-gradient';
 import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
@@ -441,19 +443,16 @@ function ReactionPill({
 }) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const scale = useRef(new Animated.Value(0.8)).current;
+  // Pops in from slightly small when the reaction first appears.
+  const scale = useSharedValue(0.8);
+  const popStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
   useEffect(() => {
-    Animated.spring(scale, {
-      toValue: 1,
-      friction: 5,
-      tension: 160,
-      useNativeDriver: true,
-    }).start();
+    scale.value = withSpring(1, SPRING_TAP);
   }, [scale]);
 
   return (
-    <Animated.View style={{ transform: [{ scale }] }}>
+    <Animated.View style={popStyle}>
       <Touchable
         style={[styles.reactionPill, summary.reactedByMe && styles.reactionPillMine]}
         onPress={onPress}

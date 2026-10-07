@@ -1,10 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
+import { scheduleOnRN } from 'react-native-worklets';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Animated,
   FlatList,
   LayoutAnimation,
-  PanResponder,
   RefreshControl,
   StyleSheet,
   Text,
@@ -52,6 +53,7 @@ import {
 import { isMuted } from '../utils/mute';
 import { fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
+import { SPRING_TAP } from '../theme/motion';
 import { Conversation, Message, Profile } from '../types';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Conversations'>;
@@ -90,11 +92,9 @@ interface ConversationRowProps {
   onDelete: () => void;
 }
 
-// Swipe-to-delete via core RN Animated/PanResponder rather than a gesture
-// library - a plain horizontal drag that reveals a Delete action underneath
-// is well within what PanResponder handles on its own. Only one row's
-// delete action is open at a time (isOpen/onOpen/onClose, coordinated by
-// the parent), matching the usual Mail/WhatsApp-style swipe list feel.
+// Swipe left to reveal a Delete action underneath. Only one row's delete
+// action is open at a time (isOpen/onOpen/onClose, coordinated by the
+// parent), matching the usual Mail/WhatsApp-style swipe list feel.
 function ConversationRow({
   title,
   muted,
@@ -118,45 +118,46 @@ function ConversationRow({
   const showsUnread = unreadCount > 0 || markedUnread;
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const translateX = useRef(new Animated.Value(0)).current;
-  const openXRef = useRef(0);
+  // Swipe left to reveal Delete. On the UI thread (Gesture Handler +
+  // Reanimated), like swipe-to-reply in a chat. It previously ran on
+  // PanResponder, created once on first render - so it also kept that
+  // render's onOpen/onClose; these callbacks track the current props.
+  const translateX = useSharedValue(0);
+  // Where the row rests: 0 (closed) or -SWIPE_DELETE_WIDTH (open).
+  const openX = useSharedValue(0);
+  const rowStyle = useAnimatedStyle(() => ({ transform: [{ translateX: translateX.value }] }));
 
+  // Another row opening closes this one.
   useEffect(() => {
-    if (!isOpen && openXRef.current !== 0) {
-      openXRef.current = 0;
-      Animated.timing(translateX, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
+    if (!isOpen && openX.value !== 0) {
+      openX.value = 0;
+      translateX.value = withSpring(0, SPRING_TAP);
     }
-  }, [isOpen, translateX]);
+  }, [isOpen, openX, translateX]);
 
-  const panResponder = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_, gesture) =>
-        Math.abs(gesture.dx) > 8 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.5,
-      onPanResponderGrant: onOpen,
-      onPanResponderMove: (_, gesture) => {
-        const next = Math.max(-SWIPE_DELETE_WIDTH, Math.min(0, openXRef.current + gesture.dx));
-        translateX.setValue(next);
-      },
-      onPanResponderRelease: (_, gesture) => {
-        const projected = Math.max(
-          -SWIPE_DELETE_WIDTH,
-          Math.min(0, openXRef.current + gesture.dx),
-        );
-        const shouldOpen = projected < SWIPE_OPEN_THRESHOLD;
-        openXRef.current = shouldOpen ? -SWIPE_DELETE_WIDTH : 0;
-        Animated.timing(translateX, {
-          toValue: openXRef.current,
-          duration: 200,
-          useNativeDriver: true,
-        }).start();
-        if (!shouldOpen) onClose();
-      },
-    }),
-  ).current;
+  const pan = usePanGesture({
+    // Horizontal only: a vertical move fails it, so the list scrolls.
+    activeOffsetX: [-10, 10],
+    failOffsetY: [-10, 10],
+    onActivate: () => {
+      'worklet';
+      scheduleOnRN(onOpen);
+    },
+    onUpdate: (event) => {
+      'worklet';
+      translateX.value = Math.max(
+        -SWIPE_DELETE_WIDTH,
+        Math.min(0, openX.value + event.translationX),
+      );
+    },
+    onDeactivate: () => {
+      'worklet';
+      const shouldOpen = translateX.value < SWIPE_OPEN_THRESHOLD;
+      openX.value = shouldOpen ? -SWIPE_DELETE_WIDTH : 0;
+      translateX.value = withSpring(openX.value, SPRING_TAP);
+      if (!shouldOpen) scheduleOnRN(onClose);
+    },
+  });
 
   return (
     <View style={styles.rowContainer}>
@@ -168,10 +169,8 @@ function ConversationRow({
       >
         <FontAwesome6 name="trash" iconStyle="solid" size={18} color={colors.white} />
       </Touchable>
-      <Animated.View
-        style={[styles.rowForeground, { transform: [{ translateX }] }]}
-        {...panResponder.panHandlers}
-      >
+      <GestureDetector gesture={pan}>
+      <Animated.View style={[styles.rowForeground, rowStyle]}>
         <Touchable style={styles.row} onPress={onPress} onLongPress={onLongPress}>
           <Avatar name={title} avatarPath={avatarPath} online={online} />
           <View style={styles.rowMain}>
@@ -242,6 +241,7 @@ function ConversationRow({
           </View>
         </Touchable>
       </Animated.View>
+      </GestureDetector>
     </View>
   );
 }

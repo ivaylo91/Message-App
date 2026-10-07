@@ -11,6 +11,7 @@ import Animated, {
 import { scheduleOnRN } from 'react-native-worklets';
 import { FontAwesome6 } from '@react-native-vector-icons/fontawesome6/static';
 import { haptic } from '../utils/haptics';
+import { SPRING_TAP } from '../theme/motion';
 
 // Drag a message to the right to reply to it. The drag runs on the UI
 // thread (Gesture Handler + Reanimated), so the bubble stays under the
@@ -23,8 +24,6 @@ import { haptic } from '../utils/haptics';
 const THRESHOLD = 64;
 const RESISTANCE = 0.3;
 const MAX_TRAVEL = THRESHOLD + 36;
-
-const SPRING_BACK = { damping: 20, stiffness: 320, mass: 0.6 } as const;
 
 interface Props {
   enabled: boolean;
@@ -64,7 +63,7 @@ export function SwipeToReply({ enabled, onReply, iconColor, children }: Props) {
     onFinalize: () => {
       'worklet';
       armed.value = false;
-      translateX.value = withSpring(0, SPRING_BACK);
+      translateX.value = withSpring(0, SPRING_TAP);
     },
   });
 

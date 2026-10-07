@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Touchable } from './Touchable';
 import { elevation, fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
+import { SPRING_SHEET } from '../theme/motion';
 
 // The long-press menu for a message, replacing the strip that used to open
 // under the bubble - which scrolled sideways and hid Forward, Edit, Delete
@@ -121,7 +122,7 @@ export function MessageMenu({
           <View style={[styles.stack, align, { top }]} pointerEvents="box-none">
             {reactions.length > 0 && (
               <Animated.View
-                entering={ZoomIn.springify().damping(18).stiffness(280)}
+                entering={ZoomIn.springify().damping(SPRING_SHEET.damping).stiffness(SPRING_SHEET.stiffness)}
                 style={styles.reactionBar}
               >
                 {reactions.map((emoji) => {
@@ -161,7 +162,7 @@ export function MessageMenu({
             </Animated.View>
 
             <Animated.View
-              entering={ZoomIn.springify().damping(20).stiffness(300)}
+              entering={ZoomIn.springify().damping(SPRING_SHEET.damping).stiffness(SPRING_SHEET.stiffness)}
               style={styles.actions}
             >
               {actions.map((action, index) => (

@@ -7,7 +7,9 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { Animated, Easing, Modal, StyleSheet, Text, View } from 'react-native';
+import { Modal, StyleSheet, Text, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import { SPRING_SHEET } from '../theme/motion';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Touchable } from './Touchable';
 import { elevation, fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
@@ -52,7 +54,9 @@ const ConfirmContext = createContext<ConfirmContextValue>({
   confirm: async () => null,
 });
 
-const SLIDE_MS = 220;
+// Where the sheet starts before springing up - enough to begin below the
+// screen's edge for any sheet this app shows.
+const SHEET_START_OFFSET = 320;
 
 export function ConfirmSheetProvider({ children }: { children: React.ReactNode }) {
   const insets = useSafeAreaInsets();
@@ -60,7 +64,9 @@ export function ConfirmSheetProvider({ children }: { children: React.ReactNode }
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [request, setRequest] = useState<ConfirmRequest | null>(null);
   const resolveRef = useRef<((id: string | null) => void) | null>(null);
-  const progress = useRef(new Animated.Value(0)).current;
+  // How far the sheet sits below its resting place - it springs up to 0.
+  const offset = useSharedValue(SHEET_START_OFFSET);
+  const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: offset.value }] }));
 
   const confirm = useCallback((next: ConfirmRequest) => {
     // A second request while one is open would strand the first promise
@@ -74,14 +80,9 @@ export function ConfirmSheetProvider({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     if (!request) return;
-    progress.setValue(0);
-    Animated.timing(progress, {
-      toValue: 1,
-      duration: SLIDE_MS,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
-  }, [request, progress]);
+    offset.value = SHEET_START_OFFSET;
+    offset.value = withSpring(0, SPRING_SHEET);
+  }, [request, offset]);
 
   const close = useCallback((id: string | null) => {
     // Resolve before the exit animation rather than after: the caller's
@@ -120,16 +121,7 @@ export function ConfirmSheetProvider({ children }: { children: React.ReactNode }
             style={[
               styles.sheet,
               { paddingBottom: insets.bottom + spacing.md },
-              {
-                transform: [
-                  {
-                    translateY: progress.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [320, 0],
-                    }),
-                  },
-                ],
-              },
+              sheetStyle,
             ]}
           >
             <View style={styles.grabber} />

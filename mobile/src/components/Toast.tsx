@@ -6,7 +6,10 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
+import { FADE_MS } from '../theme/motion';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
@@ -29,14 +32,14 @@ const ToastContext = createContext<ToastContextValue>({ showToast: () => {} });
 const HEADER_CLEARANCE = 56;
 
 const DISPLAY_MS = 2500;
-const FADE_MS = 200;
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const insets = useSafeAreaInsets();
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [toast, setToast] = useState<ToastState | null>(null);
-  const opacity = useRef(new Animated.Value(0)).current;
+  const opacity = useSharedValue(0);
+  const fadeStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
   const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // A toast can outlive the screen that triggered it (e.g. login success
@@ -46,18 +49,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     (message: string, kind: ToastKind = 'success') => {
       if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
       setToast({ message, kind });
-      opacity.setValue(0);
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: FADE_MS,
-        useNativeDriver: true,
-      }).start();
+      opacity.value = 0;
+      opacity.value = withTiming(1, { duration: FADE_MS });
       hideTimeoutRef.current = setTimeout(() => {
-        Animated.timing(opacity, {
-          toValue: 0,
-          duration: FADE_MS,
-          useNativeDriver: true,
-        }).start(() => setToast(null));
+        opacity.value = withTiming(0, { duration: FADE_MS }, (finished) => {
+          // Not when a newer toast restarted the fade mid-way.
+          if (finished) scheduleOnRN(setToast, null);
+        });
       }, DISPLAY_MS);
     },
     [opacity],
@@ -77,7 +75,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               // title and, more to the point, the back button - so for
               // its 2.5s the user could see the confirmation but not
               // navigate away from it.
-              { top: insets.top + HEADER_CLEARANCE, opacity },
+              { top: insets.top + HEADER_CLEARANCE },
+              fadeStyle,
               toast.kind === 'error' ? styles.error : styles.success,
             ]}
           >

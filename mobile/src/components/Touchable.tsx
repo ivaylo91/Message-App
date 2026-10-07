@@ -1,5 +1,7 @@
-import React, { useCallback, useRef } from 'react';
-import { Animated, Platform, Pressable, StyleProp, ViewStyle } from 'react-native';
+import React, { useCallback } from 'react';
+import { Platform, Pressable, StyleProp, ViewStyle } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import { SPRING_TAP } from '../theme/motion';
 import type { PressableProps } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 
@@ -55,16 +57,12 @@ export function Touchable({
   ...rest
 }: TouchableProps) {
   const { colors } = useTheme();
-  const scale = useRef(new Animated.Value(1)).current;
+  const scale = useSharedValue(1);
+  const scaleStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
   const springTo = useCallback(
     (toValue: number) => {
-      Animated.spring(scale, {
-        toValue,
-        friction: 6,
-        tension: 260,
-        useNativeDriver: true,
-      }).start();
+      scale.value = withSpring(toValue, SPRING_TAP);
     },
     [scale],
   );
@@ -120,6 +118,6 @@ export function Touchable({
 
   if (!pressScale) return pressable;
   return (
-    <Animated.View style={{ transform: [{ scale }] }}>{pressable}</Animated.View>
+    <Animated.View style={scaleStyle}>{pressable}</Animated.View>
   );
 }

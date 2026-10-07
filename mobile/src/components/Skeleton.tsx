@@ -1,5 +1,13 @@
-import React, { useEffect, useMemo, useRef } from 'react';
-import { Animated, Easing, StyleSheet, View, ViewStyle } from 'react-native';
+import React, { useEffect, useMemo } from 'react';
+import { StyleSheet, View, ViewStyle } from 'react-native';
+import Animated, {
+  Easing,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
 import type { DimensionValue } from 'react-native';
 import { radii, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
@@ -43,35 +51,23 @@ export function SkeletonGroup({
   children: React.ReactNode;
   style?: ViewStyle;
 }) {
-  const pulse = useRef(new Animated.Value(0)).current;
+  const pulse = useSharedValue(0);
+  const pulseStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(pulse.value, [0, 1], [0.45, 0.9]),
+  }));
 
   useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, {
-          toValue: 1,
-          duration: PULSE_MS,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true,
-        }),
-        Animated.timing(pulse, {
-          toValue: 0,
-          duration: PULSE_MS,
-          easing: Easing.inOut(Easing.quad),
-          useNativeDriver: true,
-        }),
-      ]),
+    // Forever, reversing each time - up and back down, on the UI thread.
+    pulse.value = withRepeat(
+      withTiming(1, { duration: PULSE_MS, easing: Easing.inOut(Easing.quad) }),
+      -1,
+      true,
     );
-    loop.start();
-    return () => loop.stop();
   }, [pulse]);
 
   return (
     <Animated.View
-      style={[
-        style,
-        { opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.45, 0.9] }) },
-      ]}
+      style={[style, pulseStyle]}
       // A placeholder has nothing to announce; the screen it belongs to
       // reports its own loading state.
       accessibilityElementsHidden

@@ -1,5 +1,13 @@
-import React, { useEffect, useMemo, useRef } from 'react';
-import { Animated, View } from 'react-native';
+import React, { useEffect, useMemo } from 'react';
+import { View } from 'react-native';
+import Animated, {
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
 import LinearGradient from 'react-native-linear-gradient';
 import { Skeleton, SkeletonGroup } from '../../components/Skeleton';
 import { radii } from '../../theme/tokens';
@@ -12,43 +20,22 @@ const TYPING_DOT_STAGGER_MS = 150;
 function TypingDot({ delay }: { delay: number }) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const bounce = useRef(new Animated.Value(0)).current;
+  const bounce = useSharedValue(0);
 
   useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.delay(delay),
-        Animated.timing(bounce, {
-          toValue: 1,
-          duration: TYPING_DOT_BOUNCE_MS,
-          useNativeDriver: true,
-        }),
-        Animated.timing(bounce, {
-          toValue: 0,
-          duration: TYPING_DOT_BOUNCE_MS,
-          useNativeDriver: true,
-        }),
-      ]),
+    // Staggered by `delay`, then up and down forever.
+    bounce.value = withDelay(
+      delay,
+      withRepeat(withTiming(1, { duration: TYPING_DOT_BOUNCE_MS }), -1, true),
     );
-    loop.start();
-    return () => loop.stop();
   }, [bounce, delay]);
 
-  return (
-    <Animated.View
-      style={[
-        styles.typingDot,
-        {
-          opacity: bounce.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }),
-          transform: [
-            {
-              translateY: bounce.interpolate({ inputRange: [0, 1], outputRange: [0, -4] }),
-            },
-          ],
-        },
-      ]}
-    />
-  );
+  const dotStyle = useAnimatedStyle(() => ({
+    opacity: interpolate(bounce.value, [0, 1], [0.3, 1]),
+    transform: [{ translateY: interpolate(bounce.value, [0, 1], [0, -4]) }],
+  }));
+
+  return <Animated.View style={[styles.typingDot, dotStyle]} />;
 }
 
 // Rendered as the FlatList's ListHeaderComponent - since the list is

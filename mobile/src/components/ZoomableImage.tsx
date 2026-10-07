@@ -9,6 +9,7 @@ import {
 } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
+import { SPRING_SHEET } from '../theme/motion';
 
 // Pinch, pan and double-tap zoom for one photo in the viewer. Runs on the
 // UI thread, so the photo tracks the fingers exactly.
@@ -22,7 +23,8 @@ import { scheduleOnRN } from 'react-native-worklets';
 const MIN_SCALE = 1;
 const MAX_SCALE = 4;
 const DOUBLE_TAP_SCALE = 2.5;
-const SPRING = { damping: 22, stiffness: 240 } as const;
+// Settling after a pinch or double tap - the app's softer spring.
+const SPRING = SPRING_SHEET;
 
 interface Props {
   width: number;
