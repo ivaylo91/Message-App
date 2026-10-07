@@ -31,6 +31,7 @@ import { hasLink, linkifyText } from '../../utils/linkify';
 import { showsSenderName, type RunPosition } from '../../utils/messageGrouping';
 import { MAX_FONT_SCALE_TIGHT, radii } from '../../theme/tokens';
 import { useTheme } from '../../theme/ThemeContext';
+import { useBubbleGradients } from '../../theme/chatTheme';
 import { MessageReaction, ReplyPreview } from '../../types';
 import {
   fetchLinkPreview,
@@ -210,7 +211,8 @@ function AudioMessageBubble({
   onLongPress: () => void;
 }) {
   const { t } = useTranslation();
-  const { colors, gradients } = useTheme();
+  const { colors } = useTheme();
+  const gradients = useBubbleGradients();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const durationMs = message.attachment_duration_ms ?? 0;
   const totalSeconds = Math.round(durationMs / 1000);
@@ -543,7 +545,8 @@ function MessageBubbleComponent({
   runPosition,
 }: MessageBubbleProps) {
   const { t, i18n } = useTranslation();
-  const { colors, gradients } = useTheme();
+  const { colors } = useTheme();
+  const gradients = useBubbleGradients();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const summary = useMemo(
     () => summarizeReactions(reactions, userId),

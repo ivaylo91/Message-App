@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Touchable } from './Touchable';
 import { elevation, fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
+import { useBubbleGradients } from '../theme/chatTheme';
 import { SPRING_SHEET } from '../theme/motion';
 
 // The long-press menu for a message, replacing the strip that used to open
@@ -66,7 +67,8 @@ export function MessageMenu({
   onReact,
   onClose,
 }: Props) {
-  const { colors, gradients } = useTheme();
+  const { colors } = useTheme();
+  const gradients = useBubbleGradients();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
   const { height: windowHeight } = useWindowDimensions();

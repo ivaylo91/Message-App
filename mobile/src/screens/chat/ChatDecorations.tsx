@@ -12,6 +12,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { Skeleton, SkeletonGroup } from '../../components/Skeleton';
 import { radii } from '../../theme/tokens';
 import { useTheme } from '../../theme/ThemeContext';
+import { useBubbleGradients } from '../../theme/chatTheme';
 import { makeStyles } from './chatStyles';
 
 const TYPING_DOT_BOUNCE_MS = 300;
@@ -42,7 +43,8 @@ function TypingDot({ delay }: { delay: number }) {
 // inverted, the "header" slot visually sits at the bottom, right where
 // the other person's next message would appear.
 export function TypingBubble() {
-  const { colors, gradients } = useTheme();
+  const { colors } = useTheme();
+  const gradients = useBubbleGradients();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.rowTheirs}>
