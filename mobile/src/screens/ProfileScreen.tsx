@@ -75,6 +75,8 @@ export function ProfileScreen({ navigation }: Props) {
     setBubbleGradientId,
     themePreference,
     setThemePreference,
+    chatWallpaper,
+    setChatWallpaper,
   } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [profile, setProfile] = useState<OwnProfile | null>(null);
@@ -488,6 +490,22 @@ export function ProfileScreen({ navigation }: Props) {
                 </Touchable>
               );
             })}
+          </View>
+        </View>
+
+        <View style={styles.field}>
+          <View style={styles.privacyRow}>
+            <View style={styles.privacyText}>
+              <Text style={styles.notificationStatus}>{t('profile.chatWallpaper')}</Text>
+              <Text style={styles.dangerRowHint}>{t('profile.chatWallpaperHint')}</Text>
+            </View>
+            <Switch
+              value={chatWallpaper}
+              onValueChange={setChatWallpaper}
+              trackColor={{ false: colors.line, true: colors.emberGlow }}
+              thumbColor={chatWallpaper ? colors.ember : colors.smoke}
+              accessibilityLabel={t('profile.chatWallpaper')}
+            />
           </View>
         </View>
 

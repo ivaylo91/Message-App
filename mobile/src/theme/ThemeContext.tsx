@@ -19,6 +19,7 @@ import {
 } from './tokens';
 import { loadBubbleGradientId, saveBubbleGradientId } from './bubbleGradientStorage';
 import { loadThemePreference, saveThemePreference } from './themePreferenceStorage';
+import { loadChatWallpaper, saveChatWallpaper } from './chatWallpaperStorage';
 
 interface ThemeContextValue {
   colors: ThemeColors;
@@ -28,6 +29,11 @@ interface ThemeContextValue {
   setBubbleGradientId: (id: string) => void;
   themePreference: ThemePreference;
   setThemePreference: (preference: ThemePreference) => void;
+  // The doodle pattern behind a conversation. Off by default: current
+  // messengers have moved to plain chat backgrounds (Google Messages
+  // dropped its pattern in 2025), and it's an option for those who like it.
+  chatWallpaper: boolean;
+  setChatWallpaper: (enabled: boolean) => void;
 }
 
 const defaultPreset = BUBBLE_GRADIENT_PRESETS[0];
@@ -40,6 +46,8 @@ const lightValue: ThemeContextValue = {
   setBubbleGradientId: () => {},
   themePreference: 'system',
   setThemePreference: () => {},
+  chatWallpaper: false,
+  setChatWallpaper: () => {},
 };
 
 const ThemeContext = createContext<ThemeContextValue>(lightValue);
@@ -61,6 +69,20 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [themePreference, setThemePreferenceState] = useState<ThemePreference>('system');
   const scheme: ThemeScheme = themePreference === 'system' ? systemScheme : themePreference;
   const [bubbleGradientId, setBubbleGradientIdState] = useState(DEFAULT_BUBBLE_GRADIENT_ID);
+  const [chatWallpaper, setChatWallpaperState] = useState(false);
+
+  useEffect(() => {
+    void loadChatWallpaper()
+      .then((saved) => {
+        if (saved !== null) setChatWallpaperState(saved);
+      })
+      .catch(() => {});
+  }, []);
+
+  const setChatWallpaper = useCallback((enabled: boolean) => {
+    setChatWallpaperState(enabled);
+    void saveChatWallpaper(enabled).catch(() => {});
+  }, []);
 
   useEffect(() => {
     void loadBubbleGradientId().then((saved) => {
@@ -98,8 +120,18 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       setBubbleGradientId,
       themePreference,
       setThemePreference,
+      chatWallpaper,
+      setChatWallpaper,
     };
-  }, [scheme, bubbleGradientId, setBubbleGradientId, themePreference, setThemePreference]);
+  }, [
+    scheme,
+    bubbleGradientId,
+    setBubbleGradientId,
+    themePreference,
+    setThemePreference,
+    chatWallpaper,
+    setChatWallpaper,
+  ]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }

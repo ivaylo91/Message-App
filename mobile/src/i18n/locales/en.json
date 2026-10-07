@@ -205,6 +205,7 @@
       "read": "Read"
     },
     "a11yAttachFile": "Attach a file",
+    "a11yAttach": "Attach",
     "a11yAttachPhoto": "Attach a photo",
     "a11yRecord": "Record a voice message",
     "a11ySend": "Send",
@@ -302,6 +303,8 @@
     "notificationsBlockedMessage": "Android won’t ask again. Turn them on for Hearth in system settings.",
     "notificationsOpenSettings": "Open settings",
     "privacy": "Privacy",
+    "chatWallpaper": "Chat wallpaper",
+    "chatWallpaperHint": "Show a faint pattern behind conversations.",
     "readReceipts": "Read receipts",
     "readReceiptsHint": "Let others see when you've read their messages.",
     "lastSeen": "Online and last seen",

@@ -189,7 +189,7 @@ export function ChatScreen({ route, navigation }: Props) {
   const { startCall } = useCall();
   const insets = useSafeAreaInsets();
   const { windowWidth, contentWidth } = useContentWidth();
-  const { colors } = useTheme();
+  const { colors, chatWallpaper } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const bubbleMaxWidth = Math.min(windowWidth * 0.8, MAX_BUBBLE_WIDTH);
   const [messages, setMessages] = useState<LocalMessage[]>([]);
@@ -766,6 +766,20 @@ export function ChatScreen({ route, navigation }: Props) {
       replyToPreview: null,
     });
     markRead();
+  };
+
+  const onOpenAttachMenu = () => {
+    void confirm({
+      title: t('chat.a11yAttach'),
+      cancelLabel: t('chat.cancel'),
+      options: [
+        { id: 'photo', label: t('chat.a11yAttachPhoto') },
+        { id: 'file', label: t('chat.a11yAttachFile') },
+      ],
+    }).then((choice) => {
+      if (choice === 'photo') void onPickImage();
+      else if (choice === 'file') void onPickFile();
+    });
   };
 
   const onPickImage = async () => {
@@ -1813,7 +1827,7 @@ export function ChatScreen({ route, navigation }: Props) {
     // keyboard has finished animating, and 'padding' now behaves the same
     // on Android as on iOS.
     <KeyboardAvoidingView style={styles.container} behavior="padding">
-      <AppWallpaper />
+      {chatWallpaper && <AppWallpaper />}
       <View style={[styles.content, { maxWidth: contentWidth }]}>
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
         <Touchable
@@ -2125,28 +2139,22 @@ export function ChatScreen({ route, navigation }: Props) {
           </>
         ) : (
           <>
+            {/* A floating rounded field, as current messengers draw it, with
+                one + for attachments in place of separate paperclip and
+                camera icons. */}
+            <View style={styles.inputPill}>
             <Touchable
-              onPress={() => void onPickFile()}
-              style={styles.attachButton}
+              onPress={onOpenAttachMenu}
+              style={styles.pillButton}
               iconButton
               disabled={isUploadingAttachment}
               accessibilityRole="button"
-              accessibilityLabel={t('chat.a11yAttachFile')}
-            >
-              <FontAwesome6 name="paperclip" iconStyle="solid" size={18} color={colors.smoke} />
-            </Touchable>
-            <Touchable
-              onPress={() => void onPickImage()}
-              style={styles.attachButton}
-              iconButton
-              disabled={isUploadingAttachment}
-              accessibilityRole="button"
-              accessibilityLabel={t('chat.a11yAttachPhoto')}
+              accessibilityLabel={t('chat.a11yAttach')}
             >
               {isUploadingAttachment ? (
                 <ActivityIndicator size="small" color={colors.smoke} />
               ) : (
-                <FontAwesome6 name="camera" iconStyle="solid" size={20} color={colors.smoke} />
+                <FontAwesome6 name="plus" iconStyle="solid" size={18} color={colors.smoke} />
               )}
             </Touchable>
             <TextInput
@@ -2167,6 +2175,7 @@ export function ChatScreen({ route, navigation }: Props) {
               multiline
               textAlignVertical="center"
             />
+            </View>
             {draft.trim() || editingMessageId ? (
               <Touchable
                 onPress={() => void onSend()}

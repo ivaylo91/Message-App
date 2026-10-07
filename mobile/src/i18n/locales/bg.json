@@ -205,6 +205,7 @@
       "read": "Прочетено"
     },
     "a11yAttachFile": "Прикачване на файл",
+    "a11yAttach": "Прикачване",
     "a11yAttachPhoto": "Прикачване на снимка",
     "a11yRecord": "Запис на гласово съобщение",
     "a11ySend": "Изпращане",
@@ -302,6 +303,8 @@
     "notificationsBlockedMessage": "Android няма да попита отново. Включете ги за Hearth от системните настройки.",
     "notificationsOpenSettings": "Отваряне на настройките",
     "privacy": "Поверителност",
+    "chatWallpaper": "Тапет в чата",
+    "chatWallpaperHint": "Показва лека шарка зад разговорите.",
     "readReceipts": "Потвърждения за прочитане",
     "readReceiptsHint": "Другите да виждат кога сте прочели съобщенията им.",
     "lastSeen": "На линия и последно активен",
