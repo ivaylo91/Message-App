@@ -12,7 +12,6 @@ import { Icon } from '../components/Icon';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
-import { AppWallpaper } from '../components/AppWallpaper';
 import { Touchable } from '../components/Touchable';
 import { PasswordField } from '../components/PasswordField';
 import { useToast } from '../components/Toast';
@@ -77,13 +76,12 @@ export function RegisterScreen({ navigation }: Props) {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.paper }}>
-      <AppWallpaper />
       <ScrollView
         contentContainerStyle={[
           s.container,
           {
-            paddingTop: insets.top + spacing.xxl,
-            paddingBottom: insets.bottom + spacing.xxl,
+            paddingTop: insets.top + spacing.lg,
+            paddingBottom: insets.bottom + spacing.xl,
             width: '100%',
             maxWidth: contentWidth,
             alignSelf: 'center',
@@ -91,7 +89,17 @@ export function RegisterScreen({ navigation }: Props) {
         ]}
         keyboardShouldPersistTaps="handled"
       >
-      <Text style={s.title}>{t('auth.register.title')}</Text>
+      {navigation.canGoBack() && (
+        <Touchable
+          style={s.backButton}
+          onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel={t('chat.a11yBack')}
+        >
+          <Icon name="arrow-left" size={20} color={colors.ink} />
+        </Touchable>
+      )}
+      <Text style={s.title} accessibilityRole="header">{t('auth.register.title')}</Text>
       <Text style={s.subtitle}>{t('auth.register.subtitle')}</Text>
 
       <View style={s.field}>
@@ -128,15 +136,18 @@ export function RegisterScreen({ navigation }: Props) {
         disabled={isSubmitting}
       >
         {isSubmitting ? (
-          <ActivityIndicator color={colors.white} size="small" />
+          <ActivityIndicator color="#FFFFFF" size="small" />
         ) : (
-          <Icon name="user-plus" size={16} color={colors.white} />
+          <Text style={s.primaryButtonText}>{t('auth.register.submit')}</Text>
         )}
-        <Text style={s.primaryButtonText}>{t('auth.register.submit')}</Text>
       </Touchable>
 
-      <Touchable style={s.footer} onPress={() => navigation.navigate('Login')}>
-        <Text style={s.footerText}>{t('auth.register.switchToLogin')}</Text>
+      <View style={s.spacer} />
+      <Touchable style={s.footer} onPress={() => navigation.navigate('Login')} accessibilityRole="link">
+        <Text style={s.footerText}>
+          {t('auth.register.haveAccount')}{' '}
+          <Text style={s.footerLink}>{t('auth.register.loginLink')}</Text>
+        </Text>
       </Touchable>
       </ScrollView>
     </View>

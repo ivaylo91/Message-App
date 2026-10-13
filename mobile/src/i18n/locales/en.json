@@ -1,9 +1,13 @@
 {
   "welcome": {
     "tagline": "Where your people gather.",
-    "getStarted": "Get started",
+    "getStarted": "Create account",
     "haveAccount": "I already have an account",
-    "copyright": "© 2026 Ivaylo Penev"
+    "copyright": "© 2026 Ivaylo Penev",
+    "subline": "Chats, groups and video calls - in one warm place.",
+    "bubbleOne": "Is everyone here?",
+    "bubbleTwo": "On our way, 10 min",
+    "sampleInitials": "MP GD NK IP"
   },
   "auth": {
     "login": {
@@ -15,7 +19,9 @@
       "successToast": "Welcome back!",
       "error": "Login failed. Check your email and password.",
       "switchToRegister": "New to Hearth? Create an account",
-      "forgotPassword": "Forgot password?"
+      "forgotPassword": "Forgot password?",
+      "noAccount": "No account?",
+      "registerLink": "Sign up"
     },
     "forgotPassword": {
       "title": "Reset your password",
@@ -41,7 +47,9 @@
       "successToast": "Account created!",
       "confirmEmailInfo": "Check your email to confirm your account, then sign in.",
       "error": "Registration failed. Try a different email.",
-      "switchToLogin": "Already have an account? Sign in"
+      "switchToLogin": "Already have an account? Sign in",
+      "haveAccount": "Already have an account?",
+      "loginLink": "Sign in"
     }
   },
   "conversations": {

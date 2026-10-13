@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Image,
   ScrollView,
   Text,
   TextInput,
@@ -12,7 +13,6 @@ import { Icon } from '../components/Icon';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
-import { AppWallpaper } from '../components/AppWallpaper';
 import { Touchable } from '../components/Touchable';
 import { PasswordField } from '../components/PasswordField';
 import { useToast } from '../components/Toast';
@@ -54,13 +54,12 @@ export function LoginScreen({ navigation }: Props) {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.paper }}>
-      <AppWallpaper />
       <ScrollView
         contentContainerStyle={[
           s.container,
           {
-            paddingTop: insets.top + spacing.xxl,
-            paddingBottom: insets.bottom + spacing.xxl,
+            paddingTop: insets.top + spacing.lg,
+            paddingBottom: insets.bottom + spacing.xl,
             width: '100%',
             maxWidth: contentWidth,
             alignSelf: 'center',
@@ -68,7 +67,20 @@ export function LoginScreen({ navigation }: Props) {
         ]}
         keyboardShouldPersistTaps="handled"
       >
-      <Text style={s.title}>{t('auth.login.title')}</Text>
+      {navigation.canGoBack() && (
+        <Touchable
+          style={s.backButton}
+          onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel={t('chat.a11yBack')}
+        >
+          <Icon name="arrow-left" size={20} color={colors.ink} />
+        </Touchable>
+      )}
+      <View style={s.markTile} importantForAccessibility="no-hide-descendants">
+        <Image source={require('../assets/flame-mark.png')} style={s.markGlyph} resizeMode="contain" />
+      </View>
+      <Text style={s.title} accessibilityRole="header">{t('auth.login.title')}</Text>
       <Text style={s.subtitle}>{t('auth.login.subtitle')}</Text>
 
       <View style={s.field}>
@@ -102,22 +114,22 @@ export function LoginScreen({ navigation }: Props) {
         disabled={isSubmitting}
       >
         {isSubmitting ? (
-          <ActivityIndicator color={colors.white} size="small" />
+          <ActivityIndicator color="#FFFFFF" size="small" />
         ) : (
-          <Icon
-            name="right-to-bracket"
-            size={16}
-            color={colors.white}
-          />
+          <Text style={s.primaryButtonText}>{t('auth.login.submit')}</Text>
         )}
-        <Text style={s.primaryButtonText}>{t('auth.login.submit')}</Text>
       </Touchable>
 
+      <View style={s.spacer} />
       <Touchable
         style={s.footer}
         onPress={() => navigation.navigate('Register')}
+        accessibilityRole="link"
       >
-        <Text style={s.footerText}>{t('auth.login.switchToRegister')}</Text>
+        <Text style={s.footerText}>
+          {t('auth.login.noAccount')}{' '}
+          <Text style={s.footerLink}>{t('auth.login.registerLink')}</Text>
+        </Text>
       </Touchable>
       </ScrollView>
     </View>

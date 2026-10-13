@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { Icon } from './Icon';
-import { fonts, fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
+import { fonts, fontSizes, spacing, ThemeColors } from '../theme/tokens';
 import { Touchable } from './Touchable';
 import { useTheme } from '../theme/ThemeContext';
 
@@ -45,30 +45,31 @@ export function PasswordField({ label, value, onChangeText }: PasswordFieldProps
 
 const makeStyles = (colors: ThemeColors) =>
   StyleSheet.create({
-    field: { marginBottom: spacing.lg },
+    field: { marginBottom: 14 },
     label: {
       fontFamily: fonts.family,
-      fontSize: fontSizes.caption,
-      fontWeight: '700',
-      letterSpacing: 0.5,
-      textTransform: 'uppercase',
-      color: colors.smoke,
-      marginBottom: 7,
+      fontSize: fontSizes.footnote,
+      fontWeight: '600',
+      color: colors.char,
+      marginBottom: 6,
     },
     row: {
       flexDirection: 'row',
       alignItems: 'center',
+      minHeight: 54,
+      paddingRight: 5,
       borderWidth: 1,
       borderColor: colors.line,
       backgroundColor: colors.paper2,
-      borderRadius: radii.md,
+      borderRadius: 16,
     },
     input: {
       fontFamily: fonts.family,
       flex: 1,
-      padding: 13,
-      fontSize: fontSizes.body,
+      paddingHorizontal: spacing.lg,
+      paddingVertical: 14,
+      fontSize: 16,
       color: colors.ink,
     },
-    toggle: { paddingHorizontal: 13 },
+    toggle: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: 12 },
   });

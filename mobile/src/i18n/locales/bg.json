@@ -1,9 +1,13 @@
 {
   "welcome": {
     "tagline": "Където се събират твоите хора.",
-    "getStarted": "Начало",
+    "getStarted": "Създай акаунт",
     "haveAccount": "Вече имам акаунт",
-    "copyright": "© 2026 Ivaylo Penev"
+    "copyright": "© 2026 Ivaylo Penev",
+    "subline": "Чатове, групи и видео разговори - на едно топло място.",
+    "bubbleOne": "Тук ли сте всички?",
+    "bubbleTwo": "Идваме след 10 мин",
+    "sampleInitials": "МП ГД НК ИП"
   },
   "auth": {
     "login": {
@@ -15,7 +19,9 @@
       "successToast": "Добре дошли отново!",
       "error": "Неуспешен вход. Проверете имейла и паролата си.",
       "switchToRegister": "Нови сте в Hearth? Създайте акаунт",
-      "forgotPassword": "Забравена парола?"
+      "forgotPassword": "Забравена парола?",
+      "noAccount": "Нямаш акаунт?",
+      "registerLink": "Регистрирай се"
     },
     "forgotPassword": {
       "title": "Възстановяване на паролата",
@@ -41,7 +47,9 @@
       "successToast": "Акаунтът е създаден!",
       "confirmEmailInfo": "Проверете имейла си, за да потвърдите акаунта, след което влезте.",
       "error": "Неуспешна регистрация. Опитайте с друг имейл.",
-      "switchToLogin": "Вече имате акаунт? Влезте"
+      "switchToLogin": "Вече имате акаунт? Влезте",
+      "haveAccount": "Вече имаш акаунт?",
+      "loginLink": "Вход"
     }
   },
   "conversations": {
