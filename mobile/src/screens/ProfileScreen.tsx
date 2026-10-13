@@ -50,6 +50,14 @@ import { OwnProfile } from '../types';
 type Props = NativeStackScreenProps<AppStackParamList, 'Profile'>;
 
 const THEME_PREFERENCES: ThemePreference[] = ['system', 'light', 'dark'];
+// The colours each theme card draws itself with - fixed, so the Dark
+// card looks dark while the app is light and the other way round.
+const THEME_PREVIEWS: Record<ThemePreference, { bg: string; line: string }> = {
+  system: { bg: '#E9E1D7', line: '#B9AEA5' },
+  light: { bg: '#FAF5EF', line: '#D9CEC4' },
+  dark: { bg: '#1C1613', line: '#4A3F38' },
+};
+
 const THEME_PREFERENCE_LABEL_KEYS: Record<ThemePreference, string> = {
   system: 'profile.themeSystem',
   light: 'profile.themeLight',
@@ -285,11 +293,14 @@ export function ProfileScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + spacing.lg }]}>
+    <View style={[styles.container, { paddingTop: insets.top + spacing.md }]}>
       <View style={[styles.content, { maxWidth: contentWidth }]}>
         <View style={styles.header}>
-          <Touchable style={styles.cancelButton} onPress={() => navigation.goBack()}>
-            <Icon name="xmark" size={13} color={colors.danger} />
+          <Touchable
+            style={styles.cancelButton}
+            onPress={() => navigation.goBack()}
+            accessibilityRole="button"
+          >
             <Text style={styles.cancelText}>{t('profile.cancel')}</Text>
           </Touchable>
           <Text style={styles.title}>{t('profile.title')}</Text>
@@ -297,264 +308,294 @@ export function ProfileScreen({ navigation }: Props) {
             style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
             onPress={() => void onSave()}
             disabled={isSaving || !canSave}
+            accessibilityRole="button"
+            accessibilityState={{ disabled: isSaving || !canSave }}
           >
             {isSaving ? (
-              <ActivityIndicator size="small" color={colors.sage} />
+              <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
-              <>
-                <Icon
-                  name="check"
-                  size={13}
-                  color={canSave ? colors.sage : colors.smoke}
-                />
-                <Text style={[styles.saveText, !canSave && styles.saveTextDisabled]}>
-                  {t('profile.save')}
-                </Text>
-              </>
+              <Text style={[styles.saveText, !canSave && styles.saveTextDisabled]}>
+                {t('profile.save')}
+              </Text>
             )}
           </Touchable>
         </View>
 
         <ScrollView
           style={styles.scroll}
-          contentContainerStyle={{ paddingBottom: insets.bottom + spacing.xxl }}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + spacing.xxl }]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
         <View style={styles.avatarSection}>
-          <Touchable onPress={() => void onChangePhoto()} disabled={isUploadingPhoto}>
+          <Touchable
+            onPress={() => void onChangePhoto()}
+            disabled={isUploadingPhoto}
+            accessibilityRole="button"
+            accessibilityLabel={t('profile.changePhoto')}
+          >
             <Avatar
               name={displayName || profile?.email || '?'}
               avatarPath={profile?.avatar_path}
-              size={96}
+              size={112}
             />
             <View style={styles.avatarEditBadge}>
               {isUploadingPhoto ? (
-                <ActivityIndicator size="small" color={colors.white} />
+                <ActivityIndicator size="small" color={colors.paper} />
               ) : (
-                <Icon name="camera" size={13} color={colors.white} />
+                <Icon name="camera" size={16} color={colors.paper} />
               )}
             </View>
           </Touchable>
-          <Text style={styles.changePhotoHint}>{t('profile.changePhoto')}</Text>
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>{t('profile.displayNameLabel')}</Text>
-          <TextInput
-            style={styles.input}
-            value={displayName}
-            onChangeText={setDisplayName}
-            placeholder={t('profile.displayNamePlaceholder')}
-            placeholderTextColor={colors.smoke}
-          />
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>{t('profile.usernameLabel')}</Text>
-          <TextInput
-            style={styles.input}
-            value={username}
-            onChangeText={setUsername}
-            placeholder={t('profile.usernamePlaceholder')}
-            placeholderTextColor={colors.smoke}
-            autoCapitalize="none"
-          />
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>{t('profile.phoneLabel')}</Text>
-          <TextInput
-            style={styles.input}
-            value={phone}
-            onChangeText={setPhone}
-            placeholder={t('profile.phonePlaceholder')}
-            placeholderTextColor={colors.smoke}
-            keyboardType="phone-pad"
-          />
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>{t('profile.notifications')}</Text>
-          <View style={styles.notificationRow}>
-            <Text style={styles.notificationStatus}>
-              {notificationPermission === 'granted'
-                ? t('profile.notificationsOn')
-                : t('profile.notificationsOff')}
+          <View style={styles.identity}>
+            <Text style={styles.identityName} numberOfLines={1}>
+              {displayName.trim() || profile?.display_name || ''}
             </Text>
-            {notificationPermission === 'denied' && (
-              <Touchable
-                style={styles.choiceChipActive}
-                onPress={() => void onEnableNotifications()}
-                accessibilityRole="button"
-              >
-                <Text style={styles.choiceTextActive}>{t('profile.notificationsEnable')}</Text>
-              </Touchable>
+            {!!username.trim() && (
+              <Text style={styles.identityHandle} numberOfLines={1}>
+                @{username.trim()}
+              </Text>
             )}
           </View>
         </View>
 
-        <View style={styles.field}>
-          <Text style={styles.label}>{t('profile.privacy')}</Text>
-          {(
-            [
-              ['show_read_receipts', 'profile.readReceipts', 'profile.readReceiptsHint'],
-              ['show_last_seen', 'profile.lastSeen', 'profile.lastSeenHint'],
-            ] as const
-          ).map(([key, labelKey, hintKey]) => (
-            <View key={key} style={styles.privacyRow}>
-              <View style={styles.privacyText}>
-                <Text style={styles.notificationStatus}>{t(labelKey)}</Text>
-                <Text style={styles.dangerRowHint}>{t(hintKey)}</Text>
-              </View>
-              <Switch
-                value={profile?.[key] ?? true}
-                onValueChange={(value) => void onTogglePrivacy(key, value)}
-                disabled={!profile}
-                trackColor={{ false: colors.line, true: colors.emberGlow }}
-                thumbColor={profile?.[key] ?? true ? colors.ember : colors.smoke}
-                accessibilityLabel={t(labelKey)}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t('profile.account')}</Text>
+          <View style={styles.card}>
+            <View style={styles.fieldRow}>
+              <Text style={styles.fieldLabel}>{t('profile.displayNameLabel')}</Text>
+              <TextInput
+                style={styles.fieldInput}
+                value={displayName}
+                onChangeText={setDisplayName}
+                placeholder={t('profile.displayNamePlaceholder')}
+                placeholderTextColor={colors.smoke}
+                accessibilityLabel={t('profile.displayNameLabel')}
               />
             </View>
-          ))}
+            <View style={styles.cardDivider} />
+            <View style={styles.fieldRow}>
+              <Text style={styles.fieldLabel}>{t('profile.usernameLabel')}</Text>
+              <View style={styles.handleRow}>
+                <Text style={styles.handleAt}>@</Text>
+                <TextInput
+                  style={[styles.fieldInput, styles.handleInput]}
+                  value={username}
+                  onChangeText={setUsername}
+                  placeholder={t('profile.usernamePlaceholder')}
+                  placeholderTextColor={colors.smoke}
+                  autoCapitalize="none"
+                  accessibilityLabel={t('profile.usernameLabel')}
+                />
+              </View>
+            </View>
+            <View style={styles.cardDivider} />
+            <View style={styles.fieldRow}>
+              <Text style={styles.fieldLabel}>{t('profile.phoneLabel')}</Text>
+              <TextInput
+                style={styles.fieldInput}
+                value={phone}
+                onChangeText={setPhone}
+                placeholder={t('profile.phonePlaceholder')}
+                placeholderTextColor={colors.smoke}
+                keyboardType="phone-pad"
+                accessibilityLabel={t('profile.phoneLabel')}
+              />
+            </View>
+          </View>
+          {error && <Text style={styles.error}>{error}</Text>}
         </View>
 
-        <View style={styles.field}>
-          <Text style={styles.label}>{t('profile.appearance')}</Text>
-          <View style={styles.choiceRow}>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t('profile.notificationsAndPrivacy')}</Text>
+          <View style={styles.card}>
+            {/* Notifications are the system's permission, not a setting
+                of ours - so this row reports it, and offers the way to
+                turn it on when it's off. */}
+            <View style={styles.settingRow}>
+              <View style={styles.settingIcon}>
+                <Icon name="bell" size={18} color={colors.char} />
+              </View>
+              <View style={styles.settingText}>
+                <Text style={styles.settingTitle}>{t('profile.notifications')}</Text>
+                <Text style={styles.settingHint}>
+                  {notificationPermission === 'granted'
+                    ? t('profile.notificationsOn')
+                    : t('profile.notificationsOff')}
+                </Text>
+              </View>
+              {notificationPermission === 'denied' && (
+                <Touchable
+                  style={styles.enableButton}
+                  onPress={() => void onEnableNotifications()}
+                  accessibilityRole="button"
+                >
+                  <Text style={styles.enableButtonText}>{t('profile.notificationsEnable')}</Text>
+                </Touchable>
+              )}
+            </View>
+            {(
+              [
+                ['show_read_receipts', 'check-double', 'profile.readReceipts', 'profile.readReceiptsHint'],
+                ['show_last_seen', 'eye', 'profile.lastSeen', 'profile.lastSeenHint'],
+              ] as const
+            ).map(([key, icon, labelKey, hintKey]) => (
+              <View key={key} style={[styles.settingRow, styles.settingRowDivided]}>
+                <View style={styles.settingIcon}>
+                  <Icon name={icon} size={18} color={colors.char} />
+                </View>
+                <View style={styles.settingText}>
+                  <Text style={styles.settingTitle}>{t(labelKey)}</Text>
+                  <Text style={styles.settingHint}>{t(hintKey)}</Text>
+                </View>
+                <Switch
+                  value={profile?.[key] ?? true}
+                  onValueChange={(value) => void onTogglePrivacy(key, value)}
+                  disabled={!profile}
+                  trackColor={{ false: colors.line, true: colors.ember }}
+                  thumbColor="#FFFFFF"
+                  ios_backgroundColor={colors.line}
+                  accessibilityLabel={t(labelKey)}
+                />
+              </View>
+            ))}
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t('profile.appearance')}</Text>
+          {/* Each theme as a small picture of itself. */}
+          <View style={styles.themeRow} accessibilityRole="radiogroup">
             {THEME_PREFERENCES.map((preference) => {
               const isSelected = preference === themePreference;
+              const preview = THEME_PREVIEWS[preference];
               return (
                 <Touchable
                   key={preference}
-                  style={[styles.choiceChip, isSelected && styles.choiceChipActive]}
+                  style={[styles.themeCard, isSelected && styles.themeCardSelected]}
                   onPress={() => setThemePreference(preference)}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: isSelected }}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: isSelected }}
                 >
-                  <Text style={[styles.choiceText, isSelected && styles.choiceTextActive]}>
-                    {t(THEME_PREFERENCE_LABEL_KEYS[preference])}
-                  </Text>
+                  <View style={[styles.themePreview, { backgroundColor: preview.bg }]}>
+                    <View style={[styles.themeLine, { backgroundColor: preview.line }]} />
+                    <View style={[styles.themeLine, styles.themeLineMine]} />
+                  </View>
+                  <Text style={styles.themeLabel}>{t(THEME_PREFERENCE_LABEL_KEYS[preference])}</Text>
                 </Touchable>
               );
             })}
           </View>
-        </View>
 
-        <View style={styles.field}>
-          <Text style={styles.label}>{t('profile.language')}</Text>
-          <View style={styles.choiceRow}>
-            {SUPPORTED_LANGUAGES.map((lang: SupportedLanguage) => {
-              const isSelected = i18n.language === lang;
-              return (
-                <Touchable
-                  key={lang}
-                  style={[styles.choiceChip, isSelected && styles.choiceChipActive]}
-                  onPress={() => void setLanguage(lang)}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: isSelected }}
-                >
-                  <Text style={[styles.choiceText, isSelected && styles.choiceTextActive]}>
-                    {lang.toUpperCase()}
-                  </Text>
-                </Touchable>
-              );
-            })}
-          </View>
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>{t('profile.bubbleColorLabel')}</Text>
-          <View style={styles.bubbleSwatchRow}>
-            {BUBBLE_GRADIENT_PRESETS.map((preset) => {
-              const isSelected = preset.id === bubbleGradientId;
-              return (
-                <Touchable
-                  key={preset.id}
-                  onPress={() => setBubbleGradientId(preset.id)}
-                  style={[styles.bubbleSwatchWrap, isSelected && styles.bubbleSwatchWrapSelected]}
-                  accessibilityRole="button"
-                  accessibilityLabel={t(`profile.bubbleColorNames.${preset.id}`)}
-                  accessibilityState={{ selected: isSelected }}
-                >
-                  <LinearGradient
-                    colors={[...preset[scheme].mine]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.bubbleSwatch}
-                  >
-                    {isSelected && (
-                      <Icon name="check" size={14} color={colors.white} />
-                    )}
-                  </LinearGradient>
-                </Touchable>
-              );
-            })}
-          </View>
-        </View>
-
-        <View style={styles.field}>
-          <View style={styles.privacyRow}>
-            <View style={styles.privacyText}>
-              <Text style={styles.notificationStatus}>{t('profile.chatWallpaper')}</Text>
-              <Text style={styles.dangerRowHint}>{t('profile.chatWallpaperHint')}</Text>
+          <View style={[styles.card, styles.cardSpaced]}>
+            <View style={styles.settingRow}>
+              <View style={styles.settingText}>
+                <Text style={styles.settingTitle}>{t('profile.bubbleColorLabel')}</Text>
+                <View style={styles.bubbleSwatchRow}>
+                  {BUBBLE_GRADIENT_PRESETS.map((preset) => {
+                    const isSelected = preset.id === bubbleGradientId;
+                    return (
+                      <Touchable
+                        key={preset.id}
+                        onPress={() => setBubbleGradientId(preset.id)}
+                        style={[styles.bubbleSwatchWrap, isSelected && styles.bubbleSwatchWrapSelected]}
+                        accessibilityRole="radio"
+                        accessibilityLabel={t(`profile.bubbleColorNames.${preset.id}`)}
+                        accessibilityState={{ checked: isSelected }}
+                      >
+                        <LinearGradient
+                          colors={[...preset[scheme].mine]}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 1 }}
+                          style={styles.bubbleSwatch}
+                        >
+                          {isSelected && <Icon name="check" size={14} color="#FFFFFF" />}
+                        </LinearGradient>
+                      </Touchable>
+                    );
+                  })}
+                </View>
+              </View>
             </View>
-            <Switch
-              value={chatWallpaper}
-              onValueChange={setChatWallpaper}
-              trackColor={{ false: colors.line, true: colors.emberGlow }}
-              thumbColor={chatWallpaper ? colors.ember : colors.smoke}
-              accessibilityLabel={t('profile.chatWallpaper')}
-            />
+            <View style={[styles.settingRow, styles.settingRowDivided]}>
+              <View style={styles.settingIcon}>
+                <Icon name="images" size={18} color={colors.char} />
+              </View>
+              <View style={styles.settingText}>
+                <Text style={styles.settingTitle}>{t('profile.chatWallpaper')}</Text>
+                <Text style={styles.settingHint}>{t('profile.chatWallpaperHint')}</Text>
+              </View>
+              <Switch
+                value={chatWallpaper}
+                onValueChange={setChatWallpaper}
+                trackColor={{ false: colors.line, true: colors.ember }}
+                thumbColor="#FFFFFF"
+                ios_backgroundColor={colors.line}
+                accessibilityLabel={t('profile.chatWallpaper')}
+              />
+            </View>
+            <View style={[styles.settingRow, styles.settingRowDivided]}>
+              <View style={styles.settingText}>
+                <Text style={styles.settingTitle}>{t('profile.language')}</Text>
+              </View>
+              <View style={styles.choiceRow}>
+                {SUPPORTED_LANGUAGES.map((lang: SupportedLanguage) => {
+                  const isSelected = i18n.language === lang;
+                  return (
+                    <Touchable
+                      key={lang}
+                      style={[styles.choiceChip, isSelected && styles.choiceChipActive]}
+                      onPress={() => void setLanguage(lang)}
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: isSelected }}
+                    >
+                      <Text style={[styles.choiceText, isSelected && styles.choiceTextActive]}>
+                        {lang.toUpperCase()}
+                      </Text>
+                    </Touchable>
+                  );
+                })}
+              </View>
+            </View>
           </View>
         </View>
 
-        {error && <Text style={styles.error}>{error}</Text>}
-
-        <View style={styles.legalSection}>
-          <Touchable style={styles.legalRow} onPress={() => void Linking.openURL(PRIVACY_POLICY_URL)}>
-            <Icon
-              name="shield-halved"
-              size={13}
-              color={colors.smoke}
-              style={styles.dangerRowIcon}
-            />
-            <Text style={styles.legalRowText}>{t('profile.privacyPolicy')}</Text>
-            <Icon name="arrow-up-right-from-square" size={11} color={colors.smoke} />
-          </Touchable>
+        <View style={styles.section}>
+          <View style={styles.card}>
+            <Touchable
+              style={styles.settingRow}
+              onPress={() => void Linking.openURL(PRIVACY_POLICY_URL)}
+              accessibilityRole="link"
+            >
+              <View style={styles.settingIcon}>
+                <Icon name="shield-halved" size={18} color={colors.char} />
+              </View>
+              <Text style={[styles.settingTitle, styles.settingText]}>{t('profile.privacyPolicy')}</Text>
+              <Icon name="arrow-up-right-from-square" size={16} color={colors.smoke} />
+            </Touchable>
+          </View>
         </View>
 
         {/* Moved here from the bottom bar, where it sat one tap from the
             tab people use most. Still confirmed - it drops you back to
             sign-in. */}
-        <View style={styles.legalSection}>
-          <Touchable
-            style={styles.dangerRow}
-            onPress={() =>
-              void confirm({
-                title: t('footer.logoutConfirmTitle'),
-                message: t('footer.logoutConfirmMessage'),
-                cancelLabel: t('footer.cancel'),
-                options: [{ id: 'logout', label: t('footer.logoutConfirm'), destructive: true }],
-              }).then((choice) => {
-                if (choice === 'logout') void logout();
-              })
-            }
-            accessibilityRole="button"
-          >
-            <Icon
-              name="right-from-bracket"
-              size={15}
-              color={colors.danger}
-              style={styles.dangerRowIcon}
-            />
-            <View style={styles.dangerRowText}>
-              <Text style={[styles.dangerRowTitle, styles.dangerRowTitleDestructive]}>
-                {t('footer.logoutConfirm')}
-              </Text>
-            </View>
-          </Touchable>
-        </View>
+        <Touchable
+          style={styles.logoutButton}
+          onPress={() =>
+            void confirm({
+              title: t('footer.logoutConfirmTitle'),
+              message: t('footer.logoutConfirmMessage'),
+              cancelLabel: t('footer.cancel'),
+              options: [{ id: 'logout', label: t('footer.logoutConfirm'), destructive: true }],
+            }).then((choice) => {
+              if (choice === 'logout') void logout();
+            })
+          }
+          accessibilityRole="button"
+        >
+          <Icon name="right-from-bracket" size={18} color={colors.danger} />
+          <Text style={styles.logoutText}>{t('footer.logoutConfirm')}</Text>
+        </Touchable>
 
         <View style={styles.dangerZone}>
           <Text style={styles.dangerZoneTitle}>{t('profile.dangerZoneTitle')}</Text>
@@ -582,6 +623,7 @@ export function ProfileScreen({ navigation }: Props) {
             </View>
           </Touchable>
         </View>
+        <Text style={styles.footerNote}>Hearth · {t('welcome.copyright')}</Text>
         </ScrollView>
       </View>
 
@@ -639,83 +681,130 @@ const makeStyles = (colors: ThemeColors) =>
   container: { flex: 1, backgroundColor: colors.paper },
   content: { flex: 1, width: '100%', alignSelf: 'center' },
   scroll: { flex: 1 },
+  scrollContent: { paddingHorizontal: spacing.lg + 4, gap: spacing.xl },
   header: {
-    paddingHorizontal: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 44,
+    paddingHorizontal: spacing.lg + 4,
     paddingBottom: spacing.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
   },
-  cancelButton: {
-    position: 'absolute',
-    left: spacing.lg,
-    top: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: radii.pill,
-    backgroundColor: `${colors.danger}1F`,
-  },
-  cancelText: { fontFamily: fonts.family, color: colors.danger, fontSize: fontSizes.body, fontWeight: '800' },
+  cancelButton: { minHeight: 44, paddingHorizontal: 4, justifyContent: 'center' },
+  cancelText: { fontFamily: fonts.family, color: colors.smoke, fontSize: 16, fontWeight: '500' },
   title: { fontFamily: fonts.family, fontSize: fontSizes.bodyLg, fontWeight: '700', color: colors.ink },
   saveButton: {
-    position: 'absolute',
-    right: spacing.lg,
-    top: 0,
-    flexDirection: 'row',
+    minWidth: 76,
+    height: 40,
+    paddingHorizontal: 18,
+    borderRadius: 12,
+    backgroundColor: colors.ember,
     alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: radii.pill,
-    backgroundColor: `${colors.sage}1F`,
+    justifyContent: 'center',
   },
-  saveText: { fontFamily: fonts.family, color: colors.sage, fontSize: fontSizes.body, fontWeight: '800' },
+  saveText: { fontFamily: fonts.family, color: '#FFFFFF', fontSize: fontSizes.body, fontWeight: '600' },
   saveTextDisabled: { color: colors.smoke },
-  saveButtonDisabled: { backgroundColor: `${colors.smoke}1F` },
-  avatarSection: {
-    alignItems: 'center',
-    marginTop: spacing.xl,
-    marginBottom: spacing.xxl,
-  },
+  saveButtonDisabled: { backgroundColor: colors.fill },
+  avatarSection: { alignItems: 'center', gap: spacing.md, paddingTop: 4 },
   avatarEditBadge: {
     position: 'absolute',
-    right: -2,
-    bottom: -2,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: colors.ember,
-    borderWidth: 2,
+    right: 0,
+    bottom: 2,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.ink,
+    borderWidth: 3,
     borderColor: colors.paper,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  changePhotoHint: { fontFamily: fonts.family, fontSize: fontSizes.caption, color: colors.smoke, marginTop: spacing.sm },
-  field: { paddingHorizontal: spacing.lg, marginBottom: spacing.lg },
-  choiceRow: { flexDirection: 'row', gap: spacing.sm, marginTop: 6 },
+  identity: { alignItems: 'center', gap: 2 },
+  identityName: { fontFamily: fonts.family, fontSize: fontSizes.title, fontWeight: '700', letterSpacing: -0.4, color: colors.ink },
+  identityHandle: { fontFamily: fonts.family, fontSize: 14, color: colors.smoke },
+  section: { gap: spacing.sm },
+  sectionTitle: {
+    fontFamily: fonts.family,
+    fontSize: fontSizes.footnote,
+    fontWeight: '600',
+    letterSpacing: 0.26,
+    color: colors.smoke,
+    marginHorizontal: 4,
+  },
+  card: { backgroundColor: colors.paper2, borderRadius: 20, overflow: 'hidden' },
+  cardSpaced: { marginTop: spacing.sm },
+  cardDivider: { height: 1, backgroundColor: colors.fill, marginLeft: spacing.lg },
+  fieldRow: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, gap: 2 },
+  fieldLabel: { fontFamily: fonts.family, fontSize: fontSizes.caption, fontWeight: '500', color: colors.smoke },
+  fieldInput: { fontFamily: fonts.family, fontSize: 16, color: colors.ink, padding: 0, minHeight: 24 },
+  handleRow: { flexDirection: 'row', alignItems: 'center' },
+  handleAt: { fontFamily: fonts.family, fontSize: 16, color: colors.smoke },
+  handleInput: { flex: 1 },
+  settingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 14,
+  },
+  settingRowDivided: { borderTopWidth: 1, borderTopColor: colors.fill },
+  settingIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 11,
+    backgroundColor: colors.fill,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  settingText: { flex: 1, minWidth: 0, gap: 2 },
+  settingTitle: { fontFamily: fonts.family, fontSize: 16, fontWeight: '500', color: colors.ink },
+  settingHint: { fontFamily: fonts.family, fontSize: fontSizes.footnote, lineHeight: 18, color: colors.smoke },
+  enableButton: {
+    minHeight: 36,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: colors.emberTint,
+    justifyContent: 'center',
+  },
+  enableButtonText: { fontFamily: fonts.family, fontSize: 14, fontWeight: '600', color: colors.emberText },
+  themeRow: { flexDirection: 'row', gap: spacing.sm },
+  themeCard: {
+    flex: 1,
+    gap: spacing.sm,
+    padding: 10,
+    borderRadius: 18,
+    backgroundColor: colors.paper2,
+    borderWidth: 2,
+    borderColor: colors.line,
+  },
+  themeCardSelected: { borderColor: colors.ember },
+  themePreview: { height: 56, borderRadius: 10, justifyContent: 'center', gap: 5, paddingHorizontal: 9 },
+  themeLine: { height: 7, width: '60%', borderRadius: 4 },
+  themeLineMine: { width: '40%', alignSelf: 'flex-end', backgroundColor: '#6D35E8' },
+  themeLabel: { fontFamily: fonts.family, fontSize: 14, fontWeight: '600', color: colors.ink, paddingLeft: 2 },
+  choiceRow: { flexDirection: 'row', gap: spacing.sm },
   choiceChip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: 8,
+    minHeight: 36,
+    paddingHorizontal: 14,
+    justifyContent: 'center',
     borderRadius: radii.pill,
     borderWidth: 1,
     borderColor: colors.line,
     backgroundColor: colors.paper2,
   },
-  choiceChipActive: { backgroundColor: colors.ember, borderColor: colors.ember },
-  choiceText: { fontFamily: fonts.family, fontSize: fontSizes.footnote, fontWeight: '700', color: colors.smoke },
-  choiceTextActive: { color: colors.white },
+  choiceChipActive: { backgroundColor: colors.ink, borderColor: colors.ink },
+  choiceText: { fontFamily: fonts.family, fontSize: 14, fontWeight: '600', color: colors.char },
+  choiceTextActive: { color: colors.paper },
   bubbleSwatchRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
+    marginTop: spacing.sm,
   },
   bubbleSwatchWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     padding: 2,
     borderWidth: 2,
     borderColor: 'transparent',
@@ -723,10 +812,23 @@ const makeStyles = (colors: ThemeColors) =>
   bubbleSwatchWrapSelected: { borderColor: colors.ink },
   bubbleSwatch: {
     flex: 1,
-    borderRadius: 22,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  logoutButton: {
+    minHeight: 52,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.dangerTint,
+    backgroundColor: colors.dangerTint,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  logoutText: { fontFamily: fonts.family, fontSize: 16, fontWeight: '600', color: colors.danger },
+  footerNote: { fontFamily: fonts.family, textAlign: 'center', fontSize: fontSizes.caption, color: colors.smoke },
   label: {
     fontFamily: fonts.family,
     fontSize: fontSizes.caption,
@@ -746,22 +848,8 @@ const makeStyles = (colors: ThemeColors) =>
     fontSize: fontSizes.body,
     color: colors.ink,
   },
-  error: { fontFamily: fonts.family, color: colors.danger, paddingHorizontal: spacing.lg, fontSize: fontSizes.footnote },
-  legalSection: {
-    marginTop: spacing.xl,
-    paddingHorizontal: spacing.lg,
-  },
-  legalRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: 10,
-  },
-  legalRowText: { fontFamily: fonts.family, flex: 1, fontSize: fontSizes.body, color: colors.smoke, fontWeight: '600' },
-  dangerZone: {
-    marginTop: spacing.xxl,
-    paddingHorizontal: spacing.lg,
-  },
+  error: { fontFamily: fonts.family, color: colors.danger, paddingHorizontal: 4, fontSize: fontSizes.footnote },
+  dangerZone: {},
   dangerZoneTitle: {
     fontFamily: fonts.family,
     fontSize: fontSizes.caption,
@@ -774,12 +862,10 @@ const makeStyles = (colors: ThemeColors) =>
   dangerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.line,
     backgroundColor: colors.paper2,
-    borderRadius: radii.md,
-    padding: 13,
-    marginBottom: spacing.sm,
+    borderRadius: 20,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 14,
   },
   dangerRowIcon: { width: 22, textAlign: 'center' },
   dangerRowText: { flex: 1, marginLeft: spacing.sm },
@@ -793,15 +879,6 @@ const makeStyles = (colors: ThemeColors) =>
     justifyContent: 'center',
     padding: spacing.lg,
   },
-  notificationRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  notificationStatus: { fontFamily: fonts.family, flex: 1, fontSize: fontSizes.body, color: colors.ink },
-  privacyRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  privacyText: { flex: 1 },
   modalCard: {
     width: '100%',
     maxWidth: 400,

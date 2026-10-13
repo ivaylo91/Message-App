@@ -265,6 +265,8 @@
     "cancel": "Cancel",
     "save": "Save",
     "changePhoto": "Tap to change photo",
+    "account": "Account",
+    "notificationsAndPrivacy": "Notifications and privacy",
     "displayNameLabel": "Display name",
     "displayNamePlaceholder": "Your name",
     "usernameLabel": "Username",
