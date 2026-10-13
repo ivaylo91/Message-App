@@ -277,6 +277,7 @@
     "saveFailedError": "Профилът не можа да бъде запазен. Опитайте отново.",
     "bubbleColorLabel": "Цвят на балончетата",
     "bubbleColorNames": {
+      "hearth": "Hearth",
       "ember": "Жар",
       "ocean": "Океан",
       "sunset": "Залез",

@@ -8,7 +8,7 @@ import { useCall } from './CallContext';
 import { Touchable } from '../components/Touchable';
 import { Avatar } from '../components/Avatar';
 import { useTheme } from '../theme/ThemeContext';
-import { fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
+import { fonts, fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
 
 // Rendered once at the app root (see App.tsx) so an incoming call can
 // surface as a full-screen overlay regardless of which screen is
@@ -132,8 +132,8 @@ const makeStyles = (colors: ThemeColors) =>
       alignItems: 'center',
       gap: 6,
     },
-    peerName: { fontSize: fontSizes.title, fontWeight: '700', color: colors.white, marginTop: spacing.md },
-    statusLabel: { fontSize: fontSizes.body, color: 'rgba(255, 255, 255, 0.75)' },
+    peerName: { fontFamily: fonts.family, fontSize: fontSizes.title, fontWeight: '700', color: colors.white, marginTop: spacing.md },
+    statusLabel: { fontFamily: fonts.family, fontSize: fontSizes.body, color: 'rgba(255, 255, 255, 0.75)' },
     localPreview: {
       position: 'absolute',
       right: spacing.lg,

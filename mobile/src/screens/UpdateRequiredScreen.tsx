@@ -49,13 +49,14 @@ const makeStyles = (colors: ThemeColors) =>
     mark: { width: 56, height: 64, marginBottom: spacing.xl },
     title: {
       fontSize: fontSizes.title,
-      fontFamily: fonts.display,
+      fontFamily: fonts.family, fontWeight: '800',
       letterSpacing: -0.2,
       color: colors.ink,
       textAlign: 'center',
       marginBottom: spacing.sm,
     },
     subtitle: {
+      fontFamily: fonts.family,
       fontSize: fontSizes.body,
       color: colors.smoke,
       textAlign: 'center',
@@ -69,5 +70,5 @@ const makeStyles = (colors: ThemeColors) =>
       borderRadius: radii.lg,
       backgroundColor: colors.ember,
     },
-    buttonText: { color: colors.white, fontSize: fontSizes.bodyLg, fontWeight: '700' },
+    buttonText: { fontFamily: fonts.family, color: colors.white, fontSize: fontSizes.bodyLg, fontWeight: '700' },
   });

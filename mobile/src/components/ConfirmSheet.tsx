@@ -12,7 +12,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-na
 import { SPRING_SHEET } from '../theme/motion';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Touchable } from './Touchable';
-import { elevation, fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
+import { elevation, fonts, fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 
 // A bottom sheet for choices, replacing Alert.alert for anything with more
@@ -187,12 +187,14 @@ const makeStyles = (colors: ThemeColors) =>
       marginBottom: spacing.md,
     },
     title: {
+      fontFamily: fonts.family,
       fontSize: fontSizes.bodyLg,
       fontWeight: '700',
       color: colors.ink,
       marginBottom: 4,
     },
     message: {
+      fontFamily: fonts.family,
       fontSize: fontSizes.footnote,
       color: colors.smoke,
       marginBottom: spacing.sm,
@@ -202,8 +204,8 @@ const makeStyles = (colors: ThemeColors) =>
       borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: colors.line,
     },
-    optionText: { fontSize: fontSizes.body, color: colors.ink },
-    optionDestructive: { color: colors.danger, fontWeight: '600' },
+    optionText: { fontFamily: fonts.family, fontSize: fontSizes.body, color: colors.ink },
+    optionDestructive: { fontFamily: fonts.family, color: colors.danger, fontWeight: '600' },
     cancel: {
       marginTop: spacing.md,
       paddingVertical: 13,
@@ -211,5 +213,5 @@ const makeStyles = (colors: ThemeColors) =>
       backgroundColor: colors.paper2,
       alignItems: 'center',
     },
-    cancelText: { fontSize: fontSizes.body, fontWeight: '700', color: colors.smoke },
+    cancelText: { fontFamily: fonts.family, fontSize: fontSizes.body, fontWeight: '700', color: colors.smoke },
   });

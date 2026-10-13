@@ -846,7 +846,7 @@ const makeStyles = (colors: ThemeColors) =>
     justifyContent: 'space-between',
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  headerTitle: { fontSize: fontSizes.display, fontFamily: fonts.display, letterSpacing: -0.3, color: colors.ink },
+  headerTitle: { fontSize: fontSizes.display, fontFamily: fonts.family, fontWeight: '800', letterSpacing: -0.3, color: colors.ink },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   iconButton: {
     width: 34,
@@ -873,9 +873,10 @@ const makeStyles = (colors: ThemeColors) =>
     backgroundColor: colors.paper2,
   },
   filterChipSelected: { backgroundColor: colors.ember, borderColor: colors.ember },
-  filterText: { fontSize: fontSizes.footnote, fontWeight: '600', color: colors.smoke },
+  filterText: { fontFamily: fonts.family, fontSize: fontSizes.footnote, fontWeight: '600', color: colors.smoke },
   filterTextSelected: { color: colors.white },
   filterEmpty: {
+    fontFamily: fonts.family,
     textAlign: 'center',
     marginTop: spacing.xxl,
     fontSize: fontSizes.footnote,
@@ -893,7 +894,7 @@ const makeStyles = (colors: ThemeColors) =>
     borderWidth: 1,
     borderColor: colors.line,
   },
-  searchInput: { flex: 1, paddingVertical: 9, fontSize: fontSizes.body, color: colors.ink },
+  searchInput: { fontFamily: fonts.family, flex: 1, paddingVertical: 9, fontSize: fontSizes.body, color: colors.ink },
   rowContainer: { position: 'relative', overflow: 'hidden', width: '100%' },
   deleteAction: {
     position: 'absolute',
@@ -915,6 +916,7 @@ const makeStyles = (colors: ThemeColors) =>
   },
   rowMain: { flex: 1, minWidth: 0 },
   sectionHeading: {
+    fontFamily: fonts.family,
     fontSize: fontSizes.caption,
     fontWeight: '700',
     color: colors.smoke,
@@ -925,6 +927,7 @@ const makeStyles = (colors: ThemeColors) =>
     paddingBottom: 4,
   },
   sectionHint: {
+    fontFamily: fonts.family,
     fontSize: fontSizes.footnote,
     color: colors.smoke,
     paddingHorizontal: spacing.lg,
@@ -937,8 +940,8 @@ const makeStyles = (colors: ThemeColors) =>
     paddingVertical: 9,
     paddingHorizontal: spacing.lg,
   },
-  hitTitle: { fontSize: fontSizes.footnote, fontWeight: '700', color: colors.ink },
-  hitBody: { fontSize: fontSizes.footnote, color: colors.smoke, marginTop: 1 },
+  hitTitle: { fontFamily: fonts.family, fontSize: fontSizes.footnote, fontWeight: '700', color: colors.ink },
+  hitBody: { fontFamily: fonts.family, fontSize: fontSizes.footnote, color: colors.smoke, marginTop: 1 },
   skeletonRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -949,14 +952,14 @@ const makeStyles = (colors: ThemeColors) =>
   skeletonText: { flex: 1, gap: 7 },
   rowTitleLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   // flexShrink so a long name truncates instead of pushing the time away.
-  rowTitle: { flexShrink: 1, fontWeight: '700', fontSize: fontSizes.body, color: colors.ink },
-  rowTime: { marginLeft: 'auto', fontSize: fontSizes.caption, color: colors.smoke },
-  rowTimeUnread: { color: colors.emberText, fontWeight: '700' },
+  rowTitle: { fontFamily: fonts.family, flexShrink: 1, fontWeight: '700', fontSize: fontSizes.body, color: colors.ink },
+  rowTime: { fontFamily: fonts.family, marginLeft: 'auto', fontSize: fontSizes.caption, color: colors.smoke },
+  rowTimeUnread: { fontFamily: fonts.family, color: colors.emberText, fontWeight: '700' },
   rowPreviewLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: 2 },
-  rowPreview: { flex: 1, color: colors.smoke, fontSize: fontSizes.footnote },
-  rowPreviewTyping: { color: colors.sage, fontWeight: '600' },
-  rowDraftLabel: { color: colors.emberText, fontWeight: '700' },
-  rowPreviewUnread: { color: colors.ink, fontWeight: '600' },
+  rowPreview: { fontFamily: fonts.family, flex: 1, color: colors.smoke, fontSize: fontSizes.footnote },
+  rowPreviewTyping: { fontFamily: fonts.family, color: colors.sage, fontWeight: '600' },
+  rowDraftLabel: { fontFamily: fonts.family, color: colors.emberText, fontWeight: '700' },
+  rowPreviewUnread: { fontFamily: fonts.family, color: colors.ink, fontWeight: '600' },
   unreadBadge: {
     minWidth: 22,
     height: 22,
@@ -968,7 +971,7 @@ const makeStyles = (colors: ThemeColors) =>
   },
   unreadBadgeMuted: { backgroundColor: colors.mutedFill },
   unreadDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: colors.ember },
-  unreadBadgeText: { color: colors.white, fontSize: fontSizes.caption, fontWeight: '700' },
+  unreadBadgeText: { fontFamily: fonts.family, color: colors.white, fontSize: fontSizes.caption, fontWeight: '700' },
   empty: { alignItems: 'center', marginTop: 64, paddingHorizontal: spacing.xxl },
   emptyIcon: {
     width: 60,
@@ -988,7 +991,7 @@ const makeStyles = (colors: ThemeColors) =>
     borderRadius: radii.pill,
     backgroundColor: colors.ember,
   },
-  emptyActionText: { color: colors.white, fontWeight: '700', fontSize: fontSizes.body },
-  emptyTitle: { color: colors.ink, fontWeight: '700', fontSize: fontSizes.body },
-  emptyHint: { color: colors.smoke, marginTop: 4, fontSize: fontSizes.footnote },
+  emptyActionText: { fontFamily: fonts.family, color: colors.white, fontWeight: '700', fontSize: fontSizes.body },
+  emptyTitle: { fontFamily: fonts.family, color: colors.ink, fontWeight: '700', fontSize: fontSizes.body },
+  emptyHint: { fontFamily: fonts.family, color: colors.smoke, marginTop: 4, fontSize: fontSizes.footnote },
 });

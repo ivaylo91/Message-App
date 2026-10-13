@@ -11,12 +11,13 @@ export const makeAuthStyles = (colors: ThemeColors) =>
     },
     title: {
       fontSize: 25,
-      fontFamily: fonts.display,
+      fontFamily: fonts.family, fontWeight: '800',
       letterSpacing: -0.2,
       color: colors.ink,
       marginBottom: 6,
     },
     subtitle: {
+      fontFamily: fonts.family,
       color: colors.smoke,
       fontSize: 14.5,
       lineHeight: 20,
@@ -26,6 +27,7 @@ export const makeAuthStyles = (colors: ThemeColors) =>
       marginBottom: spacing.lg,
     },
     label: {
+      fontFamily: fonts.family,
       fontSize: 12,
       fontWeight: '700',
       letterSpacing: 0.5,
@@ -34,6 +36,7 @@ export const makeAuthStyles = (colors: ThemeColors) =>
       marginBottom: 7,
     },
     input: {
+      fontFamily: fonts.family,
       borderWidth: 1,
       borderColor: colors.line,
       backgroundColor: colors.paper2,
@@ -43,6 +46,7 @@ export const makeAuthStyles = (colors: ThemeColors) =>
       color: colors.ink,
     },
     hint: {
+      fontFamily: fonts.family,
       fontSize: 12,
       color: colors.smoke,
       marginTop: -spacing.lg + 4,
@@ -54,6 +58,7 @@ export const makeAuthStyles = (colors: ThemeColors) =>
       marginBottom: spacing.md,
     },
     forgotPasswordText: {
+      fontFamily: fonts.family,
       fontSize: 13,
       fontWeight: '600',
       color: colors.emberText,
@@ -76,6 +81,7 @@ export const makeAuthStyles = (colors: ThemeColors) =>
       opacity: 0.7,
     },
     primaryButtonText: {
+      fontFamily: fonts.family,
       color: colors.white,
       fontSize: 15.5,
       fontWeight: '700',
@@ -85,6 +91,7 @@ export const makeAuthStyles = (colors: ThemeColors) =>
       alignItems: 'center',
     },
     footerText: {
+      fontFamily: fonts.family,
       fontSize: 13.5,
       color: colors.smoke,
     },

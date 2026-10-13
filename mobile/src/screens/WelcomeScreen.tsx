@@ -7,7 +7,7 @@ import type { AuthStackParamList } from '../navigation/RootNavigator';
 import { AppWallpaper } from '../components/AppWallpaper';
 import { Touchable } from '../components/Touchable';
 import { useContentWidth } from '../hooks/useContentWidth';
-import { fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
+import { fonts, fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Welcome'>;
@@ -91,12 +91,14 @@ const makeStyles = (colors: ThemeColors) =>
       height: 55,
     },
     wordmark: {
+      fontFamily: fonts.family,
       fontSize: fontSizes.hero,
       fontWeight: '800',
       letterSpacing: -0.5,
       color: colors.ink,
     },
     tagline: {
+      fontFamily: fonts.family,
       color: colors.smoke,
       fontSize: fontSizes.body,
       lineHeight: 22,
@@ -117,6 +119,7 @@ const makeStyles = (colors: ThemeColors) =>
       alignItems: 'center',
     },
     primaryButtonText: {
+      fontFamily: fonts.family,
       color: colors.white,
       fontSize: fontSizes.body,
       fontWeight: '700',
@@ -128,12 +131,14 @@ const makeStyles = (colors: ThemeColors) =>
       alignItems: 'center',
     },
     secondaryButtonText: {
+      fontFamily: fonts.family,
       color: colors.ink,
       fontSize: fontSizes.body,
       fontWeight: '600',
       opacity: 0.7,
     },
     footer: {
+      fontFamily: fonts.family,
       position: 'absolute',
       left: 0,
       right: 0,

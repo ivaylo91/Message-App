@@ -11,7 +11,7 @@ import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-na
 import { scheduleOnRN } from 'react-native-worklets';
 import { FADE_MS } from '../theme/motion';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
+import { fonts, fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 
 type ToastKind = 'success' | 'error';
@@ -112,5 +112,5 @@ const makeStyles = (colors: ThemeColors) =>
     },
     success: { backgroundColor: colors.sage },
     error: { backgroundColor: colors.dangerFill },
-    text: { color: colors.white, fontWeight: '700', fontSize: fontSizes.body },
+    text: { fontFamily: fonts.family, color: colors.white, fontWeight: '700', fontSize: fontSizes.body },
   });

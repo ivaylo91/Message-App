@@ -354,10 +354,11 @@ const makeStyles = (colors: ThemeColors) =>
       paddingBottom: spacing.md,
     },
     backButton: { width: 30, alignItems: 'flex-start' },
-    headerTitle: { fontSize: fontSizes.title, fontFamily: fonts.display, color: colors.ink },
+    headerTitle: { fontSize: fontSizes.title, fontFamily: fonts.family, fontWeight: '800', color: colors.ink },
     spinner: { marginTop: spacing.xxl },
     listContent: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },
     label: {
+      fontFamily: fonts.family,
       fontSize: fontSizes.caption,
       fontWeight: '700',
       color: colors.smoke,
@@ -366,9 +367,10 @@ const makeStyles = (colors: ThemeColors) =>
       marginTop: spacing.lg,
       marginBottom: 6,
     },
-    hint: { fontSize: fontSizes.caption, color: colors.smoke, marginTop: 4 },
+    hint: { fontFamily: fonts.family, fontSize: fontSizes.caption, color: colors.smoke, marginTop: 4 },
     nameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
     nameInput: {
+      fontFamily: fonts.family,
       flex: 1,
       backgroundColor: colors.paper2,
       borderWidth: 1,
@@ -385,7 +387,7 @@ const makeStyles = (colors: ThemeColors) =>
       borderRadius: radii.pill,
       backgroundColor: colors.ember,
     },
-    saveButtonText: { color: colors.white, fontWeight: '700', fontSize: fontSizes.footnote },
+    saveButtonText: { fontFamily: fonts.family, color: colors.white, fontWeight: '700', fontSize: fontSizes.footnote },
     searchBar: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -396,14 +398,14 @@ const makeStyles = (colors: ThemeColors) =>
       borderWidth: 1,
       borderColor: colors.line,
     },
-    searchInput: { flex: 1, paddingVertical: 9, fontSize: fontSizes.body, color: colors.ink },
+    searchInput: { fontFamily: fonts.family, flex: 1, paddingVertical: 9, fontSize: fontSizes.body, color: colors.ink },
     resultRow: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.md,
       paddingVertical: 10,
     },
-    resultName: { flex: 1, fontSize: fontSizes.body, color: colors.ink },
+    resultName: { fontFamily: fonts.family, flex: 1, fontSize: fontSizes.body, color: colors.ink },
     memberRow: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -420,8 +422,8 @@ const makeStyles = (colors: ThemeColors) =>
       paddingVertical: 12,
     },
     skeletonMemberText: { flex: 1, gap: 7 },
-    memberName: { fontSize: fontSizes.body, color: colors.ink, fontWeight: '600' },
-    memberRole: { fontSize: fontSizes.caption, color: colors.smoke, marginTop: 1 },
+    memberName: { fontFamily: fonts.family, fontSize: fontSizes.body, color: colors.ink, fontWeight: '600' },
+    memberRole: { fontFamily: fonts.family, fontSize: fontSizes.caption, color: colors.smoke, marginTop: 1 },
     leaveButton: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -433,5 +435,5 @@ const makeStyles = (colors: ThemeColors) =>
       borderWidth: 1,
       borderColor: colors.line,
     },
-    leaveText: { color: colors.danger, fontWeight: '700', fontSize: fontSizes.body },
+    leaveText: { fontFamily: fonts.family, color: colors.danger, fontWeight: '700', fontSize: fontSizes.body },
   });

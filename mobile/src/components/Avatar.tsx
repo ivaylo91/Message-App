@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import FastImage from '@d11/react-native-fast-image';
 import { getAvatarUrl } from '../data/profiles';
-import { avatarColorFor, initialsFor, ThemeColors } from '../theme/tokens';
+import { avatarColorFor, fonts, initialsFor, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 
 interface AvatarProps {
@@ -62,7 +62,7 @@ export function Avatar({ name, avatarPath, size = 48, online }: AvatarProps) {
             style={{ width: size, height: size, borderRadius: size / 2 }}
           />
         ) : (
-          <Text style={[styles.text, { fontSize: size * 0.32 }]}>
+          <Text style={[styles.text, { fontFamily: fonts.family, fontSize: size * 0.32 }]}>
             {initialsFor(name)}
           </Text>
         )}
@@ -93,6 +93,7 @@ const makeStyles = (colors: ThemeColors) =>
       overflow: 'hidden',
     },
     text: {
+      fontFamily: fonts.family,
       color: colors.white,
       fontWeight: '700',
     },

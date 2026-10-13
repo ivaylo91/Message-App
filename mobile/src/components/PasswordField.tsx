@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { Icon } from './Icon';
-import { fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
+import { fonts, fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
 import { Touchable } from './Touchable';
 import { useTheme } from '../theme/ThemeContext';
 
@@ -47,6 +47,7 @@ const makeStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     field: { marginBottom: spacing.lg },
     label: {
+      fontFamily: fonts.family,
       fontSize: fontSizes.caption,
       fontWeight: '700',
       letterSpacing: 0.5,
@@ -63,6 +64,7 @@ const makeStyles = (colors: ThemeColors) =>
       borderRadius: radii.md,
     },
     input: {
+      fontFamily: fonts.family,
       flex: 1,
       padding: 13,
       fontSize: fontSizes.body,

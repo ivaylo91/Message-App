@@ -5,7 +5,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { Icon } from './Icon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Touchable } from './Touchable';
-import { elevation, fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
+import { elevation, fonts, fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 import { useBubbleGradients } from '../theme/chatTheme';
 import { SPRING_SHEET } from '../theme/motion';
@@ -222,7 +222,7 @@ const makeStyles = (colors: ThemeColors) =>
       justifyContent: 'center',
     },
     reactionSelected: { backgroundColor: colors.line },
-    reactionText: { fontSize: 26 },
+    reactionText: { fontFamily: fonts.family, fontSize: 26 },
     preview: {
       maxWidth: '85%',
       maxHeight: PREVIEW_MAX_HEIGHT,
@@ -232,8 +232,8 @@ const makeStyles = (colors: ThemeColors) =>
       borderRadius: radii.bubble,
     },
     // Same type as the bubble it copies (bubbleTextMine/Theirs in ChatScreen).
-    previewTextMine: { fontSize: fontSizes.body, lineHeight: 20, color: colors.white },
-    previewTextTheirs: { fontSize: fontSizes.body, lineHeight: 20, color: colors.ink },
+    previewTextMine: { fontFamily: fonts.family, fontSize: fontSizes.body, lineHeight: 20, color: colors.white },
+    previewTextTheirs: { fontFamily: fonts.family, fontSize: fontSizes.body, lineHeight: 20, color: colors.ink },
     actions: {
       width: MENU_WIDTH,
       paddingVertical: spacing.sm,
@@ -252,6 +252,6 @@ const makeStyles = (colors: ThemeColors) =>
       borderTopWidth: StyleSheet.hairlineWidth,
       borderTopColor: colors.line,
     },
-    actionLabel: { fontSize: fontSizes.body, color: colors.ink },
+    actionLabel: { fontFamily: fonts.family, fontSize: fontSizes.body, color: colors.ink },
     destructive: { color: colors.danger },
   });

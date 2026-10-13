@@ -20,7 +20,7 @@ import { Touchable } from '../components/Touchable';
 import { MediaViewer } from '../components/MediaViewer';
 import { Skeleton, SkeletonGroup } from '../components/Skeleton';
 import { useContentWidth } from '../hooks/useContentWidth';
-import { fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
+import { fonts, fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 import { fileIconName, formatDuration } from '../utils/messagePreview';
 
@@ -278,6 +278,7 @@ const makeStyles = (colors: ThemeColors) =>
     },
     backButton: { width: 30, alignItems: 'flex-start' },
     headerTitle: {
+      fontFamily: fonts.family,
       flex: 1,
       fontSize: fontSizes.bodyLg,
       fontWeight: '700',
@@ -299,7 +300,7 @@ const makeStyles = (colors: ThemeColors) =>
       borderRadius: radii.pill,
     },
     tabButtonActive: { backgroundColor: colors.ember },
-    tabText: { fontSize: fontSizes.footnote, fontWeight: '600', color: colors.smoke },
+    tabText: { fontFamily: fonts.family, fontSize: fontSizes.footnote, fontWeight: '600', color: colors.smoke },
     tabTextActive: { color: colors.white },
     gridContent: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl },
     skeletonGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: GRID_GAP },
@@ -332,9 +333,9 @@ const makeStyles = (colors: ThemeColors) =>
       justifyContent: 'center',
     },
     fileTextBlock: { flex: 1 },
-    fileName: { fontSize: fontSizes.body, color: colors.ink, fontWeight: '600' },
-    fileSubtitle: { fontSize: fontSizes.caption, color: colors.smoke, marginTop: 2 },
+    fileName: { fontFamily: fonts.family, fontSize: fontSizes.body, color: colors.ink, fontWeight: '600' },
+    fileSubtitle: { fontFamily: fonts.family, fontSize: fontSizes.caption, color: colors.smoke, marginTop: 2 },
     emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.md },
-    emptyText: { fontSize: fontSizes.body, color: colors.smoke },
+    emptyText: { fontFamily: fonts.family, fontSize: fontSizes.body, color: colors.smoke },
     spinner: { marginTop: spacing.xl },
   });

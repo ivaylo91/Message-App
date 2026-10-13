@@ -277,6 +277,7 @@
     "saveFailedError": "Couldn't save your profile. Try again.",
     "bubbleColorLabel": "Chat bubble color",
     "bubbleColorNames": {
+      "hearth": "Hearth",
       "ember": "Ember",
       "ocean": "Ocean",
       "sunset": "Sunset",

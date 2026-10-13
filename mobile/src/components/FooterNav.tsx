@@ -9,9 +9,9 @@ import type { AppStackParamList } from '../navigation/RootNavigator';
 import { useUnread } from '../unread/UnreadContext';
 import {
   elevation,
+  fonts,
   fontSizes,
   MAX_FONT_SCALE_TIGHT,
-  radii,
   spacing,
   ThemeColors,
 } from '../theme/tokens';
@@ -44,6 +44,9 @@ export function FooterNav({ active }: FooterNavProps) {
     label: string;
     onPress: () => void;
     badgeCount?: number;
+    // Profile is icon-only in the bar, as in the redesign; the label
+    // still goes to screen readers.
+    iconOnly?: boolean;
   }> = [
     {
       key: 'chats',
@@ -65,14 +68,16 @@ export function FooterNav({ active }: FooterNavProps) {
       icon: 'user',
       label: t('footer.profile'),
       onPress: () => navigation.navigate('Profile'),
+      iconOnly: true,
     },
   ];
 
   return (
-    // A capsule floating above the screen's bottom edge, with a pill behind
-    // the current tab - the shape WhatsApp's 2026 redesign and Google's
-    // apps use. It stays in the layout rather than overlapping the content,
-    // so no list has to pad itself to keep its last row reachable.
+    // An inverse capsule floating above the screen's bottom edge - dark on
+    // the light theme, light on the dark one - with the current tab lifted
+    // out in the page colour. It stays in the layout rather than
+    // overlapping the content, so no list has to pad itself to keep its
+    // last row reachable.
     <View style={[styles.container, { paddingBottom: insets.bottom + spacing.sm }]}>
       <View style={styles.bar}>
       {items.map((item) => {
@@ -80,7 +85,7 @@ export function FooterNav({ active }: FooterNavProps) {
         return (
           <Touchable
             key={item.key}
-            style={[styles.item, isActive && styles.itemActive]}
+            style={[styles.item, item.iconOnly && styles.itemIconOnly, isActive && styles.itemActive]}
             iconButton
             // Tapping the tab you're on does nothing, rather than reloading.
             onPress={isActive ? undefined : item.onPress}
@@ -97,8 +102,8 @@ export function FooterNav({ active }: FooterNavProps) {
             <View style={styles.iconWrap}>
               <Icon
                 name={item.icon}
-                size={19}
-                color={isActive ? colors.emberText : colors.smoke}
+                size={20}
+                color={isActive ? colors.navActiveText : colors.navText}
               />
               {!!item.badgeCount && (
                 <View style={styles.badge}>
@@ -108,13 +113,15 @@ export function FooterNav({ active }: FooterNavProps) {
                 </View>
               )}
             </View>
-            <Text
-              style={[styles.label, isActive && styles.labelActive]}
-              maxFontSizeMultiplier={MAX_FONT_SCALE_TIGHT}
-              numberOfLines={1}
-            >
-              {item.label}
-            </Text>
+            {!item.iconOnly && (
+              <Text
+                style={[styles.label, isActive && styles.labelActive]}
+                maxFontSizeMultiplier={MAX_FONT_SCALE_TIGHT}
+                numberOfLines={1}
+              >
+                {item.label}
+              </Text>
+            )}
           </Touchable>
         );
       })}
@@ -126,46 +133,47 @@ export function FooterNav({ active }: FooterNavProps) {
 const makeStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     container: {
-      paddingHorizontal: spacing.lg,
+      paddingHorizontal: spacing.lg + 4,
       paddingTop: spacing.xs,
       backgroundColor: colors.paper,
     },
     bar: {
       flexDirection: 'row',
-      padding: 5,
+      alignItems: 'center',
+      height: 68,
+      paddingHorizontal: spacing.sm,
       gap: 4,
-      borderRadius: radii.pill,
-      backgroundColor: colors.paper2,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.line,
-      ...elevation.md,
+      borderRadius: 24,
+      backgroundColor: colors.navBar,
+      ...elevation.lg,
     },
     item: {
       flex: 1,
+      height: 52,
+      flexDirection: 'row',
       alignItems: 'center',
-      gap: 2,
-      paddingVertical: 7,
-      borderRadius: radii.pill,
+      justifyContent: 'center',
+      gap: spacing.sm,
+      borderRadius: 18,
     },
-    // The ember at about 12% opacity: a tint, so the icon and label in full
-    // ember stay the strongest thing on it.
-    itemActive: { backgroundColor: `${colors.ember}1F` },
+    itemIconOnly: { flex: 0, width: 64 },
+    itemActive: { backgroundColor: colors.navActive },
     iconWrap: { position: 'relative' },
     badge: {
       position: 'absolute',
-      top: -5,
-      right: -9,
-      minWidth: 16,
-      height: 16,
-      borderRadius: 8,
-      paddingHorizontal: 3,
+      top: -6,
+      right: -10,
+      minWidth: 18,
+      height: 18,
+      borderRadius: 9,
+      paddingHorizontal: 4,
       backgroundColor: colors.ember,
       alignItems: 'center',
       justifyContent: 'center',
-      borderWidth: 1.5,
-      borderColor: colors.paper2,
+      borderWidth: 2,
+      borderColor: colors.navBar,
     },
-    badgeText: { color: colors.white, fontSize: fontSizes.micro, fontWeight: '700' },
-    label: { fontSize: fontSizes.micro, fontWeight: '600', color: colors.smoke },
-    labelActive: { color: colors.emberText },
+    badgeText: { fontFamily: fonts.family, color: '#FFFFFF', fontSize: fontSizes.micro, fontWeight: '700' },
+    label: { fontFamily: fonts.family, fontSize: 14, fontWeight: '500', color: colors.navText },
+    labelActive: { fontWeight: '600', color: colors.navActiveText },
   });

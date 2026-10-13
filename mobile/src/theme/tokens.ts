@@ -1,5 +1,7 @@
-// Design tokens for Hearth, matching the ember/hearth palette from the
-// design review (https://claude.ai/code/artifact/c8ef954b-9c38-4fb4-b9f5-0d0d620f0e2a).
+// Design tokens for Hearth, from the 2026 redesign
+// (https://claude.ai/artifact/KvP8ArBKPM69nnjRPVbZuN): warm paper, one
+// solid violet, white cards, Onest throughout. It replaced the ember
+// palette of the earlier design review.
 //
 // Colors come in light/dark pairs (see ThemeContext.tsx for how the active
 // one is picked from the system setting) - every other token here
@@ -28,20 +30,32 @@ export interface ThemeColors {
   emberText: string;
   dangerFill: string;
   mutedFill: string;
+  // The redesign's additions. `fill` is the sunken surface (search field,
+  // date pills, segmented controls); `emberTint` sits behind emberText
+  // (count badges, the video-call button); `online` is the presence dot.
+  // The tab bar is an inverse pill - dark on the light theme, light on
+  // the dark one - so it carries its own three colours.
+  fill: string;
+  emberTint: string;
+  online: string;
+  dangerTint: string;
+  navBar: string;
+  navActive: string;
+  navActiveText: string;
+  navText: string;
 }
 
 export const lightColors: ThemeColors = {
-  ink: '#1C1310',
-  paper: '#FBF3EA',
+  ink: '#1C1613',
+  paper: '#FAF5EF',
   paper2: '#FFFFFF',
-  ember: '#7C3AED',
+  ember: '#6D35E8',
   emberGlow: '#A78BFA',
-  // Was #8A776D (3.87:1 on paper - below AA for body text).
-  smoke: '#7A685E',
-  char: '#2A1E19',
-  line: 'rgba(28, 19, 16, 0.09)',
-  // Was #7C8F6E (3.18:1) - used for 'Online' and typing text.
-  sage: '#5E7350',
+  smoke: '#6B5F57',
+  char: '#3B302A',
+  line: '#E6DCD1',
+  // Green text ('online'); the dot itself is `online`.
+  sage: '#2A7D45',
   clay: '#B5654A',
   dusk: '#6E7B94',
   white: '#FFF8F2',
@@ -50,30 +64,45 @@ export const lightColors: ThemeColors = {
   // warm ember/clay palette. This sits with clay (#B5654A) and also
   // reads better, clearing 4.5:1 against paper where the old value did
   // not manage 3.5:1.
-  danger: '#C6392F',
-  emberText: '#7C3AED',
-  dangerFill: '#C6392F',
-  mutedFill: '#7A685E',
+  danger: '#C2332B',
+  emberText: '#5B25D6',
+  dangerFill: '#C2332B',
+  mutedFill: '#6B5F57',
+  fill: '#F0E8DE',
+  emberTint: '#EEE7FD',
+  online: '#2F8F4E',
+  dangerTint: '#FDF1EF',
+  navBar: '#1C1613',
+  navActive: '#FAF5EF',
+  navActiveText: '#1C1613',
+  navText: '#D9CEC4',
 };
 
 export const darkColors: ThemeColors = {
   ink: '#F3ECE4',
   paper: '#15100D',
   paper2: '#231C18',
-  // Was #8B5CF6: white on it was 4.02:1. Text uses emberText instead.
-  ember: '#7C3AED',
+  ember: '#6D35E8',
   emberGlow: '#C4B5FD',
   smoke: '#A79A91',
   char: '#EDE4DC',
   line: 'rgba(255, 255, 255, 0.12)',
-  sage: '#8FA37E',
+  sage: '#6CC08A',
   clay: '#C97A5E',
   dusk: '#7C8CAD',
   white: '#FFF8F2',
   danger: '#F0685A',
   emberText: '#A78BFA',
-  dangerFill: '#C6392F',
+  dangerFill: '#C2332B',
   mutedFill: '#6B5E57',
+  fill: '#2A221E',
+  emberTint: '#2E2342',
+  online: '#3FA463',
+  dangerTint: '#3A1F1C',
+  navBar: '#F3ECE4',
+  navActive: '#15100D',
+  navActiveText: '#F3ECE4',
+  navText: '#5A4E47',
 };
 
 // 'system' defers to the OS setting, which is what this app did
@@ -101,9 +130,16 @@ export interface BubbleGradientPreset {
 // bubbleTextTheirs in ChatScreen, which just uses colors.ink and gets
 // the right contrast in both cases for free). "mine" has to stay dark/
 // saturated enough for the fixed white bubbleTextMine to read on it.
-// The first entry ("ember") is the original, and stays the default -
+// The first entry ("hearth", the redesign's solid violet) is the default -
 // see ThemeContext for how the user's chosen preset is applied.
 export const BUBBLE_GRADIENT_PRESETS: BubbleGradientPreset[] = [
+  // The redesign's default: solid violet for mine, a plain card for
+  // theirs. Both stops equal, so it draws through the same gradient path.
+  {
+    id: 'hearth',
+    light: { mine: ['#6D35E8', '#6D35E8'], theirs: ['#FFFFFF', '#FFFFFF'] },
+    dark: { mine: ['#6D35E8', '#6D35E8'], theirs: ['#2A221E', '#2A221E'] },
+  },
   {
     id: 'ember',
     light: { mine: ['#FB4B84', '#7C3AED'], theirs: ['#FCE0EC', '#E4DCFB'] },
@@ -138,8 +174,12 @@ export const BUBBLE_GRADIENT_PRESETS: BubbleGradientPreset[] = [
 
 export const DEFAULT_BUBBLE_GRADIENT_ID = BUBBLE_GRADIENT_PRESETS[0].id;
 
-export function avatarColorFor(seed: string, colors: ThemeColors): string {
-  const avatarPalette = [colors.clay, colors.sage, colors.dusk];
+// Initials avatars. Fixed rather than themed: each carries white initials
+// and clears 4.5:1 under them on either theme.
+const AVATAR_PALETTE = ['#B4532F', '#2D7A73', '#56677F', '#8A3F7A', '#7A5A2E', '#6B7A2E'];
+
+export function avatarColorFor(seed: string, _colors?: ThemeColors): string {
+  const avatarPalette = AVATAR_PALETTE;
   let hash = 0;
   for (let i = 0; i < seed.length; i++) {
     hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
@@ -160,14 +200,12 @@ export function initialsFor(name: string): string {
 // is never capped and scales fully with the phone's setting.
 export const MAX_FONT_SCALE_TIGHT = 1.3;
 
-// The display face, for screen titles and a few large greetings only -
-// running text stays in the system font, which covers every script and
-// reads best small. Nunito ExtraBold: rounded like Hearth's bubbles and
-// icons, with full Cyrillic. Bundled from src/assets/fonts (see
-// react-native.config.js). It *is* the 800 weight, so styles using it set
-// no fontWeight - Android would otherwise fake a bolder one on top.
+// Onest, the app's one typeface - modern, slightly rounded, with full
+// Cyrillic. Bundled in five weights (400-800) and registered as a single
+// family, so styles set `fontFamily: fonts.family` and pick the weight
+// with fontWeight as usual (Android: res/font/onest.xml; iOS: by family).
 export const fonts = {
-  display: 'Nunito-ExtraBold',
+  family: 'Onest',
 } as const;
 
 export const radii = {

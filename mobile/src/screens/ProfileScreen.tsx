@@ -37,6 +37,7 @@ import { usePresence } from '../presence/PresenceContext';
 import {
   BUBBLE_GRADIENT_PRESETS,
   elevation,
+  fonts,
   fontSizes,
   radii,
   spacing,
@@ -657,8 +658,8 @@ const makeStyles = (colors: ThemeColors) =>
     borderRadius: radii.pill,
     backgroundColor: `${colors.danger}1F`,
   },
-  cancelText: { color: colors.danger, fontSize: fontSizes.body, fontWeight: '800' },
-  title: { fontSize: fontSizes.bodyLg, fontWeight: '700', color: colors.ink },
+  cancelText: { fontFamily: fonts.family, color: colors.danger, fontSize: fontSizes.body, fontWeight: '800' },
+  title: { fontFamily: fonts.family, fontSize: fontSizes.bodyLg, fontWeight: '700', color: colors.ink },
   saveButton: {
     position: 'absolute',
     right: spacing.lg,
@@ -671,7 +672,7 @@ const makeStyles = (colors: ThemeColors) =>
     borderRadius: radii.pill,
     backgroundColor: `${colors.sage}1F`,
   },
-  saveText: { color: colors.sage, fontSize: fontSizes.body, fontWeight: '800' },
+  saveText: { fontFamily: fonts.family, color: colors.sage, fontSize: fontSizes.body, fontWeight: '800' },
   saveTextDisabled: { color: colors.smoke },
   saveButtonDisabled: { backgroundColor: `${colors.smoke}1F` },
   avatarSection: {
@@ -692,7 +693,7 @@ const makeStyles = (colors: ThemeColors) =>
     alignItems: 'center',
     justifyContent: 'center',
   },
-  changePhotoHint: { fontSize: fontSizes.caption, color: colors.smoke, marginTop: spacing.sm },
+  changePhotoHint: { fontFamily: fonts.family, fontSize: fontSizes.caption, color: colors.smoke, marginTop: spacing.sm },
   field: { paddingHorizontal: spacing.lg, marginBottom: spacing.lg },
   choiceRow: { flexDirection: 'row', gap: spacing.sm, marginTop: 6 },
   choiceChip: {
@@ -704,7 +705,7 @@ const makeStyles = (colors: ThemeColors) =>
     backgroundColor: colors.paper2,
   },
   choiceChipActive: { backgroundColor: colors.ember, borderColor: colors.ember },
-  choiceText: { fontSize: fontSizes.footnote, fontWeight: '700', color: colors.smoke },
+  choiceText: { fontFamily: fonts.family, fontSize: fontSizes.footnote, fontWeight: '700', color: colors.smoke },
   choiceTextActive: { color: colors.white },
   bubbleSwatchRow: {
     flexDirection: 'row',
@@ -727,6 +728,7 @@ const makeStyles = (colors: ThemeColors) =>
     justifyContent: 'center',
   },
   label: {
+    fontFamily: fonts.family,
     fontSize: fontSizes.caption,
     fontWeight: '700',
     letterSpacing: 0.5,
@@ -735,6 +737,7 @@ const makeStyles = (colors: ThemeColors) =>
     marginBottom: 7,
   },
   input: {
+    fontFamily: fonts.family,
     borderWidth: 1,
     borderColor: colors.line,
     backgroundColor: colors.paper2,
@@ -743,7 +746,7 @@ const makeStyles = (colors: ThemeColors) =>
     fontSize: fontSizes.body,
     color: colors.ink,
   },
-  error: { color: colors.danger, paddingHorizontal: spacing.lg, fontSize: fontSizes.footnote },
+  error: { fontFamily: fonts.family, color: colors.danger, paddingHorizontal: spacing.lg, fontSize: fontSizes.footnote },
   legalSection: {
     marginTop: spacing.xl,
     paddingHorizontal: spacing.lg,
@@ -754,12 +757,13 @@ const makeStyles = (colors: ThemeColors) =>
     gap: spacing.sm,
     paddingVertical: 10,
   },
-  legalRowText: { flex: 1, fontSize: fontSizes.body, color: colors.smoke, fontWeight: '600' },
+  legalRowText: { fontFamily: fonts.family, flex: 1, fontSize: fontSizes.body, color: colors.smoke, fontWeight: '600' },
   dangerZone: {
     marginTop: spacing.xxl,
     paddingHorizontal: spacing.lg,
   },
   dangerZoneTitle: {
+    fontFamily: fonts.family,
     fontSize: fontSizes.caption,
     fontWeight: '700',
     letterSpacing: 0.5,
@@ -779,9 +783,9 @@ const makeStyles = (colors: ThemeColors) =>
   },
   dangerRowIcon: { width: 22, textAlign: 'center' },
   dangerRowText: { flex: 1, marginLeft: spacing.sm },
-  dangerRowTitle: { fontSize: fontSizes.body, fontWeight: '600', color: colors.ink },
+  dangerRowTitle: { fontFamily: fonts.family, fontSize: fontSizes.body, fontWeight: '600', color: colors.ink },
   dangerRowTitleDestructive: { color: colors.danger },
-  dangerRowHint: { fontSize: fontSizes.caption, color: colors.smoke, marginTop: 2 },
+  dangerRowHint: { fontFamily: fonts.family, fontSize: fontSizes.caption, color: colors.smoke, marginTop: 2 },
   modalBackdrop: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -790,7 +794,7 @@ const makeStyles = (colors: ThemeColors) =>
     padding: spacing.lg,
   },
   notificationRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  notificationStatus: { flex: 1, fontSize: fontSizes.body, color: colors.ink },
+  notificationStatus: { fontFamily: fonts.family, flex: 1, fontSize: fontSizes.body, color: colors.ink },
   privacyRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -806,8 +810,8 @@ const makeStyles = (colors: ThemeColors) =>
     padding: spacing.lg,
     ...elevation.lg,
   },
-  modalTitle: { fontSize: fontSizes.bodyLg, fontWeight: '700', color: colors.ink, marginBottom: 6 },
-  modalMessage: { fontSize: fontSizes.footnote, color: colors.smoke, marginBottom: spacing.lg, lineHeight: 19 },
+  modalTitle: { fontFamily: fonts.family, fontSize: fontSizes.bodyLg, fontWeight: '700', color: colors.ink, marginBottom: 6 },
+  modalMessage: { fontFamily: fonts.family, fontSize: fontSizes.footnote, color: colors.smoke, marginBottom: spacing.lg, lineHeight: 19 },
   modalActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
@@ -819,7 +823,7 @@ const makeStyles = (colors: ThemeColors) =>
     paddingVertical: 12,
     borderRadius: radii.md,
   },
-  modalCancelText: { color: colors.smoke, fontSize: fontSizes.body, fontWeight: '700' },
+  modalCancelText: { fontFamily: fonts.family, color: colors.smoke, fontSize: fontSizes.body, fontWeight: '700' },
   modalDeleteButton: {
     paddingHorizontal: spacing.lg,
     paddingVertical: 12,
@@ -829,5 +833,5 @@ const makeStyles = (colors: ThemeColors) =>
     alignItems: 'center',
   },
   modalDeleteButtonDisabled: { opacity: 0.5 },
-  modalDeleteText: { color: colors.white, fontSize: fontSizes.body, fontWeight: '700' },
+  modalDeleteText: { fontFamily: fonts.family, color: colors.white, fontSize: fontSizes.body, fontWeight: '700' },
 });

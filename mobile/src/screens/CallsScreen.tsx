@@ -165,7 +165,7 @@ const makeStyles = (colors: ThemeColors) =>
     header: { paddingHorizontal: spacing.lg, paddingBottom: spacing.md },
     headerTitle: {
       fontSize: fontSizes.display,
-      fontFamily: fonts.display,
+      fontFamily: fonts.family, fontWeight: '800',
       letterSpacing: -0.3,
       color: colors.ink,
     },
@@ -177,10 +177,10 @@ const makeStyles = (colors: ThemeColors) =>
       paddingHorizontal: spacing.lg,
     },
     rowMain: { flex: 1, minWidth: 0, gap: 3 },
-    name: { fontSize: fontSizes.body, fontWeight: '700', color: colors.ink },
+    name: { fontFamily: fonts.family, fontSize: fontSizes.body, fontWeight: '700', color: colors.ink },
     nameMissed: { color: colors.danger },
     detail: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    detailText: { flexShrink: 1, fontSize: fontSizes.footnote, color: colors.smoke },
+    detailText: { fontFamily: fonts.family, flexShrink: 1, fontSize: fontSizes.footnote, color: colors.smoke },
     detailMissed: { color: colors.danger },
     callBack: {
       width: 44,
@@ -199,6 +199,6 @@ const makeStyles = (colors: ThemeColors) =>
       justifyContent: 'center',
       marginBottom: spacing.xs,
     },
-    emptyTitle: { fontSize: fontSizes.body, fontWeight: '700', color: colors.ink },
-    emptyHint: { fontSize: fontSizes.footnote, color: colors.smoke, textAlign: 'center' },
+    emptyTitle: { fontFamily: fonts.family, fontSize: fontSizes.body, fontWeight: '700', color: colors.ink },
+    emptyHint: { fontFamily: fonts.family, fontSize: fontSizes.footnote, color: colors.smoke, textAlign: 'center' },
   });

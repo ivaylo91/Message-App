@@ -11,7 +11,11 @@
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
-		44478ED4FBDE46D985662002 /* Nunito-ExtraBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 5B9355E7F2AB428A8544DB1E /* Nunito-ExtraBold.ttf */; };
+		E8CA47A69FBD48AFA1876C09 /* Onest-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 043A4FACA46148889512EC46 /* Onest-Bold.ttf */; };
+		F521CB39DA2240779F9B9126 /* Onest-ExtraBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = EA94F33FAE52416EAEF3BAE2 /* Onest-ExtraBold.ttf */; };
+		C70E7D378AB84151BAC4131A /* Onest-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 12C957A9903845FEB785D0B5 /* Onest-Medium.ttf */; };
+		4E1F7119009548728E7B9D9A /* Onest-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 5205092A61E1457E8CD743D7 /* Onest-Regular.ttf */; };
+		4BA507A950294F4199BBD8EA /* Onest-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C8ECFFF89C2C4314A6D533EF /* Onest-SemiBold.ttf */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -25,7 +29,11 @@
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = MobileApp/AppDelegate.swift; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = MobileApp/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
-		5B9355E7F2AB428A8544DB1E /* Nunito-ExtraBold.ttf */ = {isa = PBXFileReference; name = "Nunito-ExtraBold.ttf"; path = "../src/assets/fonts/Nunito-ExtraBold.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		043A4FACA46148889512EC46 /* Onest-Bold.ttf */ = {isa = PBXFileReference; name = "Onest-Bold.ttf"; path = "../src/assets/fonts/Onest-Bold.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		EA94F33FAE52416EAEF3BAE2 /* Onest-ExtraBold.ttf */ = {isa = PBXFileReference; name = "Onest-ExtraBold.ttf"; path = "../src/assets/fonts/Onest-ExtraBold.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		12C957A9903845FEB785D0B5 /* Onest-Medium.ttf */ = {isa = PBXFileReference; name = "Onest-Medium.ttf"; path = "../src/assets/fonts/Onest-Medium.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		5205092A61E1457E8CD743D7 /* Onest-Regular.ttf */ = {isa = PBXFileReference; name = "Onest-Regular.ttf"; path = "../src/assets/fonts/Onest-Regular.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
+		C8ECFFF89C2C4314A6D533EF /* Onest-SemiBold.ttf */ = {isa = PBXFileReference; name = "Onest-SemiBold.ttf"; path = "../src/assets/fonts/Onest-SemiBold.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -103,7 +111,11 @@
 		D6CF4FDDE0894113BE7A2E35 /* Resources */ = {
 			isa = "PBXGroup";
 			children = (
-				5B9355E7F2AB428A8544DB1E /* Nunito-ExtraBold.ttf */,
+				043A4FACA46148889512EC46 /* Onest-Bold.ttf */,
+				EA94F33FAE52416EAEF3BAE2 /* Onest-ExtraBold.ttf */,
+				12C957A9903845FEB785D0B5 /* Onest-Medium.ttf */,
+				5205092A61E1457E8CD743D7 /* Onest-Regular.ttf */,
+				C8ECFFF89C2C4314A6D533EF /* Onest-SemiBold.ttf */,
 			);
 			name = Resources;
 			sourceTree = "<group>";
@@ -171,7 +183,11 @@
 			files = (
 				81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
-				44478ED4FBDE46D985662002 /* Nunito-ExtraBold.ttf in Resources */,
+				E8CA47A69FBD48AFA1876C09 /* Onest-Bold.ttf in Resources */,
+				F521CB39DA2240779F9B9126 /* Onest-ExtraBold.ttf in Resources */,
+				C70E7D378AB84151BAC4131A /* Onest-Medium.ttf in Resources */,
+				4E1F7119009548728E7B9D9A /* Onest-Regular.ttf in Resources */,
+				4BA507A950294F4199BBD8EA /* Onest-SemiBold.ttf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

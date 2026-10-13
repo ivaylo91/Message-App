@@ -14,7 +14,7 @@ import { Icon } from './Icon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import * as mediaData from '../data/media';
-import { fontSizes, spacing } from '../theme/tokens';
+import { fonts, fontSizes, spacing } from '../theme/tokens';
 import { Touchable } from './Touchable';
 import { ZoomableImage } from './ZoomableImage';
 
@@ -211,5 +211,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  counter: { color: '#fff', fontSize: fontSizes.body, fontWeight: '600' },
+  counter: { fontFamily: fonts.family, color: '#fff', fontSize: fontSizes.body, fontWeight: '600' },
 });

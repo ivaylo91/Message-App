@@ -20,7 +20,7 @@ import { Avatar } from '../components/Avatar';
 import { Touchable } from '../components/Touchable';
 import { AppLogo } from '../components/AppLogo';
 import { useContentWidth } from '../hooks/useContentWidth';
-import { fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
+import { fonts, fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 import { ProfileSearchResult } from '../types';
 
@@ -234,16 +234,17 @@ const makeStyles = (colors: ThemeColors) =>
     gap: 6,
   },
   cancelButton: { position: 'absolute', left: spacing.lg, top: 0 },
-  cancelText: { color: colors.emberText, fontSize: fontSizes.body, fontWeight: '600' },
-  title: { fontSize: fontSizes.bodyLg, fontWeight: '700', color: colors.ink },
+  cancelText: { fontFamily: fonts.family, color: colors.emberText, fontSize: fontSizes.body, fontWeight: '600' },
+  title: { fontFamily: fonts.family, fontSize: fontSizes.bodyLg, fontWeight: '700', color: colors.ink },
   createButton: { position: 'absolute', right: spacing.lg, top: 0 },
-  createText: { color: colors.emberText, fontSize: fontSizes.body, fontWeight: '700' },
+  createText: { fontFamily: fonts.family, color: colors.emberText, fontSize: fontSizes.body, fontWeight: '700' },
   createTextDisabled: { color: colors.smoke },
   nameField: {
     marginHorizontal: spacing.lg,
     marginBottom: spacing.md,
   },
   nameInput: {
+    fontFamily: fonts.family,
     backgroundColor: colors.paper2,
     borderRadius: radii.md,
     borderWidth: 1,
@@ -257,8 +258,9 @@ const makeStyles = (colors: ThemeColors) =>
   chipsRow: { flexGrow: 0, marginBottom: spacing.md },
   chipsContent: { paddingHorizontal: spacing.lg, gap: spacing.md },
   chip: { alignItems: 'center', width: 56 },
-  chipName: { fontSize: fontSizes.caption, color: colors.ink, marginTop: 4, width: 56, textAlign: 'center' },
+  chipName: { fontFamily: fonts.family, fontSize: fontSizes.caption, color: colors.ink, marginTop: 4, width: 56, textAlign: 'center' },
   chipRemove: {
+    fontFamily: fonts.family,
     position: 'absolute',
     top: -2,
     right: -2,
@@ -280,9 +282,10 @@ const makeStyles = (colors: ThemeColors) =>
     borderWidth: 1,
     borderColor: colors.line,
   },
-  searchInput: { paddingHorizontal: 14, paddingVertical: 10, fontSize: fontSizes.body, color: colors.ink },
+  searchInput: { fontFamily: fonts.family, paddingHorizontal: 14, paddingVertical: 10, fontSize: fontSizes.body, color: colors.ink },
   spinner: { marginTop: spacing.xl },
   emptyText: {
+    fontFamily: fonts.family,
     textAlign: 'center',
     color: colors.smoke,
     marginTop: spacing.xxl,
@@ -296,8 +299,8 @@ const makeStyles = (colors: ThemeColors) =>
     paddingVertical: 10,
   },
   rowMain: { flex: 1 },
-  rowName: { fontWeight: '700', fontSize: fontSizes.body, color: colors.ink },
-  rowSub: { fontSize: fontSizes.caption, color: colors.smoke, marginTop: 1 },
+  rowName: { fontFamily: fonts.family, fontWeight: '700', fontSize: fontSizes.body, color: colors.ink },
+  rowSub: { fontFamily: fonts.family, fontSize: fontSizes.caption, color: colors.smoke, marginTop: 1 },
   checkbox: {
     width: 24,
     height: 24,
