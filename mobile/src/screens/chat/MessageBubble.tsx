@@ -29,7 +29,7 @@ import { SwipeToReply } from '../../components/SwipeToReply';
 import { splitMentions } from '../../utils/mentions';
 import { hasLink, linkifyText } from '../../utils/linkify';
 import { showsSenderName, type RunPosition } from '../../utils/messageGrouping';
-import { MAX_FONT_SCALE_TIGHT, radii } from '../../theme/tokens';
+import { MAX_FONT_SCALE_TIGHT } from '../../theme/tokens';
 import { useTheme } from '../../theme/ThemeContext';
 import { useBubbleGradients } from '../../theme/chatTheme';
 import { MessageReaction, ReplyPreview } from '../../types';
@@ -378,21 +378,27 @@ function hostnameOf(url: string): string | null {
   return match ? match[1].replace(/^www\./i, '') : null;
 }
 
-function CallLogRow({ message, isMine }: { message: LocalMessage; isMine: boolean }) {
-  const { t } = useTranslation();
+function CallLogCard({ message, onLongPress }: { message: LocalMessage; onLongPress: () => void }) {
+  const { t, i18n } = useTranslation();
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const label = callStatusPreviewText(message.call_status, message.attachment_duration_ms, t);
+  const missed = message.call_status !== 'completed';
 
   return (
-    <View style={styles.callLogRow}>
-      <Icon
-        name={message.call_status === 'completed' ? 'video' : 'video-slash'}
-        size={14}
-        color={isMine ? colors.white : colors.ink}
-      />
-      <Text style={isMine ? styles.bubbleTextMine : styles.bubbleTextTheirs}>{label}</Text>
-    </View>
+    <Touchable style={styles.callCard} onLongPress={onLongPress}>
+      <View style={[styles.callCardIcon, missed && styles.callCardIconMissed]}>
+        <Icon
+          name={missed ? 'video-slash' : 'video'}
+          size={18}
+          color={missed ? colors.danger : colors.emberText}
+        />
+      </View>
+      <View>
+        <Text style={[styles.callCardTitle, missed && styles.callCardTitleMissed]}>{label}</Text>
+        <Text style={styles.callCardTime}>{formatMessageTime(message.created_at, i18n.language)}</Text>
+      </View>
+    </Touchable>
   );
 }
 
@@ -574,13 +580,13 @@ function MessageBubbleComponent({
   );
   const openMenu = useCallback(() => openMenuFor(message), [openMenuFor, message]);
 
-  // Flatten the corner facing a neighbour in the same run, on the sender's
-  // own side - which is what turns a stack of identical rounded islands
-  // into something that reads as one person talking.
+  // The sender's bottom corner is always tucked (the bubble's "tail"), and
+  // so is the top one when it joins the message above - which is what
+  // turns a stack of rounded islands into one person talking.
   const runShape = useMemo<ViewStyle>(() => {
-    const joined = radii.sm;
+    const joined = 6;
     const top = runPosition === 'middle' || runPosition === 'last';
-    const bottom = runPosition === 'middle' || runPosition === 'first';
+    const bottom = true;
     return {
       ...(top
         ? isMine
@@ -609,6 +615,11 @@ function MessageBubbleComponent({
           <View style={styles.unreadDividerLine} />
         </View>
       )}
+      {message.call_status ? (
+        <View style={styles.rowCentered}>
+          <CallLogCard message={message} onLongPress={openMenu} />
+        </View>
+      ) : (
       <View style={isMine ? styles.rowMine : styles.rowTheirs}>
       {senderName && showsSenderName(runPosition) && (
         <Text style={styles.senderLabel}>{senderName}</Text>
@@ -632,6 +643,7 @@ function MessageBubbleComponent({
             message.attachment_type === 'image' ? styles.mediaBubble : styles.bubble,
             { maxWidth: bubbleMaxWidth },
             runShape,
+            !isMine && styles.bubbleTheirs,
             message._pending && styles.bubblePending,
             isHighlighted && styles.bubbleHighlighted,
           ]}
@@ -645,7 +657,6 @@ function MessageBubbleComponent({
               onLongPress={openMenu}
             />
           )}
-          {message.call_status && <CallLogRow message={message} isMine={isMine} />}
           {album ? (
             <View style={styles.album}>
               {album.map((photo, i) => (
@@ -745,8 +756,8 @@ function MessageBubbleComponent({
             {status && (
               <Icon
                 name={STATUS_ICONS[status]}
-                size={10}
-                color={colors.white}
+                size={13}
+                color="#FFFFFF"
                 // Read stands out by being double and fully opaque; a
                 // colour change would fight whichever bubble gradient the
                 // user has picked.
@@ -780,6 +791,7 @@ function MessageBubbleComponent({
         </View>
       )}
       </View>
+      )}
     </>
   );
 }

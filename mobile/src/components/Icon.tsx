@@ -13,6 +13,8 @@ import { Lucide } from '@react-native-vector-icons/lucide/static';
 // set again is a change to this file alone.
 const GLYPHS = {
   'arrow-down-left': 'arrow-down-left',
+  'arrow-left': 'arrow-left',
+  'arrow-right': 'arrow-right',
   'arrow-up-right': 'arrow-up-right',
   'arrow-up-right-from-square': 'external-link',
   bell: 'bell',

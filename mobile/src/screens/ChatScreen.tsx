@@ -1876,7 +1876,7 @@ export function ChatScreen({ route, navigation }: Props) {
           accessibilityRole="button"
           accessibilityLabel={t('chat.a11yBack')}
         >
-          <Icon name="chevron-left" size={18} color={colors.ink} />
+          <Icon name="chevron-left" size={22} color={colors.ink} />
         </Touchable>
         {/* The whole identity block opens the info screen - the modern
             convention, and what keeps the header down to two icons. */}
@@ -1889,7 +1889,8 @@ export function ChatScreen({ route, navigation }: Props) {
         <Avatar
           name={displayTitle}
           avatarPath={isGroup ? null : otherParticipant?.profiles.avatar_path}
-          size={36}
+          size={42}
+          shape={isGroup ? 'rounded' : 'circle'}
           online={
             isGroup || !otherParticipant ? undefined : isOnline(otherParticipant.user_id)
           }
@@ -1919,7 +1920,7 @@ export function ChatScreen({ route, navigation }: Props) {
         </Touchable>
         {!isGroup && otherParticipant && (
           <Touchable
-            style={styles.callButton}
+            style={[styles.callButton, styles.callButtonTinted]}
             iconButton
             onPress={() =>
               void startCall({
@@ -1932,7 +1933,7 @@ export function ChatScreen({ route, navigation }: Props) {
             accessibilityRole="button"
             accessibilityLabel={t('chat.a11yCall')}
           >
-            <Icon name="video" size={17} color={colors.emberText} />
+            <Icon name="video" size={20} color={colors.emberText} />
           </Touchable>
         )}
         <Touchable
@@ -1942,7 +1943,7 @@ export function ChatScreen({ route, navigation }: Props) {
           accessibilityRole="button"
           accessibilityLabel={t('chat.a11yMenu')}
         >
-          <Icon name="ellipsis-vertical" size={16} color={colors.ink} />
+          <Icon name="ellipsis-vertical" size={20} color={colors.char} />
         </Touchable>
       </View>
 
@@ -2172,18 +2173,16 @@ export function ChatScreen({ route, navigation }: Props) {
               accessibilityRole="button"
               accessibilityLabel={t('chat.a11ySendRecording')}
             >
-              <Icon name="paper-plane" size={15} color={colors.white} />
+              <Icon name="arrow-right" size={20} color="#FFFFFF" />
             </Touchable>
           </>
         ) : (
           <>
-            {/* A floating rounded field, as current messengers draw it, with
-                one + for attachments in place of separate paperclip and
-                camera icons. */}
-            <View style={styles.inputPill}>
+            {/* One + for attachments in place of separate paperclip and
+                camera icons, beside a rounded field. */}
             <Touchable
               onPress={onOpenAttachMenu}
-              style={styles.pillButton}
+              style={styles.attachCircle}
               iconButton
               disabled={isUploadingAttachment}
               accessibilityRole="button"
@@ -2192,9 +2191,10 @@ export function ChatScreen({ route, navigation }: Props) {
               {isUploadingAttachment ? (
                 <ActivityIndicator size="small" color={colors.smoke} />
               ) : (
-                <Icon name="plus" size={18} color={colors.smoke} />
+                <Icon name="plus" size={20} color={colors.char} />
               )}
             </Touchable>
+            <View style={styles.inputPill}>
             <TextInput
               style={styles.input}
               placeholder={t('chat.messagePlaceholder')}
@@ -2224,13 +2224,9 @@ export function ChatScreen({ route, navigation }: Props) {
                 accessibilityLabel={t('chat.a11ySend')}
               >
                 {editingMessageId ? (
-                  <Icon name="check" size={16} color={colors.white} />
+                  <Icon name="check" size={20} color="#FFFFFF" />
                 ) : (
-                  <Icon
-                    name="paper-plane"
-                    size={15}
-                    color={colors.white}
-                  />
+                  <Icon name="arrow-right" size={20} color="#FFFFFF" />
                 )}
               </Touchable>
             ) : (
@@ -2243,7 +2239,7 @@ export function ChatScreen({ route, navigation }: Props) {
                 accessibilityRole="button"
                 accessibilityLabel={t('chat.a11yRecord')}
               >
-                <Icon name="microphone" size={16} color={colors.white} />
+                <Icon name="microphone" size={20} color="#FFFFFF" />
               </Touchable>
             )}
           </>
