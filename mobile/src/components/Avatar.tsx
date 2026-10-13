@@ -14,16 +14,20 @@ interface AvatarProps {
   // instead of a dot, since a permanently-present grey dot reads as a
   // status rather than an absence of one.
   online?: boolean;
+  // Groups are rounded squares, people are circles - so a group reads as
+  // one at a glance, before its name does.
+  shape?: 'circle' | 'rounded';
 }
 
-export function Avatar({ name, avatarPath, size = 48, online }: AvatarProps) {
+export function Avatar({ name, avatarPath, size = 48, online, shape = 'circle' }: AvatarProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   // Avatars live in a private bucket now, so the URL has to be signed
   // (an async fetch) rather than derived synchronously - see
   // 20260807_make_avatars_bucket_private.sql.
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const dotSize = Math.max(10, size * 0.3);
+  const dotSize = Math.max(10, size * 0.24);
+  const radius = shape === 'rounded' ? size / 3 : size / 2;
 
   useEffect(() => {
     if (!avatarPath) {
@@ -51,7 +55,7 @@ export function Avatar({ name, avatarPath, size = 48, online }: AvatarProps) {
           {
             width: size,
             height: size,
-            borderRadius: size / 2,
+            borderRadius: radius,
             backgroundColor: avatarUrl ? colors.line : avatarColorFor(name, colors),
           },
         ]}
@@ -59,7 +63,7 @@ export function Avatar({ name, avatarPath, size = 48, online }: AvatarProps) {
         {avatarUrl ? (
           <FastImage
             source={{ uri: avatarUrl }}
-            style={{ width: size, height: size, borderRadius: size / 2 }}
+            style={{ width: size, height: size, borderRadius: radius }}
           />
         ) : (
           <Text style={[styles.text, { fontFamily: fonts.family, fontSize: size * 0.32 }]}>
@@ -76,7 +80,7 @@ export function Avatar({ name, avatarPath, size = 48, online }: AvatarProps) {
               height: dotSize,
               borderRadius: dotSize / 2,
               borderWidth: Math.max(2, size * 0.045),
-              backgroundColor: colors.sage,
+              backgroundColor: colors.online,
             },
           ]}
         />

@@ -7,6 +7,7 @@ import {
   FlatList,
   LayoutAnimation,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -27,7 +28,6 @@ import { Touchable } from '../components/Touchable';
 import { useConfirm } from '../components/ConfirmSheet';
 import { useToast } from '../components/Toast';
 import { Skeleton, SkeletonGroup } from '../components/Skeleton';
-import { AppLogo } from '../components/AppLogo';
 import { FooterNav } from '../components/FooterNav';
 import { useAppForeground } from '../hooks/useAppForeground';
 import { useMuteChooser } from '../hooks/useMuteChooser';
@@ -60,6 +60,9 @@ type Props = NativeStackScreenProps<AppStackParamList, 'Conversations'>;
 
 const MESSAGE_SEARCH_DEBOUNCE_MS = 300;
 const CHAT_FILTER_KEY = 'chatFilter:v1';
+// The strip under each "online now" avatar has room for one word.
+const firstName = (name: string) => name.trim().split(/\s+/)[0] ?? name;
+
 const FILTER_LABEL_KEYS: Record<ChatFilter, string> = {
   all: 'conversations.filterAll',
   unread: 'conversations.filterUnread',
@@ -70,6 +73,7 @@ const SWIPE_OPEN_THRESHOLD = -40;
 
 interface ConversationRowProps {
   title: string;
+  isGroup: boolean;
   muted: boolean;
   pinned: boolean;
   avatarPath: string | null | undefined;
@@ -97,6 +101,7 @@ interface ConversationRowProps {
 // parent), matching the usual Mail/WhatsApp-style swipe list feel.
 function ConversationRow({
   title,
+  isGroup,
   muted,
   pinned,
   avatarPath,
@@ -170,9 +175,17 @@ function ConversationRow({
         <Icon name="trash" size={18} color={colors.white} />
       </Touchable>
       <GestureDetector gesture={pan}>
-      <Animated.View style={[styles.rowForeground, rowStyle]}>
+      <Animated.View
+        style={[styles.rowForeground, showsUnread && styles.rowForegroundUnread, rowStyle]}
+      >
         <Touchable style={styles.row} onPress={onPress} onLongPress={onLongPress}>
-          <Avatar name={title} avatarPath={avatarPath} online={online} />
+          <Avatar
+            name={title}
+            avatarPath={avatarPath}
+            online={online}
+            size={54}
+            shape={isGroup ? 'rounded' : 'circle'}
+          />
           <View style={styles.rowMain}>
             <View style={styles.rowTitleLine}>
               <Text style={styles.rowTitle} numberOfLines={1}>
@@ -589,6 +602,13 @@ export function ConversationsScreen({ navigation }: Props) {
   const unreadChatCount = conversations.filter((c) =>
     matchesChatFilter(c, 'unread', userId, unreadCounts),
   ).length;
+  // "Online now": the people you have a one-to-one chat with who are
+  // online right now - a row of shortcuts above the list.
+  const onlineNow = conversations.flatMap((c) => {
+    if (c.is_group) return [];
+    const other = otherParticipantOf(c);
+    return other && isOnline(other.user_id) ? [{ conversation: c, profile: other.profiles }] : [];
+  }).slice(0, 12);
   const orderedConversations = useMemo(
     () => pinnedFirst(filteredConversations, userId),
     [filteredConversations, userId],
@@ -607,12 +627,11 @@ export function ConversationsScreen({ navigation }: Props) {
             <Avatar
               name={ownProfile?.display_name || '?'}
               avatarPath={ownProfile?.avatar_path}
-              size={40}
+              size={44}
               online={userId ? isOnline(userId) : undefined}
             />
           </Touchable>
           <Text style={styles.headerTitle}>{t('conversations.title')}</Text>
-          <AppLogo size={26} />
         </View>
         {/* The EN/BG chips that used to sit here moved to ProfileScreen,
             alongside the theme and bubble-colour choices - a setting
@@ -620,19 +639,18 @@ export function ConversationsScreen({ navigation }: Props) {
             header of the screen people open most. */}
         <View style={styles.headerActions}>
           <Touchable
-            style={styles.iconButton}
-            iconButton
+            style={styles.newChatButton}
             onPress={() => navigation.navigate('NewChat')}
             accessibilityRole="button"
             accessibilityLabel={t('conversations.a11yNewChat')}
           >
-            <Icon name="pen-to-square" size={15} color={colors.ink} />
+            <Icon name="plus" size={20} color="#FFFFFF" />
           </Touchable>
         </View>
       </View>
 
       <View style={styles.searchBar}>
-        <Icon name="magnifying-glass" size={13} color={colors.smoke} />
+        <Icon name="magnifying-glass" size={18} color={colors.smoke} />
         <TextInput
           style={styles.searchInput}
           placeholder={t('conversations.searchPlaceholder')}
@@ -647,7 +665,7 @@ export function ConversationsScreen({ navigation }: Props) {
             accessibilityRole="button"
             accessibilityLabel={t('conversations.a11yClearSearch')}
           >
-            <Icon name="xmark" size={13} color={colors.smoke} />
+            <Icon name="xmark" size={16} color={colors.smoke} />
           </Touchable>
         )}
       </View>
@@ -656,10 +674,7 @@ export function ConversationsScreen({ navigation }: Props) {
         <View style={styles.filterRow} accessibilityRole="tablist">
           {CHAT_FILTERS.map((filter) => {
             const selected = filter === chatFilter;
-            const label =
-              filter === 'unread' && unreadChatCount > 0
-                ? `${t('conversations.filterUnread')} · ${unreadChatCount}`
-                : t(FILTER_LABEL_KEYS[filter]);
+            const count = filter === 'unread' ? unreadChatCount : 0;
             return (
               <Touchable
                 key={filter}
@@ -667,13 +682,28 @@ export function ConversationsScreen({ navigation }: Props) {
                 onPress={() => onSelectFilter(filter)}
                 accessibilityRole="tab"
                 accessibilityState={{ selected }}
+                accessibilityLabel={
+                  count > 0
+                    ? `${t(FILTER_LABEL_KEYS[filter])}, ${count}`
+                    : t(FILTER_LABEL_KEYS[filter])
+                }
               >
                 <Text
                   style={[styles.filterText, selected && styles.filterTextSelected]}
                   maxFontSizeMultiplier={MAX_FONT_SCALE_TIGHT}
                 >
-                  {label}
+                  {t(FILTER_LABEL_KEYS[filter])}
                 </Text>
+                {count > 0 && (
+                  <View style={[styles.filterCount, selected && styles.filterCountSelected]}>
+                    <Text
+                      style={[styles.filterCountText, selected && styles.filterCountTextSelected]}
+                      maxFontSizeMultiplier={MAX_FONT_SCALE_TIGHT}
+                    >
+                      {count > 99 ? '99+' : count}
+                    </Text>
+                  </View>
+                )}
               </Touchable>
             );
           })}
@@ -692,7 +722,43 @@ export function ConversationsScreen({ navigation }: Props) {
         // pushing the message results that did match halfway down the
         // screen.
         ListHeaderComponent={
-          trimmedSearchQuery ? (
+          !trimmedSearchQuery ? (
+            onlineNow.length > 0 ? (
+              <View style={styles.onlineSection}>
+                <Text style={styles.onlineHeading}>{t('conversations.onlineNow')}</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.onlineStrip}
+                >
+                  {onlineNow.map(({ conversation, profile }) => (
+                    <Touchable
+                      key={conversation.id}
+                      style={styles.onlineItem}
+                      onPress={() =>
+                        navigation.navigate('Chat', {
+                          conversationId: conversation.id,
+                          title: profile.display_name,
+                        })
+                      }
+                      accessibilityRole="button"
+                      accessibilityLabel={profile.display_name}
+                    >
+                      <Avatar
+                        name={profile.display_name}
+                        avatarPath={profile.avatar_path}
+                        size={56}
+                        online
+                      />
+                      <Text style={styles.onlineName} numberOfLines={1}>
+                        {firstName(profile.display_name)}
+                      </Text>
+                    </Touchable>
+                  ))}
+                </ScrollView>
+              </View>
+            ) : null
+          ) : (
             <View>
               <Text style={styles.sectionHeading}>
                 {t('conversations.conversationsSection')}
@@ -701,7 +767,7 @@ export function ConversationsScreen({ navigation }: Props) {
                 <Text style={styles.sectionHint}>{t('conversations.noSearchResults')}</Text>
               )}
             </View>
-          ) : null
+          )
         }
         ListFooterComponent={
           trimmedSearchQuery ? (
@@ -770,6 +836,7 @@ export function ConversationsScreen({ navigation }: Props) {
           return (
             <ConversationRow
               title={title}
+              isGroup={item.is_group}
               muted={isMuted(
                 item.conversation_participants.find((p) => p.user_id === userId)?.muted_until,
               )}
@@ -839,42 +906,70 @@ const makeStyles = (colors: ThemeColors) =>
   container: { flex: 1, backgroundColor: colors.paper, paddingTop: spacing.lg },
   content: { flex: 1, width: '100%', alignSelf: 'center' },
   header: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
+    paddingHorizontal: spacing.lg + 4,
+    paddingBottom: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  headerTitle: { fontSize: fontSizes.display, fontFamily: fonts.family, fontWeight: '800', letterSpacing: -0.3, color: colors.ink },
+  headerTitle: { fontSize: 30, fontFamily: fonts.family, fontWeight: '800', letterSpacing: -0.9, color: colors.ink },
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  iconButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: colors.paper2,
+  newChatButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    backgroundColor: colors.ember,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.line,
   },
   filterRow: {
     flexDirection: 'row',
     gap: spacing.sm,
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.md,
+    marginHorizontal: spacing.lg + 4,
+    marginBottom: spacing.sm,
   },
+  // Selected is the ink pill - the strongest thing in the header after
+  // the title, so the current filter is never in doubt.
   filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    minHeight: 36,
     paddingHorizontal: 14,
-    paddingVertical: 7,
     borderRadius: radii.pill,
     borderWidth: 1,
     borderColor: colors.line,
     backgroundColor: colors.paper2,
   },
-  filterChipSelected: { backgroundColor: colors.ember, borderColor: colors.ember },
-  filterText: { fontFamily: fonts.family, fontSize: fontSizes.footnote, fontWeight: '600', color: colors.smoke },
-  filterTextSelected: { color: colors.white },
+  filterChipSelected: { backgroundColor: colors.ink, borderColor: colors.ink },
+  filterText: { fontFamily: fonts.family, fontSize: 14, fontWeight: '600', color: colors.char },
+  filterTextSelected: { color: colors.paper },
+  filterCount: {
+    minWidth: 18,
+    height: 18,
+    paddingHorizontal: 5,
+    borderRadius: 9,
+    backgroundColor: colors.emberTint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterCountSelected: { backgroundColor: colors.ember },
+  filterCountText: { fontFamily: fonts.family, fontSize: fontSizes.caption, fontWeight: '700', color: colors.emberText },
+  filterCountTextSelected: { color: '#FFFFFF' },
+  onlineSection: { paddingTop: spacing.md, paddingBottom: 6 },
+  onlineHeading: {
+    fontFamily: fonts.family,
+    fontSize: fontSizes.footnote,
+    fontWeight: '600',
+    letterSpacing: 0.26,
+    color: colors.smoke,
+    marginHorizontal: spacing.lg + 4,
+    marginBottom: 10,
+  },
+  onlineStrip: { gap: spacing.lg, paddingHorizontal: spacing.lg + 4 },
+  onlineItem: { width: 60, alignItems: 'center', gap: 6 },
+  onlineName: { fontFamily: fonts.family, fontSize: fontSizes.caption, fontWeight: '500', color: colors.char, maxWidth: 60 },
   filterEmpty: {
     fontFamily: fonts.family,
     textAlign: 'center',
@@ -885,17 +980,23 @@ const makeStyles = (colors: ThemeColors) =>
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.md,
-    paddingHorizontal: 12,
-    backgroundColor: colors.paper2,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.line,
+    gap: 10,
+    marginHorizontal: spacing.lg + 4,
+    marginBottom: spacing.lg,
+    minHeight: 46,
+    paddingHorizontal: 14,
+    backgroundColor: colors.fill,
+    borderRadius: 14,
   },
-  searchInput: { fontFamily: fonts.family, flex: 1, paddingVertical: 9, fontSize: fontSizes.body, color: colors.ink },
-  rowContainer: { position: 'relative', overflow: 'hidden', width: '100%' },
+  searchInput: { fontFamily: fonts.family, flex: 1, paddingVertical: 10, fontSize: fontSizes.body, color: colors.ink },
+  // Rows are rounded cards inset from the edges; an unread one is lifted
+  // onto white. The delete action sits behind, clipped to the same shape.
+  rowContainer: {
+    position: 'relative',
+    overflow: 'hidden',
+    marginHorizontal: spacing.md,
+    borderRadius: 18,
+  },
   deleteAction: {
     position: 'absolute',
     right: 0,
@@ -906,13 +1007,14 @@ const makeStyles = (colors: ThemeColors) =>
     alignItems: 'center',
     justifyContent: 'center',
   },
-  rowForeground: { width: '100%', backgroundColor: colors.paper },
+  rowForeground: { width: '100%', backgroundColor: colors.paper, borderRadius: 18 },
+  rowForegroundUnread: { backgroundColor: colors.paper2 },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: 14,
     paddingVertical: 10,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.sm,
   },
   rowMain: { flex: 1, minWidth: 0 },
   sectionHeading: {
@@ -952,14 +1054,14 @@ const makeStyles = (colors: ThemeColors) =>
   skeletonText: { flex: 1, gap: 7 },
   rowTitleLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   // flexShrink so a long name truncates instead of pushing the time away.
-  rowTitle: { fontFamily: fonts.family, flexShrink: 1, fontWeight: '700', fontSize: fontSizes.body, color: colors.ink },
+  rowTitle: { fontFamily: fonts.family, flexShrink: 1, fontWeight: '600', fontSize: 16, color: colors.ink },
   rowTime: { fontFamily: fonts.family, marginLeft: 'auto', fontSize: fontSizes.caption, color: colors.smoke },
   rowTimeUnread: { fontFamily: fonts.family, color: colors.emberText, fontWeight: '700' },
-  rowPreviewLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: 2 },
-  rowPreview: { fontFamily: fonts.family, flex: 1, color: colors.smoke, fontSize: fontSizes.footnote },
-  rowPreviewTyping: { fontFamily: fonts.family, color: colors.sage, fontWeight: '600' },
+  rowPreviewLine: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 3 },
+  rowPreview: { fontFamily: fonts.family, flex: 1, color: colors.smoke, fontSize: 14 },
+  rowPreviewTyping: { fontFamily: fonts.family, color: colors.emberText, fontWeight: '500' },
   rowDraftLabel: { fontFamily: fonts.family, color: colors.emberText, fontWeight: '700' },
-  rowPreviewUnread: { fontFamily: fonts.family, color: colors.ink, fontWeight: '600' },
+  rowPreviewUnread: { fontFamily: fonts.family, color: colors.ink, fontWeight: '500' },
   unreadBadge: {
     minWidth: 22,
     height: 22,
@@ -971,7 +1073,7 @@ const makeStyles = (colors: ThemeColors) =>
   },
   unreadBadgeMuted: { backgroundColor: colors.mutedFill },
   unreadDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: colors.ember },
-  unreadBadgeText: { fontFamily: fonts.family, color: colors.white, fontSize: fontSizes.caption, fontWeight: '700' },
+  unreadBadgeText: { fontFamily: fonts.family, color: '#FFFFFF', fontSize: fontSizes.caption, fontWeight: '700' },
   empty: { alignItems: 'center', marginTop: 64, paddingHorizontal: spacing.xxl },
   emptyIcon: {
     width: 60,
