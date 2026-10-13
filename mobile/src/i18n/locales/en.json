@@ -330,6 +330,9 @@
     "incoming": "Incoming",
     "outgoing": "Outgoing",
     "callBack": "Video call {{name}}",
+    "filterAll": "All",
+    "filterMissed": "Missed",
+    "emptyMissedTitle": "No missed calls",
     "emptyTitle": "No calls yet",
     "emptyHint": "Video calls you make and receive will show up here."
   },
