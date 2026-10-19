@@ -40,6 +40,13 @@
 	<string>Allow access to your microphone to record voice messages and for calls.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Allow access to your camera for video calls.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+		<string>remote-notification</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIRequiredDeviceCapabilities</key>

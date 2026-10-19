@@ -16,6 +16,7 @@
 		C70E7D378AB84151BAC4131A /* Onest-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 12C957A9903845FEB785D0B5 /* Onest-Medium.ttf */; };
 		4E1F7119009548728E7B9D9A /* Onest-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 5205092A61E1457E8CD743D7 /* Onest-Regular.ttf */; };
 		4BA507A950294F4199BBD8EA /* Onest-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = C8ECFFF89C2C4314A6D533EF /* Onest-SemiBold.ttf */; };
+		A1F0C0DE2E7B4A1100C0FFEE /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = A1F0C0DE2E7B4A1000C0FFEE /* GoogleService-Info.plist */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -28,6 +29,8 @@
 		5DCACB8F33CDC322A6C60F78 /* libPods-MobileApp.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-MobileApp.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = MobileApp/AppDelegate.swift; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = MobileApp/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		A1F0C0DE2E7B4A1000C0FFEE /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "MobileApp/GoogleService-Info.plist"; sourceTree = "<group>"; };
+		A1F0C0DE2E7B4A1200C0FFEE /* MobileApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; name = MobileApp.entitlements; path = MobileApp/MobileApp.entitlements; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		043A4FACA46148889512EC46 /* Onest-Bold.ttf */ = {isa = PBXFileReference; name = "Onest-Bold.ttf"; path = "../src/assets/fonts/Onest-Bold.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
 		EA94F33FAE52416EAEF3BAE2 /* Onest-ExtraBold.ttf */ = {isa = PBXFileReference; name = "Onest-ExtraBold.ttf"; path = "../src/assets/fonts/Onest-ExtraBold.ttf"; sourceTree = "<group>"; fileEncoding = undefined; lastKnownFileType = unknown; explicitFileType = undefined; includeInIndex = 0; };
@@ -56,6 +59,8 @@
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
+				A1F0C0DE2E7B4A1000C0FFEE /* GoogleService-Info.plist */,
+				A1F0C0DE2E7B4A1200C0FFEE /* MobileApp.entitlements */,
 			);
 			name = MobileApp;
 			sourceTree = "<group>";
@@ -188,6 +193,7 @@
 				C70E7D378AB84151BAC4131A /* Onest-Medium.ttf in Resources */,
 				4E1F7119009548728E7B9D9A /* Onest-Regular.ttf in Resources */,
 				4BA507A950294F4199BBD8EA /* Onest-SemiBold.ttf in Resources */,
+				A1F0C0DE2E7B4A1100C0FFEE /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -286,6 +292,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = MobileApp/MobileApp.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = MobileApp/Info.plist;
@@ -316,6 +323,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_ENTITLEMENTS = MobileApp/MobileApp.entitlements;
 				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = MobileApp/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;

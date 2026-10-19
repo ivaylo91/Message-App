@@ -8,7 +8,7 @@
     "lint": "eslint .",
     "start": "react-native start",
     "test": "jest",
-    "eas-build-pre-install": "if [ \"$EAS_BUILD_PLATFORM\" = \"android\" ] && [ -n \"$GOOGLE_SERVICES_JSON\" ]; then cp \"$GOOGLE_SERVICES_JSON\" android/app/google-services.json; fi"
+    "eas-build-pre-install": "if [ \"$EAS_BUILD_PLATFORM\" = \"android\" ] && [ -n \"$GOOGLE_SERVICES_JSON\" ]; then cp \"$GOOGLE_SERVICES_JSON\" android/app/google-services.json; fi; if [ \"$EAS_BUILD_PLATFORM\" = \"ios\" ]; then if [ -z \"$GOOGLE_SERVICE_INFO_PLIST\" ]; then echo 'GOOGLE_SERVICE_INFO_PLIST is not set - add GoogleService-Info.plist as a file-type EAS environment variable' >&2; exit 1; fi; cp \"$GOOGLE_SERVICE_INFO_PLIST\" ios/MobileApp/GoogleService-Info.plist; fi"
   },
   "dependencies": {
     "@d11/react-native-fast-image": "^8.13.0",
