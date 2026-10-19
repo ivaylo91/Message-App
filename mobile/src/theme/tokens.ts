@@ -33,8 +33,9 @@ export interface ThemeColors {
   // The redesign's additions. `fill` is the sunken surface (search field,
   // date pills, segmented controls); `emberTint` sits behind emberText
   // (count badges, the video-call button); `online` is the presence dot.
-  // The tab bar is an inverse pill - dark on the light theme, light on
-  // the dark one - so it carries its own three colours.
+  // The tab bar is an inverse pill - violet on the light theme, light on
+  // the dark one - so it carries its own colours, including the unread
+  // badge, which can't be violet where the bar itself is.
   fill: string;
   emberTint: string;
   online: string;
@@ -43,6 +44,8 @@ export interface ThemeColors {
   navActive: string;
   navActiveText: string;
   navText: string;
+  navBadge: string;
+  navBadgeText: string;
 }
 
 export const lightColors: ThemeColors = {
@@ -72,10 +75,12 @@ export const lightColors: ThemeColors = {
   emberTint: '#EEE7FD',
   online: '#2F8F4E',
   dangerTint: '#FDF1EF',
-  navBar: '#1C1613',
+  navBar: '#6D35E8',
   navActive: '#FAF5EF',
-  navActiveText: '#1C1613',
-  navText: '#D9CEC4',
+  navActiveText: '#5B25D6',
+  navText: '#E4DAFC',
+  navBadge: '#FFFFFF',
+  navBadgeText: '#5B25D6',
 };
 
 export const darkColors: ThemeColors = {
@@ -103,6 +108,8 @@ export const darkColors: ThemeColors = {
   navActive: '#15100D',
   navActiveText: '#F3ECE4',
   navText: '#5A4E47',
+  navBadge: '#6D35E8',
+  navBadgeText: '#FFFFFF',
 };
 
 // 'system' defers to the OS setting, which is what this app did

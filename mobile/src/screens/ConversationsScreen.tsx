@@ -942,9 +942,9 @@ const makeStyles = (colors: ThemeColors) =>
     borderColor: colors.line,
     backgroundColor: colors.paper2,
   },
-  filterChipSelected: { backgroundColor: colors.ink, borderColor: colors.ink },
+  filterChipSelected: { backgroundColor: colors.ember, borderColor: colors.ember },
   filterText: { fontFamily: fonts.family, fontSize: 14, fontWeight: '600', color: colors.char },
-  filterTextSelected: { color: colors.paper },
+  filterTextSelected: { color: '#FFFFFF' },
   filterCount: {
     minWidth: 18,
     height: 18,
@@ -954,9 +954,9 @@ const makeStyles = (colors: ThemeColors) =>
     alignItems: 'center',
     justifyContent: 'center',
   },
-  filterCountSelected: { backgroundColor: colors.ember },
+  filterCountSelected: { backgroundColor: '#FFFFFF' },
   filterCountText: { fontFamily: fonts.family, fontSize: fontSizes.caption, fontWeight: '700', color: colors.emberText },
-  filterCountTextSelected: { color: '#FFFFFF' },
+  filterCountTextSelected: { color: '#5B25D6' },
   onlineSection: { paddingTop: spacing.md, paddingBottom: 6 },
   onlineHeading: {
     fontFamily: fonts.family,

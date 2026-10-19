@@ -341,9 +341,9 @@ export function ProfileScreen({ navigation }: Props) {
             />
             <View style={styles.avatarEditBadge}>
               {isUploadingPhoto ? (
-                <ActivityIndicator size="small" color={colors.paper} />
+                <ActivityIndicator size="small" color="#FFFFFF" />
               ) : (
-                <Icon name="camera" size={16} color={colors.paper} />
+                <Icon name="camera" size={16} color="#FFFFFF" />
               )}
             </View>
           </Touchable>
@@ -713,7 +713,7 @@ const makeStyles = (colors: ThemeColors) =>
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.ink,
+    backgroundColor: colors.ember,
     borderWidth: 3,
     borderColor: colors.paper,
     alignItems: 'center',
@@ -792,9 +792,9 @@ const makeStyles = (colors: ThemeColors) =>
     borderColor: colors.line,
     backgroundColor: colors.paper2,
   },
-  choiceChipActive: { backgroundColor: colors.ink, borderColor: colors.ink },
+  choiceChipActive: { backgroundColor: colors.ember, borderColor: colors.ember },
   choiceText: { fontFamily: fonts.family, fontSize: 14, fontWeight: '600', color: colors.char },
-  choiceTextActive: { color: colors.paper },
+  choiceTextActive: { color: '#FFFFFF' },
   bubbleSwatchRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',

@@ -73,7 +73,7 @@ export function FooterNav({ active }: FooterNavProps) {
   ];
 
   return (
-    // An inverse capsule floating above the screen's bottom edge - dark on
+    // An inverse capsule floating above the screen's bottom edge - violet on
     // the light theme, light on the dark one - with the current tab lifted
     // out in the page colour. It stays in the layout rather than
     // overlapping the content, so no list has to pad itself to keep its
@@ -167,13 +167,13 @@ const makeStyles = (colors: ThemeColors) =>
       height: 18,
       borderRadius: 9,
       paddingHorizontal: 4,
-      backgroundColor: colors.ember,
+      backgroundColor: colors.navBadge,
       alignItems: 'center',
       justifyContent: 'center',
       borderWidth: 2,
       borderColor: colors.navBar,
     },
-    badgeText: { fontFamily: fonts.family, color: '#FFFFFF', fontSize: fontSizes.micro, fontWeight: '700' },
+    badgeText: { fontFamily: fonts.family, color: colors.navBadgeText, fontSize: fontSizes.micro, fontWeight: '700' },
     label: { fontFamily: fonts.family, fontSize: 14, fontWeight: '500', color: colors.navText },
     labelActive: { fontWeight: '600', color: colors.navActiveText },
   });
