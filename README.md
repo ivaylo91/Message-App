@@ -69,12 +69,11 @@ variable is not configured as a file-type EAS environment variable the copy
 silently does nothing and you get a confusing Gradle error rather than a
 clear cause.
 
-iOS is the same idea with `GoogleService-Info.plist`: it belongs at
-`mobile/ios/MobileApp/GoogleService-Info.plist` (gitignored, referenced by
-the Xcode project) and on EAS comes from the file-type variable
-`$GOOGLE_SERVICE_INFO_PLIST`. On iOS the hook fails the build when that
-variable is missing, because without the plist the app crashes at launch
-(`index.js` calls `messaging()` before anything renders). FCM on iOS also
+iOS differs: `mobile/ios/MobileApp/GoogleService-Info.plist` is committed
+(it's client config that ships inside every app bundle anyway) and
+referenced by the Xcode project, so EAS needs no variable for it. Don't
+remove it - without the plist the app crashes at launch (`index.js` calls
+`messaging()` before anything renders). FCM on iOS also
 needs an APNs auth key uploaded in Firebase Console → Project settings →
 Cloud Messaging, or tokens register but nothing is delivered.
 

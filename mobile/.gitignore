@@ -36,9 +36,10 @@ local.properties
 keystore.properties
 .kotlin/
 
-# Firebase (client config, not a build-time secret, but environment-specific)
+# Firebase (client config, not a build-time secret, but environment-specific).
+# The iOS GoogleService-Info.plist is committed: EAS builds read it from
+# ios/MobileApp rather than from an environment variable.
 google-services.json
-GoogleService-Info.plist
 
 # node.js
 #
