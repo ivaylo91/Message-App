@@ -4,7 +4,14 @@
     "appVersionSource": "remote"
   },
   "build": {
+    "base": {
+      "ios": {
+        "image": "latest",
+        "node": "22.20.0"
+      }
+    },
     "development": {
+      "extends": "base",
       "distribution": "internal",
       "environment": "development",
       "android": {
@@ -12,10 +19,12 @@
         "gradleCommand": ":app:assembleDebug"
       },
       "ios": {
-        "simulator": true
+        "simulator": true,
+        "buildConfiguration": "Debug"
       }
     },
     "preview": {
+      "extends": "base",
       "distribution": "internal",
       "environment": "preview",
       "android": {
@@ -23,6 +32,7 @@
       }
     },
     "production": {
+      "extends": "base",
       "environment": "production",
       "autoIncrement": true,
       "android": {

@@ -25,7 +25,9 @@ import { name as appName } from './app.json';
 // Both kinds of push are now data-only, so this handler renders both.
 // Calls need it so the app can show its own full-screen ringing UI; messages
 // need it so the notification can carry an inline Reply action, which is
-// only possible on a notification the app builds itself.
+// only possible on a notification the app builds itself. On iOS, messages
+// don't come through here: the system draws them from the push's `apns` block
+// (see fcmPayload.ts in the Edge Function).
 messaging().setBackgroundMessageHandler(async (remoteMessage) => {
   if (remoteMessage.data?.type === 'call') {
     await displayIncomingCallNotification(remoteMessage);
