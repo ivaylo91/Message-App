@@ -6,6 +6,14 @@
         <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
         <item name="colorAccent">@color/accent</item>
         <item name="colorControlActivated">@color/accent</item>
+        <item name="android:windowBackground">@color/paper</item>
+    </style>
+
+    <!-- Only for the moments before MainActivity starts, which swaps it for
+         AppTheme. The flame can't stay in AppTheme's window background: it
+         would show through anything transparent for the life of the app. -->
+    <style name="BootTheme" parent="AppTheme">
+        <item name="android:windowBackground">@drawable/splash</item>
     </style>
 
 </resources>

@@ -9,6 +9,7 @@ import React, {
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { RESET_PASSWORD_URL } from '../config/env';
+import { clearChatCaches } from '../data/chatCache';
 import { unregisterCurrentDeviceToken } from '../notifications';
 
 interface AuthContextValue {
@@ -39,8 +40,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    } = supabase.auth.onAuthStateChange((event, newSession) => {
       setSession(newSession);
+      if (event === 'SIGNED_OUT') void clearChatCaches().catch(() => {});
     });
 
     return () => subscription.unsubscribe();

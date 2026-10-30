@@ -26,18 +26,26 @@ function compareVersions(a: string, b: string): number {
 // True only if Remote Config genuinely says the installed version is
 // below the configured minimum. The default ("0.0.0") never blocks
 // anyone on its own - this only takes effect once a real value is set
-// in the Firebase console - and any failure along the way (network,
-// Remote Config not reachable, etc.) also resolves to false, since a
-// broken check should never itself lock users out of the app.
+// in the Firebase console - and any failure along the way also resolves
+// to false, since a broken check should never itself lock users out of
+// the app.
+//
+// Decided from the value saved by the last launch, because the whole app
+// waits on this answer and a network call here had no upper limit on how
+// long that took. The fresh value is fetched alongside for next time, so
+// a newly raised minimum takes effect one launch later than it would
+// have. That's also what keeps the gate's promise in useUpdateGate: it
+// can't change its mind mid-session.
 export async function checkForcedUpdate(): Promise<boolean> {
   try {
     const rc = remoteConfig();
     await rc.setDefaults({ [MINIMUM_VERSION_KEY]: '0.0.0' });
     await rc.setConfigSettings({ minimumFetchIntervalMillis: MINIMUM_FETCH_INTERVAL_MS });
-    await rc.fetchAndActivate();
+    await rc.ensureInitialized();
 
     const minimumVersion = rc.getValue(MINIMUM_VERSION_KEY).asString();
     const currentVersion = DeviceInfo.getVersion();
+    rc.fetchAndActivate().catch(() => {});
     return compareVersions(currentVersion, minimumVersion) < 0;
   } catch {
     return false;

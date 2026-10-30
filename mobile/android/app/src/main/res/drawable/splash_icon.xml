@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+'s launch icon. The transparent 288dp canvas is the size the
+     system expects, with the tile inside the circle it masks to. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <size android:width="288dp" android:height="288dp" />
+            <solid android:color="@android:color/transparent" />
+        </shape>
+    </item>
+    <item android:gravity="center" android:width="120dp" android:height="120dp">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/accent" />
+            <corners android:radius="40dp" />
+        </shape>
+    </item>
+    <item
+        android:gravity="center"
+        android:width="58dp"
+        android:height="66dp"
+        android:drawable="@drawable/splash_flame" />
+</layer-list>

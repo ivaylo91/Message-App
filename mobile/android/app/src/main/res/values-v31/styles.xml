@@ -1,0 +1,10 @@
+<resources>
+
+    <!-- Android 12 and up always draw their own launch screen, so this sets
+         what goes in it rather than a window background. -->
+    <style name="BootTheme" parent="AppTheme">
+        <item name="android:windowSplashScreenBackground">@color/paper</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
+    </style>
+
+</resources>

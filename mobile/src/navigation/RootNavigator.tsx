@@ -16,18 +16,7 @@ import {
 import { useUpdateGate } from '../updateGate/useUpdateGate';
 import { UpdateRequiredScreen } from '../screens/UpdateRequiredScreen';
 import { WelcomeScreen } from '../screens/WelcomeScreen';
-import { LoginScreen } from '../screens/LoginScreen';
-import { RegisterScreen } from '../screens/RegisterScreen';
-import { ForgotPasswordScreen } from '../screens/ForgotPasswordScreen';
 import { ConversationsScreen } from '../screens/ConversationsScreen';
-import { NewChatScreen } from '../screens/NewChatScreen';
-import { NewGroupScreen } from '../screens/NewGroupScreen';
-import { ChatScreen } from '../screens/ChatScreen';
-import { ProfileScreen } from '../screens/ProfileScreen';
-import { MediaGalleryScreen } from '../screens/MediaGalleryScreen';
-import { GroupInfoScreen } from '../screens/GroupInfoScreen';
-import { ContactInfoScreen } from '../screens/ContactInfoScreen';
-import { CallsScreen } from '../screens/CallsScreen';
 
 export type AuthStackParamList = {
   Welcome: undefined;
@@ -67,9 +56,15 @@ function AuthNavigator() {
   return (
     <AuthStack.Navigator screenOptions={screenOptions}>
       <AuthStack.Screen name="Welcome" component={WelcomeScreen} />
-      <AuthStack.Screen name="Login" component={LoginScreen} />
-      <AuthStack.Screen name="Register" component={RegisterScreen} />
-      <AuthStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+      <AuthStack.Screen name="Login" getComponent={() => require('../screens/LoginScreen').LoginScreen} />
+      <AuthStack.Screen
+        name="Register"
+        getComponent={() => require('../screens/RegisterScreen').RegisterScreen}
+      />
+      <AuthStack.Screen
+        name="ForgotPassword"
+        getComponent={() => require('../screens/ForgotPasswordScreen').ForgotPasswordScreen}
+      />
     </AuthStack.Navigator>
   );
 }
@@ -83,24 +78,44 @@ function AppNavigator() {
 
   return (
     <AppStack.Navigator screenOptions={screenOptions}>
+      {/* Only the first screen a launch shows is imported up front. The
+          rest load the first time they're opened, so launching doesn't pay
+          to initialise screens it may never reach. */}
       <AppStack.Screen name="Conversations" component={ConversationsScreen} />
       <AppStack.Screen
         name="NewChat"
-        component={NewChatScreen}
+        getComponent={() => require('../screens/NewChatScreen').NewChatScreen}
         options={{ presentation: 'modal' }}
       />
       <AppStack.Screen
         name="NewGroup"
-        component={NewGroupScreen}
+        getComponent={() => require('../screens/NewGroupScreen').NewGroupScreen}
         options={{ presentation: 'modal' }}
       />
       {/* Tabs, not a step deeper - they swap in place rather than pushing. */}
-      <AppStack.Screen name="Profile" component={ProfileScreen} options={{ animation: 'none' }} />
-      <AppStack.Screen name="Calls" component={CallsScreen} options={{ animation: 'none' }} />
-      <AppStack.Screen name="Chat" component={ChatScreen} />
-      <AppStack.Screen name="MediaGallery" component={MediaGalleryScreen} />
-      <AppStack.Screen name="GroupInfo" component={GroupInfoScreen} />
-      <AppStack.Screen name="ContactInfo" component={ContactInfoScreen} />
+      <AppStack.Screen
+        name="Profile"
+        getComponent={() => require('../screens/ProfileScreen').ProfileScreen}
+        options={{ animation: 'none' }}
+      />
+      <AppStack.Screen
+        name="Calls"
+        getComponent={() => require('../screens/CallsScreen').CallsScreen}
+        options={{ animation: 'none' }}
+      />
+      <AppStack.Screen name="Chat" getComponent={() => require('../screens/ChatScreen').ChatScreen} />
+      <AppStack.Screen
+        name="MediaGallery"
+        getComponent={() => require('../screens/MediaGalleryScreen').MediaGalleryScreen}
+      />
+      <AppStack.Screen
+        name="GroupInfo"
+        getComponent={() => require('../screens/GroupInfoScreen').GroupInfoScreen}
+      />
+      <AppStack.Screen
+        name="ContactInfo"
+        getComponent={() => require('../screens/ContactInfoScreen').ContactInfoScreen}
+      />
     </AppStack.Navigator>
   );
 }

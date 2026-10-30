@@ -9,6 +9,8 @@ import com.facebook.react.defaults.DefaultReactActivityDelegate
 class MainActivity : ReactActivity() {
 
   override fun onCreate(savedInstanceState: Bundle?) {
+    // The manifest's BootTheme has done its job by now - see styles.xml.
+    setTheme(R.style.AppTheme)
     super.onCreate(savedInstanceState)
     // Tapjacking protection: rejects touches that arrive while another
     // app's overlay is covering (fully or partially) this window - e.g. a

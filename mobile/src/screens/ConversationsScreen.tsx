@@ -22,6 +22,7 @@ import type { AppStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
 import * as conversationsData from '../data/conversations';
 import * as profilesData from '../data/profiles';
+import { loadCachedConversations, saveCachedConversations } from '../data/chatCache';
 import * as draftStorage from '../drafts/draftStorage';
 import { Avatar } from '../components/Avatar';
 import { Touchable } from '../components/Touchable';
@@ -336,6 +337,10 @@ export function ConversationsScreen({ navigation }: Props) {
   conversationsRef.current = conversations;
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  // True while the rows on screen came from disk, which holds no message
+  // text - see chatCache.ts.
+  const [isShowingCache, setIsShowingCache] = useState(false);
+  const hasFetchedRef = useRef(false);
   const [ownProfile, setOwnProfile] = useState<Profile | null>(null);
   const [openRowId, setOpenRowId] = useState<string | null>(null);
   // Guards against a burst of messages for unknown conversations firing
@@ -355,9 +360,22 @@ export function ConversationsScreen({ navigation }: Props) {
       callStatusPreviewText(message.call_status, message.attachment_duration_ms, t) ||
       attachmentPreviewText(message.attachment_type, message.attachment_name, t) ||
       message.body ||
-      t('conversations.noMessagesYet')
+      // A cached row has a last message whose text isn't known yet, which
+      // isn't the same as having none. A blank holds the row's height.
+      (isShowingCache ? '\u00A0' : t('conversations.noMessagesYet'))
     );
   }
+
+  useEffect(() => {
+    if (!userId) return;
+    void loadCachedConversations(userId).then((cached) => {
+      // Reading from disk is quick, but a fetch that beat it is newer.
+      if (!cached || hasFetchedRef.current) return;
+      conversationsRef.current = cached;
+      setConversations(cached);
+      setIsShowingCache(true);
+    });
+  }, [userId]);
 
   const load = useCallback(async () => {
     if (!userId) return;
@@ -379,8 +397,11 @@ export function ConversationsScreen({ navigation }: Props) {
           conversationsData.fetchConversations(userId),
           refreshUnreadCounts(),
         ]);
+        hasFetchedRef.current = true;
         conversationsRef.current = data;
         setConversations(data);
+        setIsShowingCache(false);
+        void saveCachedConversations(userId, data).catch(() => {});
       } while (pendingReloadRef.current);
     } finally {
       isLoadingRef.current = false;
@@ -625,6 +646,11 @@ export function ConversationsScreen({ navigation }: Props) {
     const other = otherParticipantOf(c);
     return other && isOnline(other.user_id) ? [{ conversation: c, profile: other.profiles }] : [];
   }).slice(0, 12);
+  // Your own row in any chat stands in until your profile has loaded, so a
+  // cold start doesn't open on a "?" avatar.
+  const me =
+    ownProfile ??
+    conversations[0]?.conversation_participants.find((p) => p.user_id === userId)?.profiles;
   const orderedConversations = useMemo(
     () => pinnedFirst(filteredConversations, userId),
     [filteredConversations, userId],
@@ -641,8 +667,8 @@ export function ConversationsScreen({ navigation }: Props) {
             accessibilityLabel={t('conversations.a11yProfile')}
           >
             <Avatar
-              name={ownProfile?.display_name || '?'}
-              avatarPath={ownProfile?.avatar_path}
+              name={me?.display_name || '?'}
+              avatarPath={me?.avatar_path}
               size={44}
               online={userId ? isOnline(userId) : undefined}
             />

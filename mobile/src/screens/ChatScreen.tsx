@@ -32,6 +32,7 @@ import { useAuth } from '../auth/AuthContext';
 import { supabase } from '../lib/supabase';
 import * as conversationsData from '../data/conversations';
 import * as reactionsData from '../data/reactions';
+import { getCachedChat, setCachedChat } from '../data/chatCache';
 import { mergeReactions } from '../utils/reactions';
 import * as mediaData from '../data/media';
 import * as moderationData from '../data/moderation';
@@ -205,7 +206,13 @@ export function ChatScreen({ route, navigation }: Props) {
   const { colors, chatWallpaper } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const bubbleMaxWidth = Math.min(windowWidth * 0.8, MAX_BUBBLE_WIDTH);
-  const [messages, setMessages] = useState<LocalMessage[]>([]);
+  // A chat opened earlier this session appears at once while the fetch
+  // below refreshes it. Not when landing on a searched-for message, which
+  // loads a different window.
+  const [cachedChat] = useState(() =>
+    route.params.highlightMessageId ? null : getCachedChat(conversationId),
+  );
+  const [messages, setMessages] = useState<LocalMessage[]>(cachedChat?.messages ?? []);
   // For callbacks that need the current list without taking it as a
   // dependency (which would give them a new identity on every message).
   const messagesRef = useRef(messages);
@@ -222,7 +229,7 @@ export function ChatScreen({ route, navigation }: Props) {
   const [viewerPath, setViewerPath] = useState<string | null>(null);
   const [forwardingMessage, setForwardingMessage] = useState<LocalMessage | null>(null);
   const [forwardTargets, setForwardTargets] = useState<Conversation[] | null>(null);
-  const [reactions, setReactions] = useState<MessageReaction[]>([]);
+  const [reactions, setReactions] = useState<MessageReaction[]>(cachedChat?.reactions ?? []);
   const [participants, setParticipants] = useState<ConversationParticipant[]>(
     [],
   );
@@ -424,9 +431,11 @@ export function ChatScreen({ route, navigation }: Props) {
       setHasMoreMessages(fetched.length === conversationsData.MESSAGE_PAGE_SIZE);
       // Chained rather than fired alongside: which reactions to ask
       // for is decided by which messages came back.
-      setReactions(
-        await reactionsData.fetchReactionsForMessages(fetched.map((m) => m.id)),
+      const fetchedReactions = await reactionsData.fetchReactionsForMessages(
+        fetched.map((m) => m.id),
       );
+      setReactions(fetchedReactions);
+      setCachedChat(conversationId, { messages: fetched, reactions: fetchedReactions });
       setHasLoadedMessages(true);
     } catch {
       // Previously this rejection went nowhere, which left an empty

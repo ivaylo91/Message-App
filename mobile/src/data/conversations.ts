@@ -6,20 +6,16 @@ import { AttachmentType, CallStatus, Conversation, Message, Profile } from '../t
 const CONVERSATION_SELECT = `*, conversation_participants(*, profiles(${PROFILE_COLUMNS}))`;
 
 export async function fetchConversations(userId: string): Promise<Conversation[]> {
-  const { data: hiddenRows, error: hiddenError } = await supabase
-    .from('conversation_participants')
-    .select('conversation_id')
-    .eq('user_id', userId)
-    .not('hidden_at', 'is', null);
-
-  if (hiddenError) throw hiddenError;
-  const hiddenIds = hiddenRows.map((row) => row.conversation_id);
-
-  let query = supabase
+  const { data, error } = await supabase
     .from('conversations')
     .select(
-      `${CONVERSATION_SELECT}, messages(id, body, media_path, attachment_type, attachment_name, attachment_duration_ms, call_status, created_at, sender_id)`,
+      `${CONVERSATION_SELECT}, mine:conversation_participants!inner(user_id), messages(id, body, media_path, attachment_type, attachment_name, attachment_mime_type, attachment_duration_ms, call_status, created_at, sender_id)`,
     )
+    // `mine` is this user's own participant row, joined a second time just
+    // to filter on: a conversation they've hidden drops out here, in the
+    // one query, rather than needing a lookup of hidden ids first.
+    .eq('mine.user_id', userId)
+    .is('mine.hidden_at', null)
     // Filters the embedded messages, not the conversations themselves
     // (that would need !inner) - so a conversation whose only messages
     // are deleted still appears, just with an empty preview. Without
@@ -30,12 +26,6 @@ export async function fetchConversations(userId: string): Promise<Conversation[]
     .order('updated_at', { ascending: false })
     .order('created_at', { ascending: false, referencedTable: 'messages' })
     .limit(1, { referencedTable: 'messages' });
-
-  if (hiddenIds.length > 0) {
-    query = query.not('id', 'in', `(${hiddenIds.join(',')})`);
-  }
-
-  const { data, error } = await query;
 
   if (error) throw error;
   return data as unknown as Conversation[];

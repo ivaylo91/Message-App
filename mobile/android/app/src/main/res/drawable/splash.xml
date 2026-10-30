@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The launch screen below Android 12, drawn by the system before any code
+     runs: the same violet tile and flame the Welcome screen opens with. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/paper" />
+    <item android:gravity="center" android:width="96dp" android:height="96dp">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/accent" />
+            <corners android:radius="32dp" />
+        </shape>
+    </item>
+    <item
+        android:gravity="center"
+        android:width="46dp"
+        android:height="53dp"
+        android:drawable="@drawable/splash_flame" />
+</layer-list>

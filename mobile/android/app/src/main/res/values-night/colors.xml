@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- colors.paper in the dark theme. -->
+    <color name="paper">#15100D</color>
+</resources>
