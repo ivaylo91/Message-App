@@ -13,7 +13,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Icon } from '../components/Icon';
+import { Icon, type IconName } from '../components/Icon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
@@ -40,6 +40,7 @@ import {
   attachmentPreviewText,
   callStatusPreviewText,
   formatListTimestamp,
+  previewIconName,
 } from '../utils/messagePreview';
 import {
   applyIncomingMessage,
@@ -83,6 +84,8 @@ interface ConversationRowProps {
   markedUnread: boolean;
   isTyping: boolean;
   preview: string;
+  // Shown before the preview when the last message isn't plain text.
+  previewIcon: IconName | null;
   // The last message's created_at; null for a conversation with none yet.
   timestamp: string | null;
   // Unsent text saved for this conversation, shown instead of the last
@@ -110,6 +113,7 @@ function ConversationRow({
   markedUnread,
   isTyping,
   preview,
+  previewIcon,
   timestamp,
   draft,
   isOpen,
@@ -131,6 +135,9 @@ function ConversationRow({
   // Where the row rests: 0 (closed) or -SWIPE_DELETE_WIDTH (open).
   const openX = useSharedValue(0);
   const rowStyle = useAnimatedStyle(() => ({ transform: [{ translateX: translateX.value }] }));
+  // Only there while the row is moved aside: at rest its colour would
+  // bleed through the antialiased corners of the row above it.
+  const deleteStyle = useAnimatedStyle(() => ({ opacity: translateX.value < 0 ? 1 : 0 }));
 
   // Another row opening closes this one.
   useEffect(() => {
@@ -166,14 +173,16 @@ function ConversationRow({
 
   return (
     <View style={styles.rowContainer}>
-      <Touchable
-        style={styles.deleteAction}
-        onPress={onDelete}
-        accessibilityRole="button"
-        accessibilityLabel={t('conversations.a11yDelete')}
-      >
-        <Icon name="trash" size={18} color={colors.white} />
-      </Touchable>
+      <Animated.View style={[styles.deleteAction, deleteStyle]}>
+        <Touchable
+          style={styles.deleteButton}
+          onPress={onDelete}
+          accessibilityRole="button"
+          accessibilityLabel={t('conversations.a11yDelete')}
+        >
+          <Icon name="trash" size={18} color={colors.white} />
+        </Touchable>
+      </Animated.View>
       <GestureDetector gesture={pan}>
       <Animated.View
         style={[styles.rowForeground, showsUnread && styles.rowForegroundUnread, rowStyle]}
@@ -217,6 +226,13 @@ function ConversationRow({
               )}
             </View>
             <View style={styles.rowPreviewLine}>
+              {previewIcon && !isTyping && !draft && (
+                <Icon
+                  name={previewIcon}
+                  size={15}
+                  color={showsUnread ? colors.ink : colors.smoke}
+                />
+              )}
               <Text
                 style={[
                   styles.rowPreview,
@@ -270,7 +286,7 @@ function ConversationListSkeleton() {
     <SkeletonGroup>
       {Array.from({ length: SKELETON_ROW_COUNT }).map((_, i) => (
         <View key={i} style={styles.skeletonRow}>
-          <Skeleton width={48} height={48} radius={24} />
+          <Skeleton width={54} height={54} radius={27} />
           <View style={styles.skeletonText}>
             <Skeleton width="55%" height={13} />
             <Skeleton width="80%" height={11} />
@@ -661,7 +677,9 @@ export function ConversationsScreen({ navigation }: Props) {
         />
         {searchQuery.length > 0 && (
           <Touchable
-            onPress={() => setSearchQuery('')}
+            // Through the handler, so a search already on its way is
+            // cancelled along with the text and its results.
+            onPress={() => onChangeSearch('')}
             accessibilityRole="button"
             accessibilityLabel={t('conversations.a11yClearSearch')}
           >
@@ -714,7 +732,13 @@ export function ConversationsScreen({ navigation }: Props) {
         data={orderedConversations}
         keyExtractor={(item) => item.id}
         refreshControl={
-          <RefreshControl refreshing={isRefreshing} onRefresh={load} />
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={load}
+            colors={[colors.ember]}
+            tintColor={colors.ember}
+            progressBackgroundColor={colors.paper2}
+          />
         }
         // While searching, both sections read the same way - a heading,
         // then results or a one-line "nothing here". The full-size empty
@@ -849,6 +873,7 @@ export function ConversationsScreen({ navigation }: Props) {
               )}
               isTyping={isTyping}
               preview={isTyping ? t('chat.typing') : previewText(item.messages?.[0])}
+              previewIcon={item.messages?.[0] ? previewIconName(item.messages[0]) : null}
               timestamp={item.messages?.[0]?.created_at ?? null}
               draft={drafts[item.id] ?? null}
               isOpen={openRowId === item.id}
@@ -929,7 +954,7 @@ const makeStyles = (colors: ThemeColors) =>
     marginHorizontal: spacing.lg + 4,
     marginBottom: spacing.sm,
   },
-  // Selected is the ink pill - the strongest thing in the header after
+  // Selected is the violet pill - the strongest thing in the header after
   // the title, so the current filter is never in doubt.
   filterChip: {
     flexDirection: 'row',
@@ -1004,9 +1029,8 @@ const makeStyles = (colors: ThemeColors) =>
     bottom: 0,
     width: SWIPE_DELETE_WIDTH,
     backgroundColor: colors.dangerFill,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
+  deleteButton: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   rowForeground: { width: '100%', backgroundColor: colors.paper, borderRadius: 18 },
   rowForegroundUnread: { backgroundColor: colors.paper2 },
   row: {
@@ -1047,9 +1071,9 @@ const makeStyles = (colors: ThemeColors) =>
   skeletonRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: 14,
     paddingVertical: 10,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.lg + 4,
   },
   skeletonText: { flex: 1, gap: 7 },
   rowTitleLine: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
@@ -1093,7 +1117,7 @@ const makeStyles = (colors: ThemeColors) =>
     borderRadius: radii.pill,
     backgroundColor: colors.ember,
   },
-  emptyActionText: { fontFamily: fonts.family, color: colors.white, fontWeight: '700', fontSize: fontSizes.body },
+  emptyActionText: { fontFamily: fonts.family, color: '#FFFFFF', fontWeight: '700', fontSize: fontSizes.body },
   emptyTitle: { fontFamily: fonts.family, color: colors.ink, fontWeight: '700', fontSize: fontSizes.body },
   emptyHint: { fontFamily: fonts.family, color: colors.smoke, marginTop: 4, fontSize: fontSizes.footnote },
 });

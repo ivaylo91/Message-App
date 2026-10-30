@@ -20,6 +20,8 @@
       "error": "Login failed. Check your email and password.",
       "switchToRegister": "New to Hearth? Create an account",
       "forgotPassword": "Forgot password?",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password",
       "noAccount": "No account?",
       "registerLink": "Sign up"
     },
@@ -56,9 +58,9 @@
     "title": "Chats",
     "searchPlaceholder": "Search conversations",
     "noMessagesYet": "No messages yet",
-    "photoPreview": "📷 Photo",
-    "audioPreview": "🎤 Voice message",
-    "filePreview": "📎 {{name}}",
+    "photoPreview": "Photo",
+    "audioPreview": "Voice message",
+    "filePreview": "{{name}}",
     "groupChat": "Group chat",
     "directMessage": "Direct message",
     "noConversationsYet": "No conversations yet.",
@@ -112,7 +114,8 @@
     "noResults": "No matches found",
     "newGroup": "New group",
     "startFailedTitle": "Couldn't start chat",
-    "startFailedMessage": "Something went wrong starting this conversation. Try again."
+    "startFailedMessage": "Something went wrong starting this conversation. Try again.",
+    "a11yClearSearch": "Clear search"
   },
   "newGroup": {
     "title": "New group",
@@ -120,7 +123,8 @@
     "create": "Create",
     "emptyPrompt": "Search for people to add",
     "createFailedTitle": "Couldn't create group",
-    "createFailedMessage": "Something went wrong creating this group. Try again."
+    "createFailedMessage": "Something went wrong creating this group. Try again.",
+    "a11yClearSearch": "Clear search"
   },
   "chat": {
     "messagePlaceholder": "Message",
@@ -133,6 +137,9 @@
     "deleteConfirmTitle": "Delete message?",
     "deleteConfirmMessage": "This cannot be undone.",
     "typing": "Typing...",
+    "groupMemberCount": "{{count}} members",
+    "groupMemberCount_one": "1 member",
+    "groupMemberCount_other": "{{count}} members",
     "newMessages": "New messages",
     "emptyChatTitle": "Say hi to {{name}}",
     "emptyGroupTitle": "Say hi to the group",
@@ -147,7 +154,7 @@
     "lastSeenMinutesAgo": "Last seen {{count}}m ago",
     "lastSeenHoursAgo": "Last seen {{count}}h ago",
     "lastSeenDaysAgo": "Last seen {{count}}d ago",
-    "edited": "(edited)",
+    "edited": "edited",
     "uploadFailedTitle": "Upload failed",
     "uploadFailedMessage": "Could not send the image. Try again.",
     "sendFailedTitle": "Message not sent",
@@ -362,7 +369,15 @@
     "connected": "Connected",
     "missedCallPreview": "Missed video call",
     "declinedCallPreview": "Declined video call",
-    "completedCallPreview": "Video call · {{duration}}"
+    "completedCallPreview": "Video call · {{duration}}",
+    "a11yMute": "Mute microphone",
+    "a11yUnmute": "Unmute microphone",
+    "a11yCameraOff": "Turn off camera",
+    "a11yCameraOn": "Turn on camera",
+    "a11ySwitchCamera": "Switch camera",
+    "a11yEndCall": "End call",
+    "a11yAcceptCall": "Accept call",
+    "a11yDeclineCall": "Decline call"
   },
   "mediaGallery": {
     "photosTab": "Photos",

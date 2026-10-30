@@ -232,7 +232,15 @@ export function CallsScreen({ navigation }: Props) {
               <Text style={styles.sectionTitle}>{section.title}</Text>
             )}
             contentContainerStyle={styles.listContent}
-            refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={load} />}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={load}
+                colors={[colors.ember]}
+                tintColor={colors.ember}
+                progressBackgroundColor={colors.paper2}
+              />
+            }
             ListEmptyComponent={
               <View style={styles.empty}>
                 <View style={styles.emptyIcon}>
@@ -340,7 +348,7 @@ const makeStyles = (colors: ThemeColors) =>
     detail: { flexDirection: 'row', alignItems: 'center', gap: 5 },
     detailText: { fontFamily: fonts.family, flexShrink: 1, fontSize: 14, color: colors.smoke },
     detailMissed: { color: colors.danger, fontWeight: '600' },
-    detailDot: { fontFamily: fonts.family, fontSize: 14, color: colors.line },
+    detailDot: { fontFamily: fonts.family, fontSize: 14, color: colors.smoke },
     detailTime: { fontFamily: fonts.family, fontSize: 14, color: colors.smoke },
     callBack: {
       width: 44,

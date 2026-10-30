@@ -153,7 +153,8 @@ const makeStyles = (colors: ThemeColors) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: spacing.sm,
+      // Clears the unread badge, which hangs off the icon's corner.
+      gap: spacing.md,
       borderRadius: 18,
     },
     itemIconOnly: { flex: 0, width: 64 },
@@ -162,7 +163,7 @@ const makeStyles = (colors: ThemeColors) =>
     badge: {
       position: 'absolute',
       top: -6,
-      right: -10,
+      right: -9,
       minWidth: 18,
       height: 18,
       borderRadius: 9,

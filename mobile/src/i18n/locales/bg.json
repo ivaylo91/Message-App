@@ -20,6 +20,8 @@
       "error": "Неуспешен вход. Проверете имейла и паролата си.",
       "switchToRegister": "Нови сте в Hearth? Създайте акаунт",
       "forgotPassword": "Забравена парола?",
+      "showPassword": "Покажи паролата",
+      "hidePassword": "Скрий паролата",
       "noAccount": "Нямаш акаунт?",
       "registerLink": "Регистрирай се"
     },
@@ -56,9 +58,9 @@
     "title": "Чатове",
     "searchPlaceholder": "Търсене на разговори",
     "noMessagesYet": "Все още няма съобщения",
-    "photoPreview": "📷 Снимка",
-    "audioPreview": "🎤 Гласово съобщение",
-    "filePreview": "📎 {{name}}",
+    "photoPreview": "Снимка",
+    "audioPreview": "Гласово съобщение",
+    "filePreview": "{{name}}",
     "groupChat": "Групов чат",
     "directMessage": "Лично съобщение",
     "noConversationsYet": "Все още няма разговори.",
@@ -112,7 +114,8 @@
     "noResults": "Няма съвпадения",
     "newGroup": "Нова група",
     "startFailedTitle": "Разговорът не можа да започне",
-    "startFailedMessage": "Възникна грешка при започването на този разговор. Опитайте отново."
+    "startFailedMessage": "Възникна грешка при започването на този разговор. Опитайте отново.",
+    "a11yClearSearch": "Изчистване на търсенето"
   },
   "newGroup": {
     "title": "Нова група",
@@ -120,7 +123,8 @@
     "create": "Създай",
     "emptyPrompt": "Търсете хора, които да добавите",
     "createFailedTitle": "Групата не можа да бъде създадена",
-    "createFailedMessage": "Възникна грешка при създаването на групата. Опитайте отново."
+    "createFailedMessage": "Възникна грешка при създаването на групата. Опитайте отново.",
+    "a11yClearSearch": "Изчистване на търсенето"
   },
   "chat": {
     "messagePlaceholder": "Съобщение",
@@ -133,6 +137,9 @@
     "deleteConfirmTitle": "Изтриване на съобщение?",
     "deleteConfirmMessage": "Това действие не може да бъде отменено.",
     "typing": "Пише...",
+    "groupMemberCount": "{{count}} участници",
+    "groupMemberCount_one": "1 участник",
+    "groupMemberCount_other": "{{count}} участници",
     "newMessages": "Нови съобщения",
     "emptyChatTitle": "Поздравете {{name}}",
     "emptyGroupTitle": "Поздравете групата",
@@ -147,7 +154,7 @@
     "lastSeenMinutesAgo": "Последно активен/а преди {{count}}м",
     "lastSeenHoursAgo": "Последно активен/а преди {{count}}ч",
     "lastSeenDaysAgo": "Последно активен/а преди {{count}}д",
-    "edited": "(редактирано)",
+    "edited": "редактирано",
     "uploadFailedTitle": "Неуспешно качване",
     "uploadFailedMessage": "Снимката не можа да бъде изпратена. Опитайте отново.",
     "sendFailedTitle": "Съобщението не е изпратено",
@@ -362,7 +369,15 @@
     "connected": "Свързан",
     "missedCallPreview": "Пропуснато видеообаждане",
     "declinedCallPreview": "Отхвърлено видеообаждане",
-    "completedCallPreview": "Видеообаждане · {{duration}}"
+    "completedCallPreview": "Видеообаждане · {{duration}}",
+    "a11yMute": "Изключи микрофона",
+    "a11yUnmute": "Включи микрофона",
+    "a11yCameraOff": "Изключи камерата",
+    "a11yCameraOn": "Включи камерата",
+    "a11ySwitchCamera": "Смени камерата",
+    "a11yEndCall": "Прекрати обаждането",
+    "a11yAcceptCall": "Приеми обаждането",
+    "a11yDeclineCall": "Отхвърли обаждането"
   },
   "mediaGallery": {
     "photosTab": "Снимки",

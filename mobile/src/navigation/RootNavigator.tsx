@@ -99,7 +99,8 @@ function AppNavigator() {
         component={ProfileScreen}
         options={{ presentation: 'modal' }}
       />
-      <AppStack.Screen name="Calls" component={CallsScreen} />
+      {/* A tab, not a step deeper - it swaps in place rather than pushing. */}
+      <AppStack.Screen name="Calls" component={CallsScreen} options={{ animation: 'none' }} />
       <AppStack.Screen name="Chat" component={ChatScreen} />
       <AppStack.Screen name="MediaGallery" component={MediaGalleryScreen} />
       <AppStack.Screen name="GroupInfo" component={GroupInfoScreen} />

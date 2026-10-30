@@ -52,7 +52,7 @@ export function TypingBubble() {
         colors={[...gradients.theirs]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={[styles.bubble, styles.typingBubble]}
+        style={[styles.bubble, styles.bubbleTheirs, styles.typingBubble]}
       >
         <TypingDot delay={0} />
         <TypingDot delay={TYPING_DOT_STAGGER_MS} />

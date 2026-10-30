@@ -30,15 +30,17 @@ export const makeStyles = (colors: ThemeColors) =>
   headerName: { fontFamily: fonts.family, fontWeight: '700', fontSize: fontSizes.bodyLg, color: colors.ink },
   headerStatus: { fontFamily: fonts.family, fontSize: fontSizes.footnote, fontWeight: '500', color: colors.sage },
   headerStatusOffline: { fontFamily: fonts.family, fontSize: fontSizes.footnote, fontWeight: '500', color: colors.smoke },
+  // A state rather than an error - messages queue and send on their own -
+  // so it stays out of the red the app keeps for destructive actions.
   offlineBanner: {
     marginHorizontal: spacing.md,
     marginTop: spacing.sm,
     paddingVertical: 6,
     borderRadius: radii.md,
-    backgroundColor: colors.dangerFill,
+    backgroundColor: colors.fill,
     alignItems: 'center',
   },
-  offlineBannerText: { fontFamily: fonts.family, color: colors.white, fontSize: fontSizes.caption, fontWeight: '700' },
+  offlineBannerText: { fontFamily: fonts.family, color: colors.char, fontSize: fontSizes.caption, fontWeight: '600' },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -127,7 +129,7 @@ export const makeStyles = (colors: ThemeColors) =>
     borderRadius: radii.pill,
     backgroundColor: colors.ember,
   },
-  loadErrorButtonText: { fontFamily: fonts.family, color: colors.white, fontWeight: '700', fontSize: fontSizes.body },
+  loadErrorButtonText: { fontFamily: fonts.family, color: '#FFFFFF', fontWeight: '700', fontSize: fontSizes.body },
   list: { flex: 1, paddingHorizontal: 14 },
   listArea: { flex: 1 },
   rowMine: { alignItems: 'flex-end', marginVertical: 3 },
@@ -247,7 +249,9 @@ export const makeStyles = (colors: ThemeColors) =>
     gap: spacing.sm,
     maxWidth: 220,
   },
-  fileName: { fontFamily: fonts.family, flex: 1, fontWeight: '600' },
+  // flexShrink, not flex: the bubble sizes to its content, and flex:1 inside
+  // a shrink-to-fit row collapses the name to an ellipsis.
+  fileName: { fontFamily: fonts.family, flexShrink: 1, fontWeight: '600' },
   iconCircle: {
     width: 34,
     height: 34,
@@ -258,7 +262,7 @@ export const makeStyles = (colors: ThemeColors) =>
   iconCircleMine: { backgroundColor: colors.white },
   iconCircleTheirs: { backgroundColor: colors.ember },
   bubblePending: { opacity: 0.55 },
-  bubbleHighlighted: { borderWidth: 3, borderColor: colors.sage },
+  bubbleHighlighted: { borderWidth: 3, borderColor: colors.emberGlow },
   spinner: { marginTop: spacing.xl },
   historyLoading: { marginVertical: spacing.md },
   senderLabel: {
@@ -269,8 +273,12 @@ export const makeStyles = (colors: ThemeColors) =>
     marginBottom: 2,
     marginLeft: 4,
   },
-  bubbleTextMine: { fontFamily: fonts.family, color: '#FFFFFF', fontSize: fontSizes.body, lineHeight: 21 },
-  bubbleTextTheirs: { fontFamily: fonts.family, color: colors.ink, fontSize: fontSizes.body, lineHeight: 21 },
+  // 16, the same size the composer types in, so a message doesn't shrink
+  // the moment it's sent.
+  bubbleTextMine: { fontFamily: fonts.family, color: '#FFFFFF', fontSize: 16, lineHeight: 22 },
+  bubbleTextTheirs: { fontFamily: fonts.family, color: colors.ink, fontSize: 16, lineHeight: 22 },
+  // A photo's bubble has almost no padding, which text under it needs back.
+  mediaCaption: { paddingHorizontal: 10, paddingTop: 6, paddingBottom: 4 },
   editedTag: { fontFamily: fonts.family, fontSize: fontSizes.micro, color: colors.smoke, marginTop: 2 },
   linkText: { textDecorationLine: 'underline' },
   jumpToLatest: {
@@ -298,7 +306,7 @@ export const makeStyles = (colors: ThemeColors) =>
     alignItems: 'center',
     justifyContent: 'center',
   },
-  jumpBadgeText: { fontFamily: fonts.family, fontSize: fontSizes.micro, fontWeight: '700', color: colors.white },
+  jumpBadgeText: { fontFamily: fonts.family, fontSize: fontSizes.micro, fontWeight: '700', color: '#FFFFFF' },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -306,9 +314,26 @@ export const makeStyles = (colors: ThemeColors) =>
     gap: spacing.xs,
     marginTop: 2,
   },
+  // Lifted into the corner, over the room metaSpacer left in the text.
+  metaInline: { position: 'absolute', right: 12, bottom: 6, marginTop: 0 },
+  metaCaption: { position: 'absolute', right: 14, bottom: 8, marginTop: 0 },
+  // On the photo itself: a dark chip, since the photo can be any colour.
+  metaPhoto: {
+    position: 'absolute',
+    right: 10,
+    bottom: 10,
+    marginTop: 0,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: radii.pill,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
   // 4.6:1 on the violet - the time is small, so it needs the contrast.
   metaTextMine: { fontFamily: fonts.family, fontSize: 11, color: 'rgba(255,255,255,0.82)' },
   metaTextTheirs: { fontFamily: fonts.family, fontSize: 11, color: colors.smoke },
+  metaTextPhoto: { fontFamily: fonts.family, fontSize: 11, color: '#FFFFFF' },
+  // Tabular only where the digits tick, so the row doesn't jitter.
+  audioDuration: { fontSize: fontSizes.caption, fontVariant: ['tabular-nums'] },
   mentionMine: { fontFamily: fonts.family, fontWeight: '700', color: colors.white },
   mentionTheirs: { fontFamily: fonts.family, fontWeight: '700', color: colors.emberText },
   statusMuted: { opacity: 0.75 },
@@ -377,7 +402,7 @@ export const makeStyles = (colors: ThemeColors) =>
     borderColor: 'transparent',
   },
   reactionPillMine: { borderColor: colors.ember },
-  reactionPillText: { fontFamily: fonts.family, fontSize: fontSizes.footnote },
+  reactionPillText: { fontFamily: fonts.family, fontSize: fontSizes.footnote, color: colors.ink },
   seenAvatar: { marginTop: 4, flexDirection: 'row', gap: 2 },
   typingBubble: {
     flexDirection: 'row',
@@ -476,7 +501,7 @@ export const makeStyles = (colors: ThemeColors) =>
     borderRadius: 5,
     backgroundColor: colors.dangerFill,
   },
-  recordingTime: { fontFamily: fonts.family, fontSize: fontSizes.body, color: colors.ink, fontWeight: '600' },
+  recordingTime: { fontFamily: fonts.family, fontSize: fontSizes.body, fontVariant: ['tabular-nums'], color: colors.ink, fontWeight: '600' },
   input: {
     fontFamily: fonts.family,
     flex: 1,

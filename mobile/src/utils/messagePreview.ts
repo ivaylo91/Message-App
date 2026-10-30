@@ -45,6 +45,28 @@ export function fileIconName(mimeType: string | null | undefined): FileIconName 
   return 'file';
 }
 
+// The small icon a conversation row puts in front of its preview, for a
+// last message that isn't plain text. Null when it is.
+export function previewIconName(message: {
+  attachment_type: AttachmentType | null;
+  attachment_mime_type: string | null;
+  call_status: CallStatus | null;
+}): FileIconName | 'camera' | 'microphone' | 'video' | 'video-slash' | null {
+  if (message.call_status) {
+    return message.call_status === 'completed' ? 'video' : 'video-slash';
+  }
+  switch (message.attachment_type) {
+    case 'image':
+      return 'camera';
+    case 'audio':
+      return 'microphone';
+    case 'file':
+      return fileIconName(message.attachment_mime_type);
+    default:
+      return null;
+  }
+}
+
 // Tiered rather than raw minutes throughout, so someone offline for a
 // few days reads as "3d ago" instead of an absurd "4320m ago". null
 // means we've never recorded a last-seen moment for them at all (e.g.

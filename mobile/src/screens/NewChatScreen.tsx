@@ -19,7 +19,7 @@ import * as profilesData from '../data/profiles';
 import { Avatar } from '../components/Avatar';
 import { Touchable } from '../components/Touchable';
 import { useContentWidth } from '../hooks/useContentWidth';
-import { fonts, fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
+import { fonts, fontSizes, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 import { ProfileSearchResult } from '../types';
 
@@ -86,6 +86,7 @@ export function NewChatScreen({ navigation }: Props) {
         </View>
 
         <View style={styles.searchBar}>
+          <Icon name="magnifying-glass" size={18} color={colors.smoke} />
           <TextInput
             style={styles.searchInput}
             placeholder={t('newChat.searchPlaceholder')}
@@ -95,6 +96,15 @@ export function NewChatScreen({ navigation }: Props) {
             onChangeText={onChangeQuery}
             autoFocus
           />
+          {query.length > 0 && (
+            <Touchable
+              onPress={() => onChangeQuery('')}
+              accessibilityRole="button"
+              accessibilityLabel={t('newChat.a11yClearSearch')}
+            >
+              <Icon name="xmark" size={16} color={colors.smoke} />
+            </Touchable>
+          )}
         </View>
 
         <ScrollView
@@ -153,23 +163,27 @@ const makeStyles = (colors: ThemeColors) =>
   container: { flex: 1, backgroundColor: colors.paper, paddingTop: spacing.lg },
   content: { flex: 1, width: '100%', alignSelf: 'center' },
   header: {
+    minHeight: 44 + spacing.sm,
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
+    paddingBottom: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cancelButton: { position: 'absolute', left: spacing.lg, top: 0 },
+  cancelButton: { position: 'absolute', left: spacing.lg, top: 0, height: 44, justifyContent: 'center' },
   cancelText: { fontFamily: fonts.family, color: colors.emberText, fontSize: fontSizes.body, fontWeight: '600' },
   title: { fontFamily: fonts.family, fontSize: fontSizes.bodyLg, fontWeight: '700', color: colors.ink },
   searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
     marginHorizontal: spacing.lg,
     marginBottom: spacing.md,
-    backgroundColor: colors.paper2,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.line,
+    minHeight: 46,
+    paddingHorizontal: 14,
+    backgroundColor: colors.fill,
+    borderRadius: 14,
   },
-  searchInput: { fontFamily: fonts.family, paddingHorizontal: 14, paddingVertical: 10, fontSize: fontSizes.body, color: colors.ink },
+  searchInput: { fontFamily: fonts.family, flex: 1, paddingVertical: 10, fontSize: fontSizes.body, color: colors.ink },
   spinner: { marginTop: spacing.xl },
   emptyText: {
     fontFamily: fonts.family,
@@ -186,7 +200,7 @@ const makeStyles = (colors: ThemeColors) =>
     paddingVertical: 10,
   },
   rowMain: { flex: 1 },
-  rowName: { fontFamily: fonts.family, fontWeight: '700', fontSize: fontSizes.body, color: colors.ink },
+  rowName: { fontFamily: fonts.family, fontWeight: '600', fontSize: 16, color: colors.ink },
   rowSub: { fontFamily: fonts.family, fontSize: fontSizes.caption, color: colors.smoke, marginTop: 1 },
   newGroupIcon: {
     width: 48,

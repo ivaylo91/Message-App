@@ -68,6 +68,24 @@ export function summarizeReactions(
   return Array.from(byEmoji.values());
 }
 
+// The time sits inside the last line of a message, as in every major
+// messenger, instead of on a line of its own under "Ok". It's drawn
+// absolutely in the bubble's corner, so the text has to leave room for it:
+// a run of no-break spaces after the body, wide enough for the time and the
+// tick. They read as silence to a screen reader, and the plain space in
+// front lets the whole run drop to a new line when the last line is full.
+const NBSP_PER_META_CHAR = 1.5;
+const NBSP_FOR_STATUS_TICK = 4;
+const NBSP_GAP = 2;
+
+function metaSpacer(metaText: string, hasStatus: boolean): string {
+  const count =
+    Math.ceil(metaText.length * NBSP_PER_META_CHAR) +
+    (hasStatus ? NBSP_FOR_STATUS_TICK : 0) +
+    NBSP_GAP;
+  return ` ${'\u00A0'.repeat(count)}`;
+}
+
 const WAVEFORM_BAR_COUNT = 24;
 const WAVEFORM_MIN_HEIGHT = 4;
 const WAVEFORM_MAX_HEIGHT = 20;
@@ -274,7 +292,7 @@ function AudioMessageBubble({
           );
         })}
       </Touchable>
-      <Text style={isMine ? styles.bubbleTextMine : styles.bubbleTextTheirs}>
+      <Text style={[isMine ? styles.metaTextMine : styles.metaTextTheirs, styles.audioDuration]}>
         {formatDuration(isPlaying ? Math.floor(positionMs / 1000) : totalSeconds)}
       </Text>
       {isPlaying && (
@@ -466,7 +484,7 @@ function ReactionPill({
         onPress={onPress}
       >
         <Text style={styles.reactionPillText}>
-          {summary.emoji} {summary.count > 1 ? summary.count : ''}
+          {summary.count > 1 ? `${summary.emoji} ${summary.count}` : summary.emoji}
         </Text>
       </Touchable>
     </Animated.View>
@@ -568,6 +586,24 @@ function MessageBubbleComponent({
     [message.body],
   );
 
+  // Where the time goes: on the photo, inside the last line of the text,
+  // or on its own row under anything that fills the bubble's width.
+  const isPhoto = message.attachment_type === 'image';
+  const metaPlacement: 'photo' | 'inline' | 'block' =
+    isPhoto && !message.body
+      ? 'photo'
+      : message.body && !previewUrl
+        ? 'inline'
+        : 'block';
+  const timeText = formatMessageTime(message.created_at, i18n.language);
+  const editedText = message.edited_at ? t('chat.edited') : '';
+  const metaTextStyle =
+    metaPlacement === 'photo'
+      ? styles.metaTextPhoto
+      : isMine
+        ? styles.metaTextMine
+        : styles.metaTextTheirs;
+
   const bubbleRef = useRef<View>(null);
   // The menu is for `target` - this message, or one photo in an album.
   const openMenuFor = useCallback(
@@ -602,7 +638,10 @@ function MessageBubbleComponent({
   }, [runPosition, isMine]);
 
   return (
-    <>
+    // A View rather than a fragment: an inverted list's cell is laid out
+    // column-reverse, which would draw these children bottom-up and put
+    // the dividers under the message they belong above.
+    <View>
       {dayLabel && (
         <View style={styles.dayDivider}>
           <Text style={styles.dayDividerText}>{dayLabel}</Text>
@@ -640,7 +679,7 @@ function MessageBubbleComponent({
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={[
-            message.attachment_type === 'image' ? styles.mediaBubble : styles.bubble,
+            isPhoto ? styles.mediaBubble : styles.bubble,
             { maxWidth: bubbleMaxWidth },
             runShape,
             !isMine && styles.bubbleTheirs,
@@ -712,7 +751,12 @@ function MessageBubbleComponent({
             <FileMessageBubble message={message} isMine={isMine} />
           )}
           {message.body && (
-            <Text style={isMine ? styles.bubbleTextMine : styles.bubbleTextTheirs}>
+            <Text
+              style={[
+                isMine ? styles.bubbleTextMine : styles.bubbleTextTheirs,
+                isPhoto && styles.mediaCaption,
+              ]}
+            >
               {splitMentions(message.body, mentionNames).map((part, i) =>
                 part.isMention ? (
                   <Text key={i} style={isMine ? styles.mentionMine : styles.mentionTheirs}>
@@ -739,20 +783,21 @@ function MessageBubbleComponent({
                   part.text
                 ),
               )}
+              {metaPlacement === 'inline' && metaSpacer(`${editedText} ${timeText}`, Boolean(status))}
             </Text>
           )}
           {previewUrl && !message._pending && (
             <LinkPreviewCard url={previewUrl} isMine={isMine} onLongPress={openMenu} />
           )}
-          <View style={styles.metaRow}>
-            {message.edited_at && (
-              <Text style={isMine ? styles.metaTextMine : styles.metaTextTheirs}>
-                {t('chat.edited')}
-              </Text>
-            )}
-            <Text style={isMine ? styles.metaTextMine : styles.metaTextTheirs}>
-              {formatMessageTime(message.created_at, i18n.language)}
-            </Text>
+          <View
+            style={[
+              styles.metaRow,
+              metaPlacement === 'inline' && (isPhoto ? styles.metaCaption : styles.metaInline),
+              metaPlacement === 'photo' && styles.metaPhoto,
+            ]}
+          >
+            {!!editedText && <Text style={metaTextStyle}>{editedText}</Text>}
+            <Text style={metaTextStyle}>{timeText}</Text>
             {status && (
               <Icon
                 name={STATUS_ICONS[status]}
@@ -792,7 +837,7 @@ function MessageBubbleComponent({
       )}
       </View>
       )}
-    </>
+    </View>
   );
 }
 

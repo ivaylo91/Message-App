@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { Icon } from './Icon';
 import { fonts, fontSizes, spacing, ThemeColors } from '../theme/tokens';
 import { Touchable } from './Touchable';
@@ -12,6 +13,7 @@ interface PasswordFieldProps {
 }
 
 export function PasswordField({ label, value, onChangeText }: PasswordFieldProps) {
+  const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -26,11 +28,16 @@ export function PasswordField({ label, value, onChangeText }: PasswordFieldProps
           autoCapitalize="none"
           value={value}
           onChangeText={onChangeText}
+          accessibilityLabel={label}
         />
         <Touchable
           style={styles.toggle}
           iconButton
           onPress={() => setVisible((current) => !current)}
+          accessibilityRole="button"
+          accessibilityLabel={
+            visible ? t('auth.login.hidePassword') : t('auth.login.showPassword')
+          }
         >
           <Icon
             name={visible ? 'eye-slash' : 'eye'}

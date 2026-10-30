@@ -1916,6 +1916,11 @@ export function ChatScreen({ route, navigation }: Props) {
               </Text>
             )
           )}
+          {!otherTyping && isGroup && participants.length > 0 && (
+            <Text style={styles.headerStatusOffline} numberOfLines={1}>
+              {t('chat.groupMemberCount', { count: participants.length })}
+            </Text>
+          )}
         </View>
         </Touchable>
         {!isGroup && otherParticipant && (

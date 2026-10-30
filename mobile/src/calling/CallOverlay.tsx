@@ -80,6 +80,8 @@ export function CallOverlay() {
                 style={[styles.controlButton, styles.declineButton]}
                 iconButton
                 onPress={declineCall}
+                accessibilityRole="button"
+                accessibilityLabel={t('call.a11yDeclineCall')}
               >
                 <Icon name="phone-slash" size={22} color={colors.white} />
               </Touchable>
@@ -87,33 +89,55 @@ export function CallOverlay() {
                 style={[styles.controlButton, styles.acceptButton]}
                 iconButton
                 onPress={() => void answerCall()}
+                accessibilityRole="button"
+                accessibilityLabel={t('call.a11yAcceptCall')}
               >
                 <Icon name="phone" size={22} color={colors.white} />
               </Touchable>
             </>
           ) : (
             <>
-              <Touchable style={styles.controlButton} onPress={toggleMute} iconButton>
+              <Touchable
+                style={styles.controlButton}
+                onPress={toggleMute}
+                iconButton
+                accessibilityRole="button"
+                accessibilityLabel={isMuted ? t('call.a11yUnmute') : t('call.a11yMute')}
+              >
                 <Icon
                   name={isMuted ? 'microphone-slash' : 'microphone'}
                   size={19}
                   color={colors.white}
                 />
               </Touchable>
-              <Touchable style={styles.controlButton} onPress={toggleCamera} iconButton>
+              <Touchable
+                style={styles.controlButton}
+                onPress={toggleCamera}
+                iconButton
+                accessibilityRole="button"
+                accessibilityLabel={isCameraOff ? t('call.a11yCameraOn') : t('call.a11yCameraOff')}
+              >
                 <Icon
                   name={isCameraOff ? 'video-slash' : 'video'}
                   size={19}
                   color={colors.white}
                 />
               </Touchable>
-              <Touchable style={styles.controlButton} onPress={switchCamera} iconButton>
+              <Touchable
+                style={styles.controlButton}
+                onPress={switchCamera}
+                iconButton
+                accessibilityRole="button"
+                accessibilityLabel={t('call.a11ySwitchCamera')}
+              >
                 <Icon name="camera-rotate" size={19} color={colors.white} />
               </Touchable>
               <Touchable
                 style={[styles.controlButton, styles.declineButton]}
                 iconButton
                 onPress={endCall}
+                accessibilityRole="button"
+                accessibilityLabel={t('call.a11yEndCall')}
               >
                 <Icon name="phone-slash" size={22} color={colors.white} />
               </Touchable>
