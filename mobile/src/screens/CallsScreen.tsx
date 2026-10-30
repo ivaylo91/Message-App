@@ -254,8 +254,8 @@ export function CallsScreen({ navigation }: Props) {
             }
           />
         )}
+        <FooterNav active="calls" />
       </View>
-      <FooterNav active="calls" />
     </View>
   );
 }

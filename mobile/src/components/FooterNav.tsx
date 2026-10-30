@@ -38,6 +38,13 @@ export function FooterNav({ active }: FooterNavProps) {
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
+  // Tabs are peers, so switching never builds up history: the stack is
+  // Chats, plus at most one other tab on top, and Back from either of those
+  // lands on Chats. A plain navigate() can't do this - it pushes a new copy
+  // of any screen that isn't the current one.
+  const switchTo = (route: 'Calls' | 'Profile') =>
+    active === 'chats' ? navigation.navigate(route) : navigation.replace(route);
+
   const items: Array<{
     key: FooterTab;
     icon: IconName;
@@ -52,22 +59,20 @@ export function FooterNav({ active }: FooterNavProps) {
       key: 'chats',
       icon: 'comment',
       label: t('footer.chats'),
-      // Conversations is the stack's root, so this goes back to it rather
-      // than stacking another copy.
-      onPress: () => navigation.navigate('Conversations'),
+      onPress: () => navigation.popTo('Conversations'),
       badgeCount: unreadConversationCount,
     },
     {
       key: 'calls',
       icon: 'phone',
       label: t('footer.calls'),
-      onPress: () => navigation.navigate('Calls'),
+      onPress: () => switchTo('Calls'),
     },
     {
       key: 'profile',
       icon: 'user',
       label: t('footer.profile'),
-      onPress: () => navigation.navigate('Profile'),
+      onPress: () => switchTo('Profile'),
       iconOnly: true,
     },
   ];

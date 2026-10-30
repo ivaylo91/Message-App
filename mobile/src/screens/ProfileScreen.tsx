@@ -15,6 +15,7 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import LinearGradient from 'react-native-linear-gradient';
 import { Icon } from '../components/Icon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { usePreventRemove } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
 import { setLanguage, SUPPORTED_LANGUAGES, SupportedLanguage } from '../i18n';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -29,9 +30,11 @@ import {
   type NotificationPermission,
 } from '../notifications';
 import { Avatar } from '../components/Avatar';
+import { FooterNav } from '../components/FooterNav';
 import { Touchable } from '../components/Touchable';
 import { PasswordField } from '../components/PasswordField';
 import { useConfirm } from '../components/ConfirmSheet';
+import { useToast } from '../components/Toast';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { usePresence } from '../presence/PresenceContext';
 import {
@@ -74,6 +77,7 @@ export function ProfileScreen({ navigation }: Props) {
   const { t, i18n } = useTranslation();
   const { userId, logout } = useAuth();
   const { confirm } = useConfirm();
+  const { showToast } = useToast();
   const { setSharesLastSeen } = usePresence();
   const insets = useSafeAreaInsets();
   const { contentWidth } = useContentWidth();
@@ -254,6 +258,26 @@ export function ProfileScreen({ navigation }: Props) {
   };
 
   const canSave = displayName.trim().length > 0;
+  // Everything else on this screen saves as it's changed, so only these
+  // three fields can be pending. Save shows only while they are.
+  const hasUnsavedChanges =
+    profile !== null &&
+    (displayName.trim() !== profile.display_name ||
+      username.trim() !== (profile.username ?? '') ||
+      profilesData.normalizePhone(phone) !== (profile.phone ?? ''));
+
+  // Leaving is one tap on the tab bar now, with no Cancel to make it
+  // deliberate, so edits don't quietly vanish with the screen.
+  usePreventRemove(hasUnsavedChanges, ({ data }) => {
+    void confirm({
+      title: t('profile.discardChangesTitle'),
+      message: t('profile.discardChangesMessage'),
+      cancelLabel: t('profile.keepEditing'),
+      options: [{ id: 'discard', label: t('profile.discardChanges'), destructive: true }],
+    }).then((choice) => {
+      if (choice === 'discard') navigation.dispatch(data.action);
+    });
+  });
 
   const onSave = async () => {
     if (!userId || !canSave) return;
@@ -272,12 +296,17 @@ export function ProfileScreen({ navigation }: Props) {
 
     setIsSaving(true);
     try {
-      await profilesData.updateProfile(userId, {
+      const saved = {
         display_name: displayName.trim(),
         username: trimmedUsername || null,
         phone: trimmedPhone || null,
-      });
-      navigation.goBack();
+      };
+      await profilesData.updateProfile(userId, saved);
+      setProfile((current) => (current ? { ...current, ...saved } : current));
+      setDisplayName(saved.display_name);
+      setUsername(trimmedUsername);
+      setPhone(trimmedPhone);
+      showToast(t('profile.savedToast'));
     } catch (err) {
       const message = err instanceof Error ? err.message : '';
       if (message.includes('profiles_username_key')) {
@@ -293,37 +322,34 @@ export function ProfileScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + spacing.md }]}>
+    <View style={[styles.container, { paddingTop: insets.top + spacing.lg }]}>
       <View style={[styles.content, { maxWidth: contentWidth }]}>
         <View style={styles.header}>
-          <Touchable
-            style={styles.cancelButton}
-            onPress={() => navigation.goBack()}
-            accessibilityRole="button"
-          >
-            <Text style={styles.cancelText}>{t('profile.cancel')}</Text>
-          </Touchable>
-          <Text style={styles.title}>{t('profile.title')}</Text>
-          <Touchable
-            style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
-            onPress={() => void onSave()}
-            disabled={isSaving || !canSave}
-            accessibilityRole="button"
-            accessibilityState={{ disabled: isSaving || !canSave }}
-          >
-            {isSaving ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Text style={[styles.saveText, !canSave && styles.saveTextDisabled]}>
-                {t('profile.save')}
-              </Text>
-            )}
-          </Touchable>
+          <Text style={styles.title} accessibilityRole="header">
+            {t('profile.title')}
+          </Text>
+          {hasUnsavedChanges && (
+            <Touchable
+              style={[styles.saveButton, !canSave && styles.saveButtonDisabled]}
+              onPress={() => void onSave()}
+              disabled={isSaving || !canSave}
+              accessibilityRole="button"
+              accessibilityState={{ disabled: isSaving || !canSave }}
+            >
+              {isSaving ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text style={[styles.saveText, !canSave && styles.saveTextDisabled]}>
+                  {t('profile.save')}
+                </Text>
+              )}
+            </Touchable>
+          )}
         </View>
 
         <ScrollView
           style={styles.scroll}
-          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + spacing.xxl }]}
+          contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
@@ -625,6 +651,7 @@ export function ProfileScreen({ navigation }: Props) {
         </View>
         <Text style={styles.footerNote}>Hearth · {t('welcome.copyright')}</Text>
         </ScrollView>
+        <FooterNav active="profile" />
       </View>
 
       <Modal
@@ -681,18 +708,24 @@ const makeStyles = (colors: ThemeColors) =>
   container: { flex: 1, backgroundColor: colors.paper },
   content: { flex: 1, width: '100%', alignSelf: 'center' },
   scroll: { flex: 1 },
-  scrollContent: { paddingHorizontal: spacing.lg + 4, gap: spacing.xl },
+  scrollContent: { paddingHorizontal: spacing.lg + 4, paddingBottom: spacing.xl, gap: spacing.xl },
+  // The same title the other two tabs open with. minHeight holds the space
+  // Save appears in, so the page doesn't jump when an edit starts.
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    minHeight: 44,
+    minHeight: 40 + spacing.lg,
     paddingHorizontal: spacing.lg + 4,
-    paddingBottom: spacing.md,
+    paddingBottom: spacing.lg,
   },
-  cancelButton: { minHeight: 44, paddingHorizontal: 4, justifyContent: 'center' },
-  cancelText: { fontFamily: fonts.family, color: colors.smoke, fontSize: 16, fontWeight: '500' },
-  title: { fontFamily: fonts.family, fontSize: fontSizes.bodyLg, fontWeight: '700', color: colors.ink },
+  title: {
+    fontSize: 30,
+    fontFamily: fonts.family,
+    fontWeight: '800',
+    letterSpacing: -0.9,
+    color: colors.ink,
+  },
   saveButton: {
     minWidth: 76,
     height: 40,
