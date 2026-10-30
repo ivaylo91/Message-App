@@ -1,6 +1,5 @@
 import React, { useMemo } from 'react';
 import { Modal, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
 import LinearGradient from 'react-native-linear-gradient';
 import { Icon } from './Icon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,7 +7,6 @@ import { Touchable } from './Touchable';
 import { elevation, fonts, fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 import { useBubbleGradients } from '../theme/chatTheme';
-import { SPRING_SHEET } from '../theme/motion';
 
 // The long-press menu for a message, replacing the strip that used to open
 // under the bubble - which scrolled sideways and hid Forward, Edit, Delete
@@ -105,28 +103,21 @@ export function MessageMenu({
     >
       {target && (
         <>
-          <Animated.View
-            // Entry only: closing hides the Modal at once, so an exit
-            // animation here would never be seen - and an instant close is
-            // what you want after picking an action anyway.
-            entering={FadeIn.duration(160)}
-            style={[StyleSheet.absoluteFill, styles.scrim]}
-          >
+          {/* No entry or exit animation: the menu appears at once, right
+              under the finger that long-pressed. */}
+          <View style={[StyleSheet.absoluteFill, styles.scrim]}>
             <Touchable
               style={StyleSheet.absoluteFill}
               onPress={onClose}
               ripple={null}
               accessibilityRole="button"
             />
-          </Animated.View>
+          </View>
 
           {/* box-none: taps between the pieces fall through to the scrim. */}
           <View style={[styles.stack, align, { top }]} pointerEvents="box-none">
             {reactions.length > 0 && (
-              <Animated.View
-                entering={ZoomIn.springify().damping(SPRING_SHEET.damping).stiffness(SPRING_SHEET.stiffness)}
-                style={styles.reactionBar}
-              >
+              <View style={styles.reactionBar}>
                 {reactions.map((emoji) => {
                   const selected = reactedEmojis.has(emoji);
                   return (
@@ -144,10 +135,10 @@ export function MessageMenu({
                     </Touchable>
                   );
                 })}
-              </Animated.View>
+              </View>
             )}
 
-            <Animated.View entering={FadeIn.duration(140)} pointerEvents="none">
+            <View pointerEvents="none">
               <LinearGradient
                 colors={target.isMine ? [...gradients.mine] : [...gradients.theirs]}
                 start={{ x: 0, y: 0 }}
@@ -161,12 +152,9 @@ export function MessageMenu({
                   {target.previewText}
                 </Text>
               </LinearGradient>
-            </Animated.View>
+            </View>
 
-            <Animated.View
-              entering={ZoomIn.springify().damping(SPRING_SHEET.damping).stiffness(SPRING_SHEET.stiffness)}
-              style={styles.actions}
-            >
+            <View style={styles.actions}>
               {actions.map((action, index) => (
                 <Touchable
                   key={action.id}
@@ -186,7 +174,7 @@ export function MessageMenu({
                   />
                 </Touchable>
               ))}
-            </Animated.View>
+            </View>
           </View>
         </>
       )}
@@ -232,8 +220,8 @@ const makeStyles = (colors: ThemeColors) =>
       borderRadius: radii.bubble,
     },
     // Same type as the bubble it copies (bubbleTextMine/Theirs in ChatScreen).
-    previewTextMine: { fontFamily: fonts.family, fontSize: fontSizes.body, lineHeight: 20, color: colors.white },
-    previewTextTheirs: { fontFamily: fonts.family, fontSize: fontSizes.body, lineHeight: 20, color: colors.ink },
+    previewTextMine: { fontFamily: fonts.family, fontSize: 16, lineHeight: 22, color: '#FFFFFF' },
+    previewTextTheirs: { fontFamily: fonts.family, fontSize: 16, lineHeight: 22, color: colors.ink },
     actions: {
       width: MENU_WIDTH,
       paddingVertical: spacing.sm,
