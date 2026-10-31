@@ -128,6 +128,25 @@ export function isSameDay(isoA: string, isoB: string): boolean {
   );
 }
 
+// Building an Intl.DateTimeFormat is what's slow, not using one: measured on
+// Hermes on Android, about 15ms to build against under 0.1ms to format. A
+// chat renders one per message, so building them fresh cost most of the time
+// it took to open one. Each locale and options pair is built once.
+const dateFormatters = new Map<string, Intl.DateTimeFormat>();
+
+function dateFormatter(
+  locale: string | undefined,
+  options: Intl.DateTimeFormatOptions,
+): Intl.DateTimeFormat {
+  const key = `${locale}|${JSON.stringify(options)}`;
+  let formatter = dateFormatters.get(key);
+  if (!formatter) {
+    formatter = new Intl.DateTimeFormat(locale, options);
+    dateFormatters.set(key, formatter);
+  }
+  return formatter;
+}
+
 // Wall-clock time for a message bubble. Goes through Intl so 12h/24h
 // follows the reader's locale (3:45 PM vs 15:45) rather than being
 // hardcoded to one of them - Hermes bundles Intl on both platforms for
@@ -136,10 +155,7 @@ export function isSameDay(isoA: string, isoB: string): boolean {
 export function formatMessageTime(isoDate: string, locale?: string): string {
   const date = new Date(isoDate);
   try {
-    return new Intl.DateTimeFormat(locale, {
-      hour: 'numeric',
-      minute: '2-digit',
-    }).format(date);
+    return dateFormatter(locale, { hour: 'numeric', minute: '2-digit' }).format(date);
   } catch {
     return `${date.getHours()}:${date.getMinutes().toString().padStart(2, '0')}`;
   }
@@ -167,9 +183,9 @@ export function formatListTimestamp(
 
   try {
     if (daysAgo < 7) {
-      return new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(date);
+      return dateFormatter(locale, { weekday: 'short' }).format(date);
     }
-    return new Intl.DateTimeFormat(
+    return dateFormatter(
       locale,
       date.getFullYear() === now.getFullYear()
         ? { day: 'numeric', month: 'short' }
@@ -198,7 +214,7 @@ export function formatMessageDay(
   if (daysAgo === 1) return t('chat.yesterday');
 
   try {
-    return new Intl.DateTimeFormat(locale, {
+    return dateFormatter(locale, {
       day: 'numeric',
       month: 'long',
       ...(date.getFullYear() === now.getFullYear() ? {} : { year: 'numeric' }),

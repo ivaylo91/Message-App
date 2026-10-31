@@ -47,16 +47,14 @@ const ICON_BUTTON_HIT_SLOP = 6;
 
 const PRESS_SCALE = 0.92;
 
-export function Touchable({
-  style,
-  children,
-  ripple,
-  iconButton = false,
-  pressScale = false,
-  pressedOpacity = 0.6,
-  ...rest
-}: TouchableProps) {
-  const { colors } = useTheme();
+export function Touchable({ pressScale = false, ...props }: TouchableProps) {
+  return pressScale ? <ScalingTouchable {...props} /> : <PlainTouchable {...props} />;
+}
+
+// Split off so a shared value and an animated style are only set up where
+// something actually scales. Every row and bubble has Touchables, nearly all
+// of which don't, and in a chat that added up to a measurable cost.
+function ScalingTouchable(props: Omit<TouchableProps, 'pressScale'>) {
   const scale = useSharedValue(1);
   const scaleStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
@@ -67,23 +65,34 @@ export function Touchable({
     [scale],
   );
 
-  const onPressIn = useCallback(
-    (event: Parameters<NonNullable<PressableProps['onPressIn']>>[0]) => {
-      if (pressScale) springTo(PRESS_SCALE);
-      rest.onPressIn?.(event);
-    },
-    [pressScale, springTo, rest],
+  return (
+    <Animated.View style={scaleStyle}>
+      <PlainTouchable
+        {...props}
+        onPressIn={(event) => {
+          springTo(PRESS_SCALE);
+          props.onPressIn?.(event);
+        }}
+        onPressOut={(event) => {
+          springTo(1);
+          props.onPressOut?.(event);
+        }}
+      />
+    </Animated.View>
   );
+}
 
-  const onPressOut = useCallback(
-    (event: Parameters<NonNullable<PressableProps['onPressOut']>>[0]) => {
-      if (pressScale) springTo(1);
-      rest.onPressOut?.(event);
-    },
-    [pressScale, springTo, rest],
-  );
+function PlainTouchable({
+  style,
+  children,
+  ripple,
+  iconButton = false,
+  pressedOpacity = 0.6,
+  ...rest
+}: Omit<TouchableProps, 'pressScale'>) {
+  const { colors } = useTheme();
 
-  const pressable = (
+  return (
     <Pressable
       hitSlop={iconButton ? ICON_BUTTON_HIT_SLOP : undefined}
       style={({ pressed }) => [
@@ -109,15 +118,8 @@ export function Touchable({
             }
       }
       {...rest}
-      onPressIn={onPressIn}
-      onPressOut={onPressOut}
     >
       {children}
     </Pressable>
-  );
-
-  if (!pressScale) return pressable;
-  return (
-    <Animated.View style={scaleStyle}>{pressable}</Animated.View>
   );
 }

@@ -18,6 +18,26 @@ import {
 const t = ((key: string, options?: Record<string, unknown>) =>
   options ? `${key}:${JSON.stringify(options)}` : key) as unknown as TFunction;
 
+describe('date formatters', () => {
+  it('builds each one once, since building is the slow part', () => {
+    const build = jest.spyOn(Intl, 'DateTimeFormat');
+    const iso = '2026-10-30T10:00:00Z';
+    // A locale no other test uses, so this starts from nothing cached.
+    formatMessageTime(iso, 'fr');
+    formatMessageTime('2026-10-30T11:00:00Z', 'fr');
+    formatMessageTime('2026-10-30T12:00:00Z', 'fr');
+    expect(build).toHaveBeenCalledTimes(1);
+    build.mockRestore();
+  });
+
+  it('keeps locales apart', () => {
+    const iso = '2026-10-30T10:00:00Z';
+    const french = formatMessageDay('2026-01-05T10:00:00Z', ((k: string) => k) as TFunction, 'fr', new Date(iso));
+    const german = formatMessageDay('2026-01-05T10:00:00Z', ((k: string) => k) as TFunction, 'de', new Date(iso));
+    expect(french).not.toBe(german);
+  });
+});
+
 describe('attachmentPreviewText', () => {
   test('names each attachment kind', () => {
     expect(attachmentPreviewText('image', null, t)).toBe('conversations.photoPreview');

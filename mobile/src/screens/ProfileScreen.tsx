@@ -67,6 +67,10 @@ const THEME_PREFERENCE_LABEL_KEYS: Record<ThemePreference, string> = {
   dark: 'profile.themeDark',
 };
 
+// Avatars show at 112 at most, and everyone with this person in their chat
+// list downloads the file.
+const AVATAR_MAX_DIMENSION = 512;
+
 const USERNAME_PATTERN = /^[a-zA-Z0-9_]{3,20}$/;
 // Hosted from docs/privacy-policy.html - requires GitHub Pages enabled on
 // this repo (Settings > Pages > Deploy from a branch > main > /docs).
@@ -178,6 +182,8 @@ export function ProfileScreen({ navigation }: Props) {
     const result = await launchImageLibrary({
       mediaType: 'photo',
       quality: 0.7,
+      maxWidth: AVATAR_MAX_DIMENSION,
+      maxHeight: AVATAR_MAX_DIMENSION,
       includeBase64: true,
     });
     const asset = result.assets?.[0];

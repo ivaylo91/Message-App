@@ -129,6 +129,9 @@ const REPORT_REASON_LABEL_KEYS: Record<ReportReason, string> = {
 };
 const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
 const MAX_IMAGE_SELECTION = 10;
+// Sharp full screen on a phone, without every viewer of the chat downloading
+// the camera's full resolution for a thumbnail 220 wide.
+const MAX_IMAGE_DIMENSION = 1600;
 const SEARCH_DEBOUNCE_MS = 300;
 // Roughly a screenful of history before the jump-to-latest button is
 // worth offering.
@@ -809,6 +812,8 @@ export function ChatScreen({ route, navigation }: Props) {
     const result = await launchImageLibrary({
       mediaType: 'photo',
       quality: 0.7,
+      maxWidth: MAX_IMAGE_DIMENSION,
+      maxHeight: MAX_IMAGE_DIMENSION,
       selectionLimit: MAX_IMAGE_SELECTION,
     });
     const assets = result.assets ?? [];
