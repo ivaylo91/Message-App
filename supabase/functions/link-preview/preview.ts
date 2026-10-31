@@ -56,6 +56,59 @@ const BLOCKED_V4: [string, number][] = [
   ["240.0.0.0", 4], // reserved, incl. broadcast
 ];
 
+// The eight 16-bit groups of an IPv6 address, or null if it isn't one.
+// Worked out numerically because the same address has many spellings, and
+// the URL parser picks one nobody would look for: [::ffff:169.254.169.254]
+// reaches here as ::ffff:a9fe:a9fe.
+function ipv6Groups(address: string): number[] | null {
+  let text = address;
+  // A dotted tail (::ffff:1.2.3.4) is two groups written differently.
+  const dotted = text.match(/^(.*:)(\d+\.\d+\.\d+\.\d+)$/);
+  if (dotted) {
+    const v4 = ipv4ToInt(dotted[2]);
+    if (v4 === null) return null;
+    text = `${dotted[1]}${Math.floor(v4 / 65536).toString(16)}:${(v4 % 65536).toString(16)}`;
+  }
+  const sides = text.split("::");
+  if (sides.length > 2) return null;
+  const head = sides[0] ? sides[0].split(":") : [];
+  const tail = sides[1] ? sides[1].split(":") : [];
+  const missing = 8 - head.length - tail.length;
+  if (sides.length === 1 ? missing !== 0 : missing < 1) return null;
+  const parts = [...head, ...Array(missing).fill("0"), ...tail];
+  if (!parts.every((part) => /^[0-9a-f]{1,4}$/.test(part))) return null;
+  return parts.map((part) => parseInt(part, 16));
+}
+
+function isBlockedEmbeddedV4(high: number, low: number): boolean {
+  return isBlockedAddress(`${high >> 8}.${high & 255}.${low >> 8}.${low & 255}`);
+}
+
+function isBlockedIpv6(address: string): boolean {
+  const groups = ipv6Groups(address);
+  if (!groups) return true; // neither form - refuse rather than guess
+  const [a, b, c, d, e, f, g, h] = groups;
+  const firstFiveZero = a === 0 && b === 0 && c === 0 && d === 0 && e === 0;
+
+  // ::/96 - unspecified, loopback and the old IPv4-compatible form.
+  if (firstFiveZero && f === 0) return true;
+  // ::ffff:0:0/96 - IPv4-mapped, which reaches the IPv4 address itself.
+  if (firstFiveZero && f === 0xffff) return isBlockedEmbeddedV4(g, h);
+  // 64:ff9b::/96 - NAT64 and 2002::/16 - 6to4 both carry an IPv4 address.
+  if (a === 0x64 && b === 0xff9b && c === 0 && d === 0 && e === 0 && f === 0) {
+    return isBlockedEmbeddedV4(g, h);
+  }
+  if (a === 0x2002) return isBlockedEmbeddedV4(b, c);
+  if (a === 0x2001 && b === 0) return true; // 2001::/32 Teredo tunnelling
+  if (a === 0x2001 && b === 0xdb8) return true; // 2001:db8::/32 documentation
+  if (a === 0x100 && b === 0 && c === 0 && d === 0) return true; // 100::/64 discard
+  if ((a & 0xfe00) === 0xfc00) return true; // fc00::/7 unique local
+  if ((a & 0xffc0) === 0xfe80) return true; // fe80::/10 link-local
+  if ((a & 0xffc0) === 0xfec0) return true; // fec0::/10 site-local
+  if ((a & 0xff00) === 0xff00) return true; // ff00::/8 multicast
+  return false;
+}
+
 // True for any address that isn't on the public internet - where a
 // preview fetch must never go, since the function runs inside the
 // provider's network.
@@ -70,15 +123,7 @@ export function isBlockedAddress(address: string): boolean {
   }
   const v6 = address.toLowerCase().replace(/^\[|\]$/g, "");
   if (!v6.includes(":")) return true; // neither form - refuse rather than guess
-  if (v6 === "::" || v6 === "::1") return true; // unspecified, loopback
-  // IPv4-mapped (::ffff:a.b.c.d) - judge the embedded IPv4 address.
-  const mapped = v6.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
-  if (mapped) return isBlockedAddress(mapped[1]);
-  const first = parseInt(v6.split(":")[0] || "0", 16);
-  if ((first & 0xfe00) === 0xfc00) return true; // fc00::/7 unique local
-  if ((first & 0xffc0) === 0xfe80) return true; // fe80::/10 link-local
-  if ((first & 0xff00) === 0xff00) return true; // ff00::/8 multicast
-  return false;
+  return isBlockedIpv6(v6);
 }
 
 const ENTITIES: Record<string, string> = {

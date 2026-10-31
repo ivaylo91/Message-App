@@ -75,6 +75,19 @@ export function OutboxProvider({ children }: { children: React.ReactNode }) {
     void saveOutbox(entries);
   }, [entries]);
 
+  // The queue isn't tied to an account, and flush() sends as whoever is
+  // signed in, so one person's unsent messages must not survive into the
+  // next person's session on this phone. Only on a real sign-out: userId is
+  // also null for a moment on every launch, while the session is read.
+  const previousUserIdRef = useRef(userId);
+  useEffect(() => {
+    if (previousUserIdRef.current && !userId) {
+      entriesRef.current = [];
+      setEntries([]);
+    }
+    previousUserIdRef.current = userId;
+  }, [userId]);
+
   // Removes an entry from both the ref and the React state that mirrors
   // it, synchronously and in that order. This matters because flush()'s
   // loop re-checks entriesRef.current on its very next iteration with no

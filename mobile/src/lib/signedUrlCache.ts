@@ -12,6 +12,14 @@ function storageKey(bucket: string, path: string): string {
   return `${STORAGE_PREFIX}${bucket}:${path}`;
 }
 
+// A signed URL opens a private file for anyone holding it, so none outlive
+// the session that was allowed to see the file.
+export async function clearSignedUrlCache(): Promise<void> {
+  memoryCache.clear();
+  const keys = await AsyncStorage.getAllKeys();
+  await AsyncStorage.removeMany(keys.filter((key) => key.startsWith(STORAGE_PREFIX)));
+}
+
 // Signed URLs are cached by storage path (not just held in memory) so
 // the *same* URL string survives an app restart. That matters beyond
 // avoiding a re-sign round trip: FastImage's disk cache is keyed on the

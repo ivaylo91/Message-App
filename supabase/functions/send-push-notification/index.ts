@@ -213,7 +213,10 @@ async function handleReaction(
 }
 
 Deno.serve(async (req: Request) => {
-  if (WEBHOOK_SECRET && req.headers.get("x-webhook-secret") !== WEBHOOK_SECRET) {
+  // Anyone can reach this URL (verify_jwt is off for the database trigger),
+  // so the secret is the only check there is. With it unset, refuse rather
+  // than let every request through.
+  if (!WEBHOOK_SECRET || req.headers.get("x-webhook-secret") !== WEBHOOK_SECRET) {
     return new Response("Unauthorized", { status: 401 });
   }
   if (!FIREBASE_SERVICE_ACCOUNT) {

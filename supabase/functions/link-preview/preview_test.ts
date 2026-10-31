@@ -42,6 +42,40 @@ Deno.test("isBlockedAddress: public IPv4 is allowed, including near the private 
   }
 });
 
+Deno.test("isBlockedAddress: private IPv4 is blocked in every IPv6 spelling", () => {
+  // What `new URL()` turns [::ffff:169.254.169.254] and friends into, which
+  // is what reaches the check - the dotted form never does for a literal.
+  for (const ip of [
+    "[::ffff:7f00:1]", // ::ffff:127.0.0.1
+    "[::ffff:a9fe:a9fe]", // ::ffff:169.254.169.254
+    "::ffff:a00:1", // 10.0.0.1
+    "0:0:0:0:0:ffff:7f00:1",
+    "::7f00:1", // IPv4-compatible
+    "64:ff9b::a9fe:a9fe", // NAT64
+    "2002:a9fe:a9fe::", // 6to4
+    "2001:0:4136:e378::1", // Teredo
+    "2001:db8::1",
+    "fec0::1",
+    "100::1",
+    "fe80::1%eth0",
+  ]) {
+    assertEquals(isBlockedAddress(ip), true, ip);
+  }
+});
+
+Deno.test("isBlockedAddress: public addresses survive the same checks", () => {
+  for (const ip of [
+    "2606:4700:4700::1111",
+    "2a00:1450:4001:81a::200e",
+    "::ffff:8.8.8.8",
+    "::ffff:808:808",
+    "64:ff9b::808:808",
+    "2002:808:808::",
+  ]) {
+    assertEquals(isBlockedAddress(ip), false, ip);
+  }
+});
+
 Deno.test("isBlockedAddress: IPv6 loopback, unique-local, link-local and mapped-private are blocked", () => {
   for (const ip of ["::1", "::", "fc00::1", "fd12:3456::1", "fe80::1", "ff02::1", "::ffff:127.0.0.1", "[::1]"]) {
     assertEquals(isBlockedAddress(ip), true, ip);

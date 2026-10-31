@@ -163,6 +163,19 @@ Deno.serve(async (req: Request) => {
       return new Response(JSON.stringify({ skipped: true }), { status: 200 });
     }
 
+    // Either direction, matching the block on messages. The same answer as
+    // any other skip, so a caller can't tell they've been blocked.
+    const { data: blocks, error: blocksError } = await supabase
+      .from("blocked_users")
+      .select("blocker_id")
+      .in("blocker_id", [user.id, calleeUserId])
+      .in("blocked_id", [user.id, calleeUserId])
+      .limit(1);
+    if (blocksError) throw blocksError;
+    if (blocks?.length) {
+      return new Response(JSON.stringify({ skipped: true }), { status: 200 });
+    }
+
     const { data: tokens, error: tokensError } = await supabase
       .from("push_tokens")
       .select("token")

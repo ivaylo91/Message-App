@@ -6,6 +6,7 @@ import React, {
   useMemo,
   useState,
 } from 'react';
+import FastImage from '@d11/react-native-fast-image';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { RESET_PASSWORD_URL } from '../config/env';
@@ -42,7 +43,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, newSession) => {
       setSession(newSession);
-      if (event === 'SIGNED_OUT') void clearChatCaches().catch(() => {});
+      if (event === 'SIGNED_OUT') {
+        void clearChatCaches().catch(() => {});
+        // Downloaded photos and avatars from private chats.
+        void FastImage.clearMemoryCache().catch(() => {});
+        void FastImage.clearDiskCache().catch(() => {});
+      }
     });
 
     return () => subscription.unsubscribe();

@@ -18,7 +18,13 @@ export const keychainStorage = {
   },
 
   async setItem(key: string, value: string): Promise<void> {
-    await Keychain.setGenericPassword(USERNAME_PLACEHOLDER, value, { service: key });
+    await Keychain.setGenericPassword(USERNAME_PLACEHOLDER, value, {
+      service: key,
+      // iOS. Stays on this device, out of iCloud Keychain and backups. After
+      // first unlock rather than while unlocked, because replying from a
+      // notification reads the session with the phone locked.
+      accessible: Keychain.ACCESSIBLE.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
+    });
   },
 
   async removeItem(key: string): Promise<void> {

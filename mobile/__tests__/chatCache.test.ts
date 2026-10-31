@@ -102,6 +102,14 @@ describe('the chat list on disk', () => {
     expect(await loadCachedConversations('u1')).toBeNull();
     expect(await AsyncStorage.getItem('chatFilter:v1')).toBe('unread');
   });
+
+  it('takes unsent drafts and signed URLs with it', async () => {
+    await AsyncStorage.setItem('draft:v1:c1', SECRET);
+    await AsyncStorage.setItem('signedUrl:avatars:u1.jpg', '{"url":"https://x"}');
+    await clearChatCaches();
+    expect(await AsyncStorage.getItem('draft:v1:c1')).toBeNull();
+    expect(await AsyncStorage.getItem('signedUrl:avatars:u1.jpg')).toBeNull();
+  });
 });
 
 describe('open chats in memory', () => {

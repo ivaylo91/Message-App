@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { clearSignedUrlCache } from '../lib/signedUrlCache';
 import { Conversation, Message, MessageReaction } from '../types';
 
 // What makes the app open on content instead of placeholders, in two tiers
@@ -15,6 +16,8 @@ import { Conversation, Message, MessageReaction } from '../types';
 // waits for the network.
 
 const LIST_KEY_PREFIX = 'conversationList:v1:';
+// Unsent text, in the plaintext store. See draftStorage.ts.
+const DRAFT_KEY_PREFIX = 'draft:v1:';
 const MAX_CACHED_CONVERSATIONS = 50;
 const MAX_CACHED_CHATS = 20;
 
@@ -93,5 +96,8 @@ export function setCachedChat(conversationId: string, chat: CachedChat): void {
 export async function clearChatCaches(): Promise<void> {
   chats.clear();
   const keys = await AsyncStorage.getAllKeys();
-  await AsyncStorage.removeMany(keys.filter((key) => key.startsWith(LIST_KEY_PREFIX)));
+  await AsyncStorage.removeMany(
+    keys.filter((key) => key.startsWith(LIST_KEY_PREFIX) || key.startsWith(DRAFT_KEY_PREFIX)),
+  );
+  await clearSignedUrlCache();
 }
