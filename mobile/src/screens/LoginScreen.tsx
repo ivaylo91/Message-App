@@ -13,6 +13,7 @@ import { Icon } from '../components/Icon';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
+import { FormError } from '../components/FormError';
 import { Touchable } from '../components/Touchable';
 import { PasswordField } from '../components/PasswordField';
 import { useToast } from '../components/Toast';
@@ -106,7 +107,7 @@ export function LoginScreen({ navigation }: Props) {
         <Text style={s.forgotPasswordText}>{t('auth.login.forgotPassword')}</Text>
       </Touchable>
 
-      {error && <Text style={s.error}>{error}</Text>}
+      {error && <FormError message={error} style={s.error} />}
 
       <Touchable
         style={[s.primaryButton, isSubmitting && s.primaryButtonDisabled]}

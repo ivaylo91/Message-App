@@ -13,6 +13,7 @@ import { FADE_MS } from '../theme/motion';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { fonts, fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
+import { announce } from '../utils/announce';
 
 type ToastKind = 'success' | 'error';
 
@@ -49,6 +50,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     (message: string, kind: ToastKind = 'success') => {
       if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
       setToast({ message, kind });
+      announce(message);
       opacity.value = 0;
       opacity.value = withTiming(1, { duration: FADE_MS });
       hideTimeoutRef.current = setTimeout(() => {

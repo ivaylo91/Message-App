@@ -41,15 +41,19 @@ export function CallsScreen({ navigation }: Props) {
   const [filter, setFilter] = useState<CallFilter>('all');
 
   const load = useCallback(async () => {
-    setIsRefreshing(true);
     try {
       setCalls(await conversationsData.fetchCallLog());
     } catch {
       setCalls((current) => current ?? []);
-    } finally {
-      setIsRefreshing(false);
     }
   }, []);
+
+  // The spinner is only for a refresh someone asked for, as on the Chats tab.
+  const onPullToRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await load();
+    setIsRefreshing(false);
+  }, [load]);
 
   // A call that just ended should be here when you come back to the tab.
   useFocusEffect(
@@ -235,7 +239,7 @@ export function CallsScreen({ navigation }: Props) {
             refreshControl={
               <RefreshControl
                 refreshing={isRefreshing}
-                onRefresh={load}
+                onRefresh={onPullToRefresh}
                 colors={[colors.ember]}
                 tintColor={colors.ember}
                 progressBackgroundColor={colors.paper2}

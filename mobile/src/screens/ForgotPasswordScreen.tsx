@@ -12,6 +12,7 @@ import { Icon } from '../components/Icon';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
+import { FormError } from '../components/FormError';
 import { Touchable } from '../components/Touchable';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { spacing } from '../theme/tokens';
@@ -87,7 +88,7 @@ export function ForgotPasswordScreen({ navigation }: Props) {
               />
             </View>
 
-            {error && <Text style={s.error}>{error}</Text>}
+            {error && <FormError message={error} style={s.error} />}
 
             <Touchable
               style={[s.primaryButton, (isSubmitting || !email.trim()) && s.primaryButtonDisabled]}

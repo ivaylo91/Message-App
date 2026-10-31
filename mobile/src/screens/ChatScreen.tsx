@@ -38,6 +38,7 @@ import * as mediaData from '../data/media';
 import * as moderationData from '../data/moderation';
 import type { ReportReason } from '../data/moderation';
 import { Avatar } from '../components/Avatar';
+import { OfflineBanner } from '../components/OfflineBanner';
 import { Touchable } from '../components/Touchable';
 import { AppWallpaper } from '../components/AppWallpaper';
 import { MediaViewer } from '../components/MediaViewer';
@@ -60,6 +61,7 @@ import {
   messageIdsStartingADay,
   typingLabel,
 } from '../utils/messagePreview';
+import { announce } from '../utils/announce';
 import { haptic } from '../utils/haptics';
 import { unreadDividerMessageId } from '../utils/unreadDivider';
 import { groupPhotoAlbums } from '../utils/photoAlbums';
@@ -381,12 +383,19 @@ export function ChatScreen({ route, navigation }: Props) {
       // Counted here rather than inside the updater below, which React may
       // run twice. Realtime can redeliver, so only a message not already
       // loaded counts.
-      if (
-        isScrolledUpRef.current &&
-        incoming.sender_id !== userId &&
-        !messagesRef.current.some((m) => m.id === incoming.id)
-      ) {
-        setUnseenCount((count) => count + 1);
+      if (incoming.sender_id !== userId && !messagesRef.current.some((m) => m.id === incoming.id)) {
+        if (isScrolledUpRef.current) setUnseenCount((count) => count + 1);
+        // Nothing else tells a screen reader user a message has arrived.
+        const sender = participantsRef.current.find((p) => p.user_id === incoming.sender_id);
+        announce(
+          [
+            sender?.profiles.display_name,
+            incoming.body ||
+              attachmentPreviewText(incoming.attachment_type, incoming.attachment_name, t),
+          ]
+            .filter(Boolean)
+            .join(': '),
+        );
       }
       setMessages((current) => {
         if (current.some((m) => m.id === incoming.id)) return current;
@@ -421,7 +430,7 @@ export function ChatScreen({ route, navigation }: Props) {
       });
       markRead();
     },
-    [markRead, userId],
+    [markRead, userId, t],
   );
 
   // Split out of the focus effect so the retry button can call it too.
@@ -1966,11 +1975,7 @@ export function ChatScreen({ route, navigation }: Props) {
         </Touchable>
       </View>
 
-      {!outbox.isOnline && (
-        <View style={styles.offlineBanner}>
-          <Text style={styles.offlineBannerText}>{t('chat.offlineBanner')}</Text>
-        </View>
-      )}
+      <OfflineBanner style={styles.offlineBanner} />
 
       {isSearchOpen && (
         <View style={styles.searchBar}>
@@ -1985,6 +1990,7 @@ export function ChatScreen({ route, navigation }: Props) {
           />
           <Touchable
             onPress={onCloseSearch}
+            iconButton
             accessibilityRole="button"
             accessibilityLabel={t('chat.a11yCloseSearch')}
           >
@@ -2278,6 +2284,7 @@ export function ChatScreen({ route, navigation }: Props) {
         actions={menu?.actions ?? NO_ACTIONS}
         onReact={(emoji) => menu && onToggleReactionForMessage(menu.messageId, emoji)}
         onClose={onCloseMenu}
+        closeLabel={t('chat.cancel')}
       />
 
       <Modal

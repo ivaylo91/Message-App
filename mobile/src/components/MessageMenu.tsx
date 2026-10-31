@@ -47,6 +47,8 @@ interface Props {
   actions: MessageMenuAction[];
   onReact: (emoji: string) => void;
   onClose: () => void;
+  // Names the dimmed area around the menu, which closes it when tapped.
+  closeLabel: string;
 }
 
 const REACTION_BAR_HEIGHT = 52;
@@ -64,6 +66,7 @@ export function MessageMenu({
   actions,
   onReact,
   onClose,
+  closeLabel,
 }: Props) {
   const { colors } = useTheme();
   const gradients = useBubbleGradients();
@@ -111,6 +114,7 @@ export function MessageMenu({
               onPress={onClose}
               ripple={null}
               accessibilityRole="button"
+              accessibilityLabel={closeLabel}
             />
           </View>
 

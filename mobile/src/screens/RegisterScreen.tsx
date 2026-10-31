@@ -12,6 +12,7 @@ import { Icon } from '../components/Icon';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
+import { FormError } from '../components/FormError';
 import { Touchable } from '../components/Touchable';
 import { PasswordField } from '../components/PasswordField';
 import { useToast } from '../components/Toast';
@@ -128,7 +129,7 @@ export function RegisterScreen({ navigation }: Props) {
         onChangeText={setConfirmPassword}
       />
 
-      {error && <Text style={s.error}>{error}</Text>}
+      {error && <FormError message={error} style={s.error} />}
 
       <Touchable
         style={[s.primaryButton, isSubmitting && s.primaryButtonDisabled]}

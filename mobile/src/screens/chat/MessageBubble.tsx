@@ -454,6 +454,9 @@ function FileMessageBubble({ message, isMine }: { message: LocalMessage; isMine:
   );
 }
 
+// The pill is small and sits under a bubble, so the touch area grows past it.
+const REACTION_HIT_SLOP = 10;
+
 // Reactions used to simply appear, which for something as small and
 // incidental as a pill reads as a rendering glitch rather than as
 // somebody responding. Springing it in from 0.8 gives the arrival a
@@ -482,6 +485,10 @@ function ReactionPill({
       <Touchable
         style={[styles.reactionPill, summary.reactedByMe && styles.reactionPillMine]}
         onPress={onPress}
+        hitSlop={REACTION_HIT_SLOP}
+        accessibilityRole="button"
+        accessibilityLabel={`${summary.emoji} ${summary.count}`}
+        accessibilityState={{ selected: summary.reactedByMe }}
       >
         <Text style={styles.reactionPillText}>
           {summary.count > 1 ? `${summary.emoji} ${summary.count}` : summary.emoji}
@@ -604,6 +611,22 @@ function MessageBubbleComponent({
         ? styles.metaTextMine
         : styles.metaTextTheirs;
 
+  // A plain text message is one thing to a screen reader, read in one go. A
+  // bubble with a photo or voice message stays open, so the controls inside
+  // it can be reached: the bubble itself would otherwise swallow them.
+  const isPlainText = Boolean(message.body) && !message.attachment_type && !message.call_status;
+  const bubbleLabel = isPlainText
+    ? [
+        isMine ? t('chat.you') : senderName,
+        message.body,
+        editedText,
+        timeText,
+        status && t(`chat.status.${status}`),
+      ]
+        .filter(Boolean)
+        .join(', ')
+    : undefined;
+
   const bubbleRef = useRef<View>(null);
   // The menu is for `target` - this message, or one photo in an album.
   const openMenuFor = useCallback(
@@ -673,7 +696,25 @@ function MessageBubbleComponent({
         iconColor={colors.smoke}
       >
       <View ref={bubbleRef} collapsable={false}>
-      <Touchable onLongPress={openMenu}>
+      {/* Swiping and long-pressing aren't available to everyone, so both
+          are offered as named actions too. */}
+      <Touchable
+        onLongPress={openMenu}
+        accessible={isPlainText}
+        accessibilityLabel={bubbleLabel}
+        accessibilityActions={
+          message._pending
+            ? [{ name: 'longpress', label: t('chat.a11yMenu') }]
+            : [
+                { name: 'reply', label: t('chat.reply') },
+                { name: 'longpress', label: t('chat.a11yMenu') },
+              ]
+        }
+        onAccessibilityAction={(event) => {
+          if (event.nativeEvent.actionName === 'reply') onReply(message);
+          else if (event.nativeEvent.actionName === 'longpress') openMenu();
+        }}
+      >
         <LinearGradient
           colors={isMine ? [...gradients.mine] : [...gradients.theirs]}
           start={{ x: 0, y: 0 }}

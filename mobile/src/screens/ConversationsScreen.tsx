@@ -1,5 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, {
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
 import { scheduleOnRN } from 'react-native-worklets';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -30,9 +35,11 @@ import { useConfirm } from '../components/ConfirmSheet';
 import { useToast } from '../components/Toast';
 import { Skeleton, SkeletonGroup } from '../components/Skeleton';
 import { FooterNav } from '../components/FooterNav';
+import { OfflineBanner } from '../components/OfflineBanner';
 import { useAppForeground } from '../hooks/useAppForeground';
 import { useMuteChooser } from '../hooks/useMuteChooser';
 import { useContentWidth } from '../hooks/useContentWidth';
+import { useInviteFriend } from '../hooks/useInviteFriend';
 import { usePresence } from '../presence/PresenceContext';
 import { useUnread } from '../unread/UnreadContext';
 import { useTyping } from '../typing/TypingContext';
@@ -70,6 +77,8 @@ const FILTER_LABEL_KEYS: Record<ChatFilter, string> = {
   unread: 'conversations.filterUnread',
   groups: 'conversations.filterGroups',
 };
+// 36 tall, which keeps the header compact; the touch area grows to 48.
+const CHIP_HIT_SLOP = 6;
 const SWIPE_DELETE_WIDTH = 84;
 const SWIPE_OPEN_THRESHOLD = -40;
 
@@ -172,9 +181,28 @@ function ConversationRow({
     },
   });
 
+  // Read as one line, with the details a sighted user gets from colour and
+  // small icons. Swiping isn't available to everyone, so Delete is also an
+  // action on the row, and the button behind it stays hidden until it shows.
+  const rowLabel = [
+    title,
+    unreadCount > 0 && t('conversations.a11yUnreadCount', { count: unreadCount }),
+    markedUnread && t('conversations.markedUnread'),
+    muted && t('conversations.a11yMuted'),
+    pinned && t('conversations.pinned'),
+    draft && !isTyping ? `${t('conversations.draftPrefix')} ${draft}` : preview.trim(),
+    timestamp && formatListTimestamp(timestamp, t, i18n.language),
+  ]
+    .filter(Boolean)
+    .join(', ');
+
   return (
     <View style={styles.rowContainer}>
-      <Animated.View style={[styles.deleteAction, deleteStyle]}>
+      <Animated.View
+        style={[styles.deleteAction, deleteStyle]}
+        accessibilityElementsHidden={!isOpen}
+        importantForAccessibility={isOpen ? 'auto' : 'no-hide-descendants'}
+      >
         <Touchable
           style={styles.deleteButton}
           onPress={onDelete}
@@ -188,7 +216,21 @@ function ConversationRow({
       <Animated.View
         style={[styles.rowForeground, showsUnread && styles.rowForegroundUnread, rowStyle]}
       >
-        <Touchable style={styles.row} onPress={onPress} onLongPress={onLongPress}>
+        <Touchable
+          style={styles.row}
+          onPress={onPress}
+          onLongPress={onLongPress}
+          accessibilityRole="button"
+          accessibilityLabel={rowLabel}
+          accessibilityActions={[
+            { name: 'longpress', label: t('chat.a11yMenu') },
+            { name: 'delete', label: t('conversations.a11yDelete') },
+          ]}
+          onAccessibilityAction={(event) => {
+            if (event.nativeEvent.actionName === 'delete') onDelete();
+            else if (event.nativeEvent.actionName === 'longpress') onLongPress();
+          }}
+        >
           <Avatar
             name={title}
             avatarPath={avatarPath}
@@ -213,7 +255,6 @@ function ConversationRow({
                   name="thumbtack"
                   size={11}
                   color={colors.smoke}
-                  accessibilityLabel={t('conversations.pinned')}
                 />
               )}
               {timestamp && (
@@ -325,6 +366,8 @@ export function ConversationsScreen({ navigation }: Props) {
   const { confirm } = useConfirm();
   const { showToast } = useToast();
   const { subscribe: subscribeToMessages } = useMessageStream();
+  const reduceMotion = useReducedMotion();
+  const inviteFriend = useInviteFriend();
   const insets = useSafeAreaInsets();
   const { contentWidth } = useContentWidth();
   const { colors } = useTheme();
@@ -389,7 +432,6 @@ export function ConversationsScreen({ navigation }: Props) {
       return;
     }
     isLoadingRef.current = true;
-    setIsRefreshing(true);
     try {
       do {
         pendingReloadRef.current = false;
@@ -406,11 +448,19 @@ export function ConversationsScreen({ navigation }: Props) {
     } finally {
       isLoadingRef.current = false;
       pendingReloadRef.current = false;
-      setIsRefreshing(false);
       // Resolved either way - a genuinely empty list can now say so.
       setHasLoadedOnce(true);
     }
   }, [userId, refreshUnreadCounts]);
+
+  // The spinner is only for a refresh someone asked for. load() also runs on
+  // every focus and foreground, where it would sit over the list for nothing,
+  // and Android's RefreshControl can stick on if a load finishes too quickly.
+  const onPullToRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    await load().catch(() => {});
+    setIsRefreshing(false);
+  }, [load]);
 
   // Keeps the list current while it's on screen: a new message refreshes
   // that row's preview and moves it to the top, instead of the row
@@ -438,15 +488,19 @@ export function ConversationsScreen({ navigation }: Props) {
         // flickering rather than as a row moving. One line of
         // LayoutAnimation makes it legible as movement. It is a no-op
         // rather than an error where the platform doesn't support it.
-        LayoutAnimation.configureNext({
-          duration: 220,
-          update: { type: 'easeInEaseOut', property: 'scaleXY' },
-          create: { type: 'easeInEaseOut', property: 'opacity', duration: 160 },
-        });
+        // Reanimated follows the system's reduced motion setting by itself
+        // (see motion.ts); this is the one animation here that doesn't.
+        if (!reduceMotion) {
+          LayoutAnimation.configureNext({
+            duration: 220,
+            update: { type: 'easeInEaseOut', property: 'scaleXY' },
+            create: { type: 'easeInEaseOut', property: 'opacity', duration: 160 },
+          });
+        }
         conversationsRef.current = next;
         setConversations(next);
       }),
-    [subscribeToMessages, load],
+    [subscribeToMessages, load, reduceMotion],
   );
 
   // Long-press rather than another swipe action: the swipe already reveals
@@ -691,6 +745,8 @@ export function ConversationsScreen({ navigation }: Props) {
         </View>
       </View>
 
+      <OfflineBanner style={styles.offlineBanner} />
+
       <View style={styles.searchBar}>
         <Icon name="magnifying-glass" size={18} color={colors.smoke} />
         <TextInput
@@ -706,6 +762,7 @@ export function ConversationsScreen({ navigation }: Props) {
             // Through the handler, so a search already on its way is
             // cancelled along with the text and its results.
             onPress={() => onChangeSearch('')}
+            iconButton
             accessibilityRole="button"
             accessibilityLabel={t('conversations.a11yClearSearch')}
           >
@@ -724,6 +781,7 @@ export function ConversationsScreen({ navigation }: Props) {
                 key={filter}
                 style={[styles.filterChip, selected && styles.filterChipSelected]}
                 onPress={() => onSelectFilter(filter)}
+                hitSlop={CHIP_HIT_SLOP}
                 accessibilityRole="tab"
                 accessibilityState={{ selected }}
                 accessibilityLabel={
@@ -760,7 +818,7 @@ export function ConversationsScreen({ navigation }: Props) {
         refreshControl={
           <RefreshControl
             refreshing={isRefreshing}
-            onRefresh={load}
+            onRefresh={onPullToRefresh}
             colors={[colors.ember]}
             tintColor={colors.ember}
             progressBackgroundColor={colors.paper2}
@@ -800,7 +858,11 @@ export function ConversationsScreen({ navigation }: Props) {
                         size={56}
                         online
                       />
-                      <Text style={styles.onlineName} numberOfLines={1}>
+                      <Text
+                        style={styles.onlineName}
+                        numberOfLines={1}
+                        maxFontSizeMultiplier={MAX_FONT_SCALE_TIGHT}
+                      >
                         {firstName(profile.display_name)}
                       </Text>
                     </Touchable>
@@ -942,6 +1004,15 @@ export function ConversationsScreen({ navigation }: Props) {
                 {t('conversations.startFirstChat')}
               </Text>
             </Touchable>
+            {inviteFriend && (
+              <Touchable
+                style={styles.emptySecondaryAction}
+                onPress={inviteFriend}
+                accessibilityRole="button"
+              >
+                <Text style={styles.emptySecondaryActionText}>{t('invite.action')}</Text>
+              </Touchable>
+            )}
           </View>
           )
         }
@@ -974,6 +1045,7 @@ const makeStyles = (colors: ThemeColors) =>
     alignItems: 'center',
     justifyContent: 'center',
   },
+  offlineBanner: { marginHorizontal: spacing.lg + 4, marginBottom: spacing.sm },
   filterRow: {
     flexDirection: 'row',
     gap: spacing.sm,
@@ -1144,6 +1216,8 @@ const makeStyles = (colors: ThemeColors) =>
     backgroundColor: colors.ember,
   },
   emptyActionText: { fontFamily: fonts.family, color: '#FFFFFF', fontWeight: '700', fontSize: fontSizes.body },
+  emptySecondaryAction: { minHeight: 44, marginTop: spacing.xs, paddingHorizontal: spacing.lg, justifyContent: 'center' },
+  emptySecondaryActionText: { fontFamily: fonts.family, color: colors.emberText, fontWeight: '600', fontSize: fontSizes.body },
   emptyTitle: { fontFamily: fonts.family, color: colors.ink, fontWeight: '700', fontSize: fontSizes.body },
   emptyHint: { fontFamily: fonts.family, color: colors.smoke, marginTop: 4, fontSize: fontSizes.footnote },
 });

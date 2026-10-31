@@ -173,6 +173,7 @@ export function NewGroupScreen({ navigation }: Props) {
           {query.length > 0 && (
             <Touchable
               onPress={() => onChangeQuery('')}
+              iconButton
               accessibilityRole="button"
               accessibilityLabel={t('newGroup.a11yClearSearch')}
             >

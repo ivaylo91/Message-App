@@ -39,6 +39,7 @@ function PhotoThumbnail({
   size: number;
   onOpen: (path: string) => void;
 }) {
+  const { t } = useTranslation();
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [url, setUrl] = useState<string | null>(null);
@@ -58,6 +59,8 @@ function PhotoThumbnail({
       style={[styles.thumbnail, { width: size, height: size }]}
       onPress={() => onOpen(path)}
       disabled={!url}
+      accessibilityRole="imagebutton"
+      accessibilityLabel={t('chat.a11yOpenPhoto')}
     >
       {url ? (
         <FastImage
@@ -166,7 +169,13 @@ export function MediaGalleryScreen({ route, navigation }: Props) {
     <View style={styles.container}>
       <View style={[styles.content, { maxWidth: contentWidth }]}>
         <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
-          <Touchable style={styles.backButton} onPress={() => navigation.goBack()} iconButton>
+          <Touchable
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            iconButton
+            accessibilityRole="button"
+            accessibilityLabel={t('chat.a11yBack')}
+          >
             <Icon name="chevron-left" size={18} color={colors.ink} />
           </Touchable>
           <Text style={styles.headerTitle} numberOfLines={1}>

@@ -31,6 +31,7 @@ import {
 } from '../notifications';
 import { Avatar } from '../components/Avatar';
 import { FooterNav } from '../components/FooterNav';
+import { FormError } from '../components/FormError';
 import { Touchable } from '../components/Touchable';
 import { PasswordField } from '../components/PasswordField';
 import { useConfirm } from '../components/ConfirmSheet';
@@ -66,6 +67,9 @@ const THEME_PREFERENCE_LABEL_KEYS: Record<ThemePreference, string> = {
   light: 'profile.themeLight',
   dark: 'profile.themeDark',
 };
+
+// These controls are 36 tall; the touch area grows to 48.
+const CONTROL_HIT_SLOP = 6;
 
 // Avatars show at 112 at most, and everyone with this person in their chat
 // list downloads the file.
@@ -164,17 +168,13 @@ export function ProfileScreen({ navigation }: Props) {
     setNotificationPermission(permission);
     if (permission === 'granted') return;
 
-    Alert.alert(
-      t('profile.notificationsBlockedTitle'),
-      t('profile.notificationsBlockedMessage'),
-      [
-        { text: t('profile.cancel'), style: 'cancel' },
-        {
-          text: t('profile.notificationsOpenSettings'),
-          onPress: () => void openNotificationSettings().catch(() => {}),
-        },
-      ],
-    );
+    const choice = await confirm({
+      title: t('profile.notificationsBlockedTitle'),
+      message: t('profile.notificationsBlockedMessage'),
+      cancelLabel: t('profile.cancel'),
+      options: [{ id: 'settings', label: t('profile.notificationsOpenSettings') }],
+    });
+    if (choice === 'settings') void openNotificationSettings().catch(() => {});
   };
 
   const onChangePhoto = async () => {
@@ -288,15 +288,21 @@ export function ProfileScreen({ navigation }: Props) {
   const onSave = async () => {
     if (!userId || !canSave) return;
     setError(null);
+    // Save is at the top and the fields can be scrolled away from it, so a
+    // problem is shown in a toast too, which is visible from anywhere.
+    const fail = (message: string) => {
+      setError(message);
+      showToast(message, 'error');
+    };
 
     const trimmedUsername = username.trim();
     if (trimmedUsername && !USERNAME_PATTERN.test(trimmedUsername)) {
-      setError(t('profile.usernameInvalidError'));
+      fail(t('profile.usernameInvalidError'));
       return;
     }
     const trimmedPhone = profilesData.normalizePhone(phone);
     if (trimmedPhone && !PHONE_PATTERN.test(trimmedPhone)) {
-      setError(t('profile.phoneInvalidError'));
+      fail(t('profile.phoneInvalidError'));
       return;
     }
 
@@ -316,11 +322,11 @@ export function ProfileScreen({ navigation }: Props) {
     } catch (err) {
       const message = err instanceof Error ? err.message : '';
       if (message.includes('profiles_username_key')) {
-        setError(t('profile.usernameTakenError'));
+        fail(t('profile.usernameTakenError'));
       } else if (message.includes('profiles_phone_key')) {
-        setError(t('profile.phoneTakenError'));
+        fail(t('profile.phoneTakenError'));
       } else {
-        setError(t('profile.saveFailedError'));
+        fail(t('profile.saveFailedError'));
       }
     } finally {
       setIsSaving(false);
@@ -459,6 +465,7 @@ export function ProfileScreen({ navigation }: Props) {
               {notificationPermission === 'denied' && (
                 <Touchable
                   style={styles.enableButton}
+                  hitSlop={CONTROL_HIT_SLOP}
                   onPress={() => void onEnableNotifications()}
                   accessibilityRole="button"
                 >
@@ -577,6 +584,7 @@ export function ProfileScreen({ navigation }: Props) {
                     <Touchable
                       key={lang}
                       style={[styles.choiceChip, isSelected && styles.choiceChipActive]}
+                      hitSlop={CONTROL_HIT_SLOP}
                       onPress={() => void setLanguage(lang)}
                       accessibilityRole="radio"
                       accessibilityState={{ checked: isSelected }}
@@ -678,7 +686,9 @@ export function ProfileScreen({ navigation }: Props) {
                 setDeletePasswordError(null);
               }}
             />
-            {deletePasswordError && <Text style={styles.error}>{deletePasswordError}</Text>}
+            {deletePasswordError && (
+              <FormError message={deletePasswordError} style={styles.error} />
+            )}
             <View style={styles.modalActions}>
               <Touchable
                 style={styles.modalCancelButton}

@@ -100,6 +100,9 @@
     "a11yNewChat": "Нов чат",
     "a11yClearSearch": "Изчистване на търсенето",
     "a11yDelete": "Изтриване на разговора",
+    "a11yUnreadCount": "{{count}} непрочетени",
+    "a11yUnreadCount_one": "1 непрочетено",
+    "a11yUnreadCount_other": "{{count}} непрочетени",
     "noSearchResults": "Няма разговори, отговарящи на търсенето.",
     "logout": "Изход",
     "delete": "Изтрий",
@@ -343,6 +346,11 @@
   },
   "common": {
     "language": "Език"
+  },
+  "invite": {
+    "action": "Поканете приятел",
+    "message": "Присъединете се към мен в Hearth: {{url}}",
+    "messageWithUsername": "Присъединете се към мен в Hearth: {{url}} - там съм @{{username}}."
   },
   "errorBoundary": {
     "title": "Нещо се обърка",

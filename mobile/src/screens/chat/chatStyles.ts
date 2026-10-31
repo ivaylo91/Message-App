@@ -30,17 +30,7 @@ export const makeStyles = (colors: ThemeColors) =>
   headerName: { fontFamily: fonts.family, fontWeight: '700', fontSize: fontSizes.bodyLg, color: colors.ink },
   headerStatus: { fontFamily: fonts.family, fontSize: fontSizes.footnote, fontWeight: '500', color: colors.sage },
   headerStatusOffline: { fontFamily: fonts.family, fontSize: fontSizes.footnote, fontWeight: '500', color: colors.smoke },
-  // A state rather than an error - messages queue and send on their own -
-  // so it stays out of the red the app keeps for destructive actions.
-  offlineBanner: {
-    marginHorizontal: spacing.md,
-    marginTop: spacing.sm,
-    paddingVertical: 6,
-    borderRadius: radii.md,
-    backgroundColor: colors.fill,
-    alignItems: 'center',
-  },
-  offlineBannerText: { fontFamily: fonts.family, color: colors.char, fontSize: fontSizes.caption, fontWeight: '600' },
+  offlineBanner: { marginHorizontal: spacing.md, marginTop: spacing.sm },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',

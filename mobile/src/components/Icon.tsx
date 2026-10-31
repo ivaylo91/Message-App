@@ -94,8 +94,12 @@ export function Icon({ name, size = 20, color, style, accessibilityLabel }: Icon
       style={style}
       accessibilityLabel={accessibilityLabel}
       // Decorative unless labelled - most icons sit inside a button that
-      // carries the label.
+      // carries the label. Hidden outright, because an icon is a character in
+      // an icon font, and a button with no label of its own would otherwise
+      // read that character aloud with the rest of its text.
       accessible={Boolean(accessibilityLabel)}
+      accessibilityElementsHidden={!accessibilityLabel}
+      importantForAccessibility={accessibilityLabel ? 'auto' : 'no'}
     />
   );
 }

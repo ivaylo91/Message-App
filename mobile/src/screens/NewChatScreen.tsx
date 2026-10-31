@@ -19,6 +19,7 @@ import * as profilesData from '../data/profiles';
 import { Avatar } from '../components/Avatar';
 import { Touchable } from '../components/Touchable';
 import { useContentWidth } from '../hooks/useContentWidth';
+import { useInviteFriend } from '../hooks/useInviteFriend';
 import { fonts, fontSizes, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 import { ProfileSearchResult } from '../types';
@@ -30,6 +31,7 @@ const SEARCH_DEBOUNCE_MS = 300;
 export function NewChatScreen({ navigation }: Props) {
   const { t } = useTranslation();
   const { userId } = useAuth();
+  const inviteFriend = useInviteFriend();
   const insets = useSafeAreaInsets();
   const { contentWidth } = useContentWidth();
   const { colors } = useTheme();
@@ -99,6 +101,7 @@ export function NewChatScreen({ navigation }: Props) {
           {query.length > 0 && (
             <Touchable
               onPress={() => onChangeQuery('')}
+              iconButton
               accessibilityRole="button"
               accessibilityLabel={t('newChat.a11yClearSearch')}
             >
@@ -126,6 +129,17 @@ export function NewChatScreen({ navigation }: Props) {
           )}
 
           {isSearching && <ActivityIndicator color={colors.emberText} style={styles.spinner} />}
+
+          {inviteFriend && !isSearching && results.length === 0 && (
+            <Touchable style={styles.row} onPress={inviteFriend} accessibilityRole="button">
+              <View style={styles.inviteIcon}>
+                <Icon name="user-plus" size={20} color={colors.emberText} />
+              </View>
+              <View style={styles.rowMain}>
+                <Text style={styles.rowName}>{t('invite.action')}</Text>
+              </View>
+            </Touchable>
+          )}
 
           {!isSearching && query.trim() && results.length === 0 && (
             <Text style={styles.emptyText}>{t('newChat.noResults')}</Text>
@@ -202,6 +216,14 @@ const makeStyles = (colors: ThemeColors) =>
   rowMain: { flex: 1 },
   rowName: { fontFamily: fonts.family, fontWeight: '600', fontSize: 16, color: colors.ink },
   rowSub: { fontFamily: fonts.family, fontSize: fontSizes.caption, color: colors.smoke, marginTop: 1 },
+  inviteIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.emberTint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   newGroupIcon: {
     width: 48,
     height: 48,
