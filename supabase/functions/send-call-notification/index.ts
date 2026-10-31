@@ -131,7 +131,7 @@ Deno.serve(async (req: Request) => {
       return new Response("Unauthorized", { status: 401 });
     }
 
-    const { conversationId, calleeUserId } = await req.json();
+    const { conversationId, calleeUserId, media } = await req.json();
     if (!conversationId || !calleeUserId) {
       return new Response(JSON.stringify({ skipped: true }), { status: 200 });
     }
@@ -202,6 +202,7 @@ Deno.serve(async (req: Request) => {
           callerId: user.id,
           callerName: caller?.display_name ?? "Someone",
           callerAvatarPath: caller?.avatar_path ?? "",
+          media: media === "audio" ? "audio" : "video",
         }),
       ),
     );

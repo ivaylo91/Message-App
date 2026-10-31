@@ -25,6 +25,7 @@ import { useTranslation } from 'react-i18next';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
+import { isVoiceCallLog } from '../calling/callMedia';
 import * as conversationsData from '../data/conversations';
 import * as profilesData from '../data/profiles';
 import { loadCachedConversations, saveCachedConversations } from '../data/chatCache';
@@ -400,7 +401,12 @@ export function ConversationsScreen({ navigation }: Props) {
   function previewText(message: Message | undefined): string {
     if (!message) return t('conversations.noMessagesYet');
     return (
-      callStatusPreviewText(message.call_status, message.attachment_duration_ms, t) ||
+      callStatusPreviewText(
+        message.call_status,
+        message.attachment_duration_ms,
+        t,
+        isVoiceCallLog(message),
+      ) ||
       attachmentPreviewText(message.attachment_type, message.attachment_name, t) ||
       message.body ||
       // A cached row has a last message whose text isn't known yet, which

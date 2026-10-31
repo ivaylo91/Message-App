@@ -215,6 +215,7 @@
     "a11ySearch": "Търсене в чата",
     "a11yGallery": "Снимки и файлове",
     "a11yCall": "Видео разговор",
+    "a11yVoiceCall": "Гласово обаждане",
     "a11yMenu": "Още опции",
     "a11yJumpToOriginal": "Показва оригиналното съобщение",
     "a11yPlay": "Пусни гласовото съобщение",
@@ -245,6 +246,7 @@
   "contactInfo": {
     "title": "Информация за контакта",
     "call": "Видео разговор",
+    "voiceCall": "Обаждане",
     "media": "Медия",
     "mute": "Заглушаване"
   },
@@ -366,11 +368,12 @@
     "incoming": "Входящо",
     "outgoing": "Изходящо",
     "callBack": "Видео разговор с {{name}}",
+    "callBackVoice": "Обаждане на {{name}}",
     "filterAll": "Всички",
     "filterMissed": "Пропуснати",
     "emptyMissedTitle": "Няма пропуснати обаждания",
     "emptyTitle": "Все още няма обаждания",
-    "emptyHint": "Видео разговорите, които провеждате и получавате, ще се показват тук."
+    "emptyHint": "Обажданията, които правите и получавате, ще се появят тук."
   },
   "footer": {
     "calls": "Обаждания",
@@ -384,11 +387,15 @@
   },
   "call": {
     "incoming": "Входящо видеообаждане",
+    "incomingVoice": "Входящо гласово обаждане",
     "calling": "Обаждане...",
     "connected": "Свързан",
     "missedCallPreview": "Пропуснато видеообаждане",
     "declinedCallPreview": "Отхвърлено видеообаждане",
     "completedCallPreview": "Видеообаждане · {{duration}}",
+    "missedVoiceCallPreview": "Пропуснато гласово обаждане",
+    "declinedVoiceCallPreview": "Отхвърлено гласово обаждане",
+    "completedVoiceCallPreview": "Гласово обаждане · {{duration}}",
     "a11yMute": "Изключи микрофона",
     "a11yUnmute": "Включи микрофона",
     "a11yCameraOff": "Изключи камерата",

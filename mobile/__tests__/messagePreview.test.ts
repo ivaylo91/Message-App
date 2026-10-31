@@ -121,6 +121,14 @@ describe('formatLastSeen', () => {
 });
 
 describe('callStatusPreviewText', () => {
+  it('names a voice call as one', () => {
+    expect(callStatusPreviewText('missed', null, t, true)).toBe('call.missedVoiceCallPreview');
+    expect(callStatusPreviewText('declined', null, t, true)).toBe('call.declinedVoiceCallPreview');
+    expect(callStatusPreviewText('completed', 65_400, t, true)).toBe(
+      'call.completedVoiceCallPreview:{"duration":"1:05"}',
+    );
+  });
+
   test('labels each outcome', () => {
     expect(callStatusPreviewText('missed', null, t)).toBe('call.missedCallPreview');
     expect(callStatusPreviewText('declined', null, t)).toBe('call.declinedCallPreview');

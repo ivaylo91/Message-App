@@ -1,4 +1,5 @@
 import type { TFunction } from 'i18next';
+import { isVoiceCallLog } from '../calling/callMedia';
 import { AttachmentType, CallStatus } from '../types';
 
 // Shared between the chat's reply quote/bar, and the conversation
@@ -51,9 +52,11 @@ export function previewIconName(message: {
   attachment_type: AttachmentType | null;
   attachment_mime_type: string | null;
   call_status: CallStatus | null;
-}): FileIconName | 'camera' | 'microphone' | 'video' | 'video-slash' | null {
+}): FileIconName | 'camera' | 'microphone' | 'phone' | 'phone-slash' | 'video' | 'video-slash' | null {
   if (message.call_status) {
-    return message.call_status === 'completed' ? 'video' : 'video-slash';
+    const completed = message.call_status === 'completed';
+    if (isVoiceCallLog(message)) return completed ? 'phone' : 'phone-slash';
+    return completed ? 'video' : 'video-slash';
   }
   switch (message.attachment_type) {
     case 'image':
@@ -100,14 +103,15 @@ export function callStatusPreviewText(
   callStatus: CallStatus | null | undefined,
   durationMs: number | null | undefined,
   t: TFunction,
+  isVoice = false,
 ): string | null {
   switch (callStatus) {
     case 'missed':
-      return t('call.missedCallPreview');
+      return t(isVoice ? 'call.missedVoiceCallPreview' : 'call.missedCallPreview');
     case 'declined':
-      return t('call.declinedCallPreview');
+      return t(isVoice ? 'call.declinedVoiceCallPreview' : 'call.declinedCallPreview');
     case 'completed':
-      return t('call.completedCallPreview', {
+      return t(isVoice ? 'call.completedVoiceCallPreview' : 'call.completedCallPreview', {
         duration: formatDuration(Math.round((durationMs ?? 0) / 1000)),
       });
     default:

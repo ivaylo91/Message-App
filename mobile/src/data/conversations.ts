@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { VOICE_CALL_MARKER, type CallMedia } from '../calling/callMedia';
 import { escapeLikePattern } from '../utils/likePattern';
 import { PROFILE_COLUMNS } from './profiles';
 import { AttachmentType, CallStatus, Conversation, Message, Profile } from '../types';
@@ -400,6 +401,7 @@ export async function sendCallLogMessage(
   senderId: string,
   callStatus: CallStatus,
   durationMs: number | null,
+  media: CallMedia,
 ): Promise<Message> {
   const { data, error } = await supabase
     .from('messages')
@@ -408,6 +410,7 @@ export async function sendCallLogMessage(
       sender_id: senderId,
       call_status: callStatus,
       attachment_duration_ms: durationMs,
+      attachment_mime_type: media === 'audio' ? VOICE_CALL_MARKER : null,
     })
     .select(MESSAGE_SELECT)
     .single();
@@ -525,6 +528,7 @@ export interface CallLogEntry {
   sender_id: string;
   call_status: CallStatus;
   attachment_duration_ms: number | null;
+  attachment_mime_type: string | null;
   created_at: string;
   conversations: Pick<Conversation, 'id' | 'is_group' | 'name' | 'conversation_participants'>;
 }
@@ -536,7 +540,7 @@ export async function fetchCallLog(): Promise<CallLogEntry[]> {
   const { data, error } = await supabase
     .from('messages')
     .select(
-      `id, conversation_id, sender_id, call_status, attachment_duration_ms, created_at, conversations!inner(id, is_group, name, conversation_participants(user_id, profiles(${PROFILE_COLUMNS})))`,
+      `id, conversation_id, sender_id, call_status, attachment_duration_ms, attachment_mime_type, created_at, conversations!inner(id, is_group, name, conversation_participants(user_id, profiles(${PROFILE_COLUMNS})))`,
     )
     .not('call_status', 'is', null)
     .is('deleted_at', null)

@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../navigation/RootNavigator';
 import { useAuth } from '../auth/AuthContext';
+import { isVoiceCallLog } from '../calling/callMedia';
 import { useCall } from '../calling/CallContext';
 import * as conversationsData from '../data/conversations';
 import { Avatar } from '../components/Avatar';
@@ -94,6 +95,8 @@ export function CallsScreen({ navigation }: Props) {
     section: { data: readonly Row[] };
   }) => {
     const { entry, direction, count } = item;
+    // Calling back repeats the kind of call this was.
+    const isVoice = isVoiceCallLog(entry);
     const conversation = entry.conversations;
     const other = conversation.conversation_participants.find((p) => p.user_id !== userId);
     const title = conversation.is_group
@@ -155,17 +158,20 @@ export function CallsScreen({ navigation }: Props) {
             style={styles.callBack}
             iconButton
             onPress={() =>
-              void startCall({
-                conversationId: entry.conversation_id,
-                peerUserId: other.user_id,
-                peerName: title,
-                peerAvatarPath: other.profiles.avatar_path,
-              })
+              void startCall(
+                {
+                  conversationId: entry.conversation_id,
+                  peerUserId: other.user_id,
+                  peerName: title,
+                  peerAvatarPath: other.profiles.avatar_path,
+                },
+                isVoice ? 'audio' : 'video',
+              )
             }
             accessibilityRole="button"
-            accessibilityLabel={t('calls.callBack', { name: title })}
+            accessibilityLabel={t(isVoice ? 'calls.callBackVoice' : 'calls.callBack', { name: title })}
           >
-            <Icon name="video" size={20} color={colors.emberText} />
+            <Icon name={isVoice ? 'phone' : 'video'} size={20} color={colors.emberText} />
           </Touchable>
         )}
       </Touchable>

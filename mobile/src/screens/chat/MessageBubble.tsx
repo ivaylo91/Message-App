@@ -26,6 +26,7 @@ import {
   formatMessageTime,
 } from '../../utils/messagePreview';
 import { SwipeToReply } from '../../components/SwipeToReply';
+import { isVoiceCallLog } from '../../calling/callMedia';
 import { splitMentions } from '../../utils/mentions';
 import { hasLink, linkifyText } from '../../utils/linkify';
 import { showsSenderName, type RunPosition } from '../../utils/messageGrouping';
@@ -400,14 +401,17 @@ function CallLogCard({ message, onLongPress }: { message: LocalMessage; onLongPr
   const { t, i18n } = useTranslation();
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
-  const label = callStatusPreviewText(message.call_status, message.attachment_duration_ms, t);
+  const isVoice = isVoiceCallLog(message);
+  const label = callStatusPreviewText(message.call_status, message.attachment_duration_ms, t, isVoice);
   const missed = message.call_status !== 'completed';
+  const missedIcon = isVoice ? 'phone-slash' : 'video-slash';
+  const icon = isVoice ? 'phone' : 'video';
 
   return (
     <Touchable style={styles.callCard} onLongPress={onLongPress}>
       <View style={[styles.callCardIcon, missed && styles.callCardIconMissed]}>
         <Icon
-          name={missed ? 'video-slash' : 'video'}
+          name={missed ? missedIcon : icon}
           size={18}
           color={missed ? colors.danger : colors.emberText}
         />

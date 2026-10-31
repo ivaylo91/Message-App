@@ -75,6 +75,21 @@ export function ContactInfoScreen({ route, navigation }: Props) {
   const actions = other
     ? [
         {
+          id: 'voiceCall',
+          icon: 'phone' as const,
+          label: t('contactInfo.voiceCall'),
+          onPress: () =>
+            void startCall(
+              {
+                conversationId,
+                peerUserId: other.user_id,
+                peerName: name,
+                peerAvatarPath: other.profiles.avatar_path,
+              },
+              'audio',
+            ),
+        },
+        {
           id: 'call',
           icon: 'video' as const,
           label: t('contactInfo.call'),
@@ -145,7 +160,6 @@ export function ContactInfoScreen({ route, navigation }: Props) {
                   key={action.id}
                   style={styles.action}
                   onPress={action.onPress}
-                  pressScale
                   accessibilityRole="button"
                   accessibilityLabel={action.label}
                 >
@@ -154,7 +168,7 @@ export function ContactInfoScreen({ route, navigation }: Props) {
                     size={18}
                     color={colors.emberText}
                   />
-                  <Text style={styles.actionLabel} numberOfLines={1}>
+                  <Text style={styles.actionLabel} numberOfLines={2}>
                     {action.label}
                   </Text>
                 </Touchable>
@@ -197,8 +211,9 @@ const makeStyles = (colors: ThemeColors) =>
       alignItems: 'center',
       gap: spacing.xs,
       paddingVertical: spacing.md,
+      paddingHorizontal: spacing.xs,
       borderRadius: radii.lg,
       backgroundColor: colors.paper2,
     },
-    actionLabel: { fontFamily: fonts.family, fontSize: fontSizes.footnote, fontWeight: '600', color: colors.ink },
+    actionLabel: { fontFamily: fonts.family, fontSize: fontSizes.footnote, fontWeight: '600', textAlign: 'center', color: colors.ink },
   });

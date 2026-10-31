@@ -215,6 +215,7 @@
     "a11ySearch": "Search this chat",
     "a11yGallery": "Photos and files",
     "a11yCall": "Start video call",
+    "a11yVoiceCall": "Start voice call",
     "a11yMenu": "More options",
     "a11yJumpToOriginal": "Shows the original message",
     "a11yPlay": "Play voice message",
@@ -245,6 +246,7 @@
   "contactInfo": {
     "title": "Contact info",
     "call": "Video call",
+    "voiceCall": "Call",
     "media": "Media",
     "mute": "Mute"
   },
@@ -366,11 +368,12 @@
     "incoming": "Incoming",
     "outgoing": "Outgoing",
     "callBack": "Video call {{name}}",
+    "callBackVoice": "Call {{name}}",
     "filterAll": "All",
     "filterMissed": "Missed",
     "emptyMissedTitle": "No missed calls",
     "emptyTitle": "No calls yet",
-    "emptyHint": "Video calls you make and receive will show up here."
+    "emptyHint": "Calls you make and receive will show up here."
   },
   "footer": {
     "calls": "Calls",
@@ -384,11 +387,15 @@
   },
   "call": {
     "incoming": "Incoming video call",
+    "incomingVoice": "Incoming voice call",
     "calling": "Calling...",
     "connected": "Connected",
     "missedCallPreview": "Missed video call",
     "declinedCallPreview": "Declined video call",
     "completedCallPreview": "Video call · {{duration}}",
+    "missedVoiceCallPreview": "Missed voice call",
+    "declinedVoiceCallPreview": "Declined voice call",
+    "completedVoiceCallPreview": "Voice call · {{duration}}",
     "a11yMute": "Mute microphone",
     "a11yUnmute": "Unmute microphone",
     "a11yCameraOff": "Turn off camera",

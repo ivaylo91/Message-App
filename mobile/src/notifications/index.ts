@@ -69,7 +69,7 @@ export async function displayIncomingCallNotification(
 
   await notifee.displayNotification({
     title: callerName,
-    body: 'Incoming video call',
+    body: data.media === 'audio' ? 'Incoming voice call' : 'Incoming video call',
     data: { ...(conversationId ? { conversationId } : {}), ...(callerId ? { callerId } : {}) },
     android: {
       channelId: CALL_CHANNEL_ID,

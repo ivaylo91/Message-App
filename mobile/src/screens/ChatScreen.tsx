@@ -44,6 +44,7 @@ import { AppWallpaper } from '../components/AppWallpaper';
 import { MediaViewer } from '../components/MediaViewer';
 import { useToast } from '../components/Toast';
 import { useConfirm } from '../components/ConfirmSheet';
+import { isVoiceCallLog } from '../calling/callMedia';
 import { useCall } from '../calling/CallContext';
 import { useAppForeground } from '../hooks/useAppForeground';
 import { useContentWidth } from '../hooks/useContentWidth';
@@ -1767,7 +1768,12 @@ export function ChatScreen({ route, navigation }: Props) {
     const previewText =
       message.body ||
       attachmentPreviewText(message.attachment_type, message.attachment_name, t) ||
-      callStatusPreviewText(message.call_status, message.attachment_duration_ms, t) ||
+      callStatusPreviewText(
+        message.call_status,
+        message.attachment_duration_ms,
+        t,
+        isVoiceCallLog(message),
+      ) ||
       '';
     return {
       target: {
@@ -1946,6 +1952,27 @@ export function ChatScreen({ route, navigation }: Props) {
           )}
         </View>
         </Touchable>
+        {!isGroup && otherParticipant && (
+          <Touchable
+            style={styles.callButton}
+            iconButton
+            onPress={() =>
+              void startCall(
+                {
+                  conversationId,
+                  peerUserId: otherParticipant.user_id,
+                  peerName: displayTitle,
+                  peerAvatarPath: otherParticipant.profiles.avatar_path,
+                },
+                'audio',
+              )
+            }
+            accessibilityRole="button"
+            accessibilityLabel={t('chat.a11yVoiceCall')}
+          >
+            <Icon name="phone" size={20} color={colors.char} />
+          </Touchable>
+        )}
         {!isGroup && otherParticipant && (
           <Touchable
             style={[styles.callButton, styles.callButtonTinted]}

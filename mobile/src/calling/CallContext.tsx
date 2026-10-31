@@ -20,6 +20,7 @@ import { useAuth } from '../auth/AuthContext';
 import * as profilesData from '../data/profiles';
 import * as conversationsData from '../data/conversations';
 import { consumeAutoAnswer } from './autoAnswerFlag';
+import { mediaConstraints, offerMedia, type CallMedia } from './callMedia';
 import type { CallStatus as CallLogStatus } from '../types';
 
 // Free, no-account STUN - enough for most home/office networks, but
@@ -75,16 +76,19 @@ interface OfferPayload {
   callerAvatarPath: string | null;
   conversationId: string;
   sdp: string;
+  // Absent from apps older than voice calling - see offerMedia.
+  media?: CallMedia;
 }
 
 interface CallContextValue {
   status: CallStatus;
   peer: CallPeer | null;
+  media: CallMedia;
   localStream: MediaStream | null;
   remoteStream: MediaStream | null;
   isMuted: boolean;
   isCameraOff: boolean;
-  startCall: (peer: CallPeer) => Promise<void>;
+  startCall: (peer: CallPeer, media?: CallMedia) => Promise<void>;
   answerCall: () => Promise<void>;
   declineCall: () => void;
   endCall: () => void;
@@ -95,22 +99,23 @@ interface CallContextValue {
 
 const CallContext = createContext<CallContextValue | undefined>(undefined);
 
-async function ensureCallPermissions(): Promise<boolean> {
+// A voice call doesn't ask for the camera at all.
+async function ensureCallPermissions(media: CallMedia): Promise<boolean> {
   if (Platform.OS !== 'android') return true;
-  const granted = await PermissionsAndroid.requestMultiple([
-    PermissionsAndroid.PERMISSIONS.CAMERA,
+  const needed = [
     PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
-  ]);
-  return (
-    granted[PermissionsAndroid.PERMISSIONS.CAMERA] === PermissionsAndroid.RESULTS.GRANTED &&
-    granted[PermissionsAndroid.PERMISSIONS.RECORD_AUDIO] === PermissionsAndroid.RESULTS.GRANTED
-  );
+    ...(media === 'video' ? [PermissionsAndroid.PERMISSIONS.CAMERA] : []),
+  ];
+  const granted = await PermissionsAndroid.requestMultiple(needed);
+  return needed.every((permission) => granted[permission] === PermissionsAndroid.RESULTS.GRANTED);
 }
 
 export function CallProvider({ children }: { children: React.ReactNode }) {
   const { userId } = useAuth();
   const [status, setStatus] = useState<CallStatus>('idle');
   const [peer, setPeer] = useState<CallPeer | null>(null);
+  const [media, setMedia] = useState<CallMedia>('video');
+  const mediaRef = useRef<CallMedia>('video');
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [isMuted, setIsMuted] = useState(false);
@@ -215,7 +220,13 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       const outcome: CallLogStatus = wasConnected ? 'completed' : fallbackOutcome;
       const durationMs = wasConnected && connectedAt ? Date.now() - connectedAt : null;
       void conversationsData
-        .sendCallLogMessage(currentPeer.conversationId, currentUserId, outcome, durationMs)
+        .sendCallLogMessage(
+          currentPeer.conversationId,
+          currentUserId,
+          outcome,
+          durationMs,
+          mediaRef.current,
+        )
         .catch(() => {
           // best-effort - a missing call-log entry isn't worth surfacing an error for
         });
@@ -328,6 +339,8 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       }
 
       pendingOfferRef.current = offer;
+      mediaRef.current = offerMedia(offer);
+      setMedia(mediaRef.current);
       setPeer({
         conversationId: offer.conversationId,
         peerUserId: offer.from,
@@ -371,11 +384,13 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   }, [userId]);
 
   const startCall = useCallback(
-    async (callPeer: CallPeer) => {
+    async (callPeer: CallPeer, callMedia: CallMedia = 'video') => {
       if (!userId || statusRef.current !== 'idle') return;
-      const allowed = await ensureCallPermissions();
+      const allowed = await ensureCallPermissions(callMedia);
       if (!allowed) return;
 
+      mediaRef.current = callMedia;
+      setMedia(callMedia);
       setPeer(callPeer);
       statusRef.current = 'outgoing';
       setStatus('outgoing');
@@ -383,7 +398,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
       try {
         const [ownProfile, stream, iceServers] = await Promise.all([
           profilesData.fetchProfile(userId),
-          mediaDevices.getUserMedia({ audio: true, video: { facingMode: 'user' } }),
+          mediaDevices.getUserMedia(mediaConstraints(callMedia)),
           getIceServers(),
         ]);
         localStreamRef.current = stream;
@@ -402,6 +417,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
           callerAvatarPath: ownProfile.avatar_path,
           conversationId: callPeer.conversationId,
           sdp: offer.sdp,
+          media: callMedia,
         };
 
         const channel = supabase.channel(`calls:${callPeer.peerUserId}`, {
@@ -440,7 +456,11 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         // realtime for anyone with the app already open.
         void supabase.functions
           .invoke('send-call-notification', {
-            body: { conversationId: callPeer.conversationId, calleeUserId: callPeer.peerUserId },
+            body: {
+              conversationId: callPeer.conversationId,
+              calleeUserId: callPeer.peerUserId,
+              media: callMedia,
+            },
           })
           .catch(() => {});
       } catch {
@@ -458,14 +478,15 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
   const answerCall = useCallback(async () => {
     if (!userId || statusRef.current !== 'incoming' || !pendingOfferRef.current) return;
     const offer = pendingOfferRef.current;
-    const allowed = await ensureCallPermissions();
+    const callMedia = offerMedia(offer);
+    const allowed = await ensureCallPermissions(callMedia);
     if (!allowed) {
       declineCall();
       return;
     }
 
     const [stream, iceServers] = await Promise.all([
-      mediaDevices.getUserMedia({ audio: true, video: { facingMode: 'user' } }),
+      mediaDevices.getUserMedia(mediaConstraints(callMedia)),
       getIceServers(),
     ]);
     localStreamRef.current = stream;
@@ -558,6 +579,7 @@ export function CallProvider({ children }: { children: React.ReactNode }) {
         remoteStream,
         isMuted,
         isCameraOff,
+        media,
         startCall,
         answerCall,
         declineCall,
