@@ -32,6 +32,7 @@ import { useAuth } from '../auth/AuthContext';
 import { supabase } from '../lib/supabase';
 import * as conversationsData from '../data/conversations';
 import * as reactionsData from '../data/reactions';
+import * as savedMessagesData from '../data/savedMessages';
 import { getCachedChat, setCachedChat } from '../data/chatCache';
 import { mergeReactions } from '../utils/reactions';
 import * as mediaData from '../data/media';
@@ -94,6 +95,7 @@ import { makeStyles } from './chat/chatStyles';
 import { LocalMessage, PLAYBACK_SPEEDS, type PlaybackSpeed } from './chat/types';
 import { MessageBubble, NO_REACTIONS, NO_SEEN_BY, replySenderLabel } from './chat/MessageBubble';
 import { ChatHistorySkeleton, TypingBubble } from './chat/ChatDecorations';
+import { PinnedBanner } from './chat/PinnedBanner';
 import { KeyboardAvoidingView, KeyboardGestureArea } from 'react-native-keyboard-controller';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'Chat'>;
@@ -240,6 +242,8 @@ export function ChatScreen({ route, navigation }: Props) {
     [],
   );
   const [isGroup, setIsGroup] = useState(false);
+  const [pinnedMessage, setPinnedMessage] = useState<Message | null>(null);
+  const [savedMessageIds, setSavedMessageIds] = useState<ReadonlySet<string>>(new Set());
   const [draft, setDraft] = useState('');
   // Where the cursor is, for the @mention suggestions - see onChangeDraft
   // for why it's also nudged on every text change.
@@ -312,12 +316,20 @@ export function ChatScreen({ route, navigation }: Props) {
       .then((conversation) => {
         setParticipants(conversation.conversation_participants);
         setIsGroup(conversation.is_group);
+        const pinnedId = conversation.pinned_message_id;
+        if (pinnedId) {
+          void conversationsData.fetchMessage(pinnedId).then(setPinnedMessage).catch(() => {});
+        }
       })
       .catch(() => {
         // Non-fatal on its own: the header falls back to the title
         // passed in through route params, and the message list surfaces
         // its own failure below. Swallowed rather than reported twice.
       });
+    void savedMessagesData
+      .fetchSavedMessageIds()
+      .then(setSavedMessageIds)
+      .catch(() => {});
   }, [conversationId]);
 
   // The composer's bottom safe-area padding (for the home indicator/
@@ -1410,6 +1422,48 @@ export function ChatScreen({ route, navigation }: Props) {
   const chooseMute = useMuteChooser();
   const myMutedUntil = participants.find((p) => p.user_id === userId)?.muted_until;
 
+  // Either person in a one-to-one chat; only an admin in a group.
+  const canPin =
+    !isGroup || participants.some((p) => p.user_id === userId && p.role === 'ADMIN');
+
+  const onSetPinned = useCallback(
+    (message: Message | null) => {
+      setMenuTarget(null);
+      const previous = pinnedMessage;
+      setPinnedMessage(message);
+      void conversationsData.setPinnedMessage(conversationId, message?.id ?? null).catch(() => {
+        setPinnedMessage(previous);
+        showToast(t('chat.pinFailedToast'), 'error');
+      });
+    },
+    [conversationId, pinnedMessage, showToast, t],
+  );
+
+  const onToggleSaved = useCallback(
+    (messageId: string) => {
+      setMenuTarget(null);
+      if (!userId) return;
+      const wasSaved = savedMessageIds.has(messageId);
+      const toggled = (ids: ReadonlySet<string>, add: boolean) => {
+        const next = new Set(ids);
+        if (add) next.add(messageId);
+        else next.delete(messageId);
+        return next;
+      };
+      setSavedMessageIds((ids) => toggled(ids, !wasSaved));
+      void (wasSaved
+        ? savedMessagesData.unsaveMessage(userId, messageId)
+        : savedMessagesData.saveMessage(userId, messageId)
+      )
+        .then(() => showToast(t(wasSaved ? 'saved.removedToast' : 'saved.savedToast')))
+        .catch(() => {
+          setSavedMessageIds((ids) => toggled(ids, wasSaved));
+          showToast(t('saved.saveFailedToast'), 'error');
+        });
+    },
+    [userId, savedMessageIds, showToast, t],
+  );
+
   const onOpenInfo = useCallback(() => {
     if (isGroup) navigation.navigate('GroupInfo', { conversationId });
     else if (otherParticipant) navigation.navigate('ContactInfo', { conversationId });
@@ -1734,6 +1788,24 @@ export function ChatScreen({ route, navigation }: Props) {
         onPress: () => onForward(message),
       });
     }
+    if (!pending) {
+      const isSaved = savedMessageIds.has(message.id);
+      actions.push({
+        id: 'save',
+        label: t(isSaved ? 'chat.unsaveMessage' : 'chat.saveMessage'),
+        icon: 'bookmark',
+        onPress: () => onToggleSaved(message.id),
+      });
+      if (canPin) {
+        const isPinned = pinnedMessage?.id === message.id;
+        actions.push({
+          id: 'pin',
+          label: t(isPinned ? 'chat.unpinMessage' : 'chat.pinMessage'),
+          icon: 'thumbtack',
+          onPress: () => onSetPinned(isPinned ? null : message),
+        });
+      }
+    }
     if (isMine && message.body) {
       actions.push({
         id: 'edit',
@@ -1799,6 +1871,11 @@ export function ChatScreen({ route, navigation }: Props) {
     onEditMessage,
     onDeleteMessage,
     onReportMessage,
+    savedMessageIds,
+    onToggleSaved,
+    canPin,
+    pinnedMessage,
+    onSetPinned,
   ]);
 
   const forwardTargetTitle = useCallback(
@@ -2003,6 +2080,13 @@ export function ChatScreen({ route, navigation }: Props) {
       </View>
 
       <OfflineBanner style={styles.offlineBanner} />
+      {pinnedMessage && !isSearchOpen && (
+        <PinnedBanner
+          message={pinnedMessage}
+          onPress={() => void onJumpToMessage(pinnedMessage.id)}
+          onUnpin={canPin ? () => onSetPinned(null) : undefined}
+        />
+      )}
 
       {isSearchOpen && (
         <View style={styles.searchBar}>

@@ -419,6 +419,30 @@ export async function sendCallLogMessage(
   return data as unknown as Message;
 }
 
+// Null when it's been deleted, which leaves the pin pointing at nothing to show.
+export async function fetchMessage(messageId: string): Promise<Message | null> {
+  const { data, error } = await supabase
+    .from('messages')
+    .select(MESSAGE_SELECT)
+    .eq('id', messageId)
+    .is('deleted_at', null)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data as unknown as Message | null;
+}
+
+export async function setPinnedMessage(
+  conversationId: string,
+  messageId: string | null,
+): Promise<void> {
+  const { error } = await supabase.rpc('set_pinned_message', {
+    p_conversation_id: conversationId,
+    p_message_id: messageId,
+  });
+  if (error) throw error;
+}
+
 export async function markConversationRead(
   conversationId: string,
   userId: string,

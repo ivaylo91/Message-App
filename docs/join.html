@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Join a group on Hearth</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<style>
+  :root { --paper: #FAF5EF; --card: #FFFFFF; --ink: #1C1613; --smoke: #6B5F57; --violet: #6D35E8; }
+  @media (prefers-color-scheme: dark) {
+    :root { --paper: #15100D; --card: #231C18; --ink: #F3ECE4; --smoke: #A79A91; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  main {
+    width: 100%;
+    max-width: 380px;
+    padding: 32px 24px;
+    border-radius: 20px;
+    background: var(--card);
+    text-align: center;
+  }
+  h1 { margin: 0 0 8px; font-size: 24px; }
+  p { margin: 0 0 24px; color: var(--smoke); line-height: 1.5; }
+  a.button {
+    display: block;
+    padding: 14px;
+    border-radius: 16px;
+    background: var(--violet);
+    color: #FFFFFF;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  a.store { display: inline-block; margin-top: 16px; color: var(--smoke); }
+  [hidden] { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Join a group on Hearth</h1>
+  <p id="message">Open this link on your phone to join the group.</p>
+  <a id="open" class="button" hidden>Open in Hearth</a>
+  <a class="store" href="https://play.google.com/store/apps/details?id=com.ivaylopenev.messageapp">Get Hearth</a>
+</main>
+<script>
+  // Only hands the token to the app. Joining happens there, after a prompt.
+  var token = location.hash.slice(1);
+  if (/^[0-9a-f]{32}$/.test(token)) {
+    var link = 'hearth://join/' + token;
+    var open = document.getElementById('open');
+    open.href = link;
+    open.hidden = false;
+    location.href = link;
+  } else {
+    document.getElementById('message').textContent = 'This invite link isn\'t valid.';
+  }
+</script>
+</body>
+</html>

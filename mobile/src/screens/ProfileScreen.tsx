@@ -604,6 +604,22 @@ export function ProfileScreen({ navigation }: Props) {
           <View style={styles.card}>
             <Touchable
               style={styles.settingRow}
+              onPress={() => navigation.navigate('SavedMessages')}
+              accessibilityRole="button"
+            >
+              <View style={styles.settingIcon}>
+                <Icon name="bookmark" size={18} color={colors.char} />
+              </View>
+              <Text style={[styles.settingTitle, styles.settingText]}>{t('saved.title')}</Text>
+              <Icon name="chevron-right" size={18} color={colors.smoke} />
+            </Touchable>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.card}>
+            <Touchable
+              style={styles.settingRow}
               onPress={() => void Linking.openURL(PRIVACY_POLICY_URL)}
               accessibilityRole="link"
             >

@@ -12,6 +12,9 @@ export const RESET_PASSWORD_URL = 'https://ivaylo91.github.io/Message-App/reset-
 // events, not read them, so like the publishable key above it's safe to ship.
 export const SENTRY_DSN = '';
 
+// Hosted from docs/join.html. Hands a group invite over to the app.
+export const INVITE_PAGE_URL = 'https://ivaylo91.github.io/Message-App/join.html';
+
 export const ANDROID_STORE_URL =
   'https://play.google.com/store/apps/details?id=com.ivaylopenev.messageapp';
 // Placeholder - there's no App Store listing yet. Replace the numeric id

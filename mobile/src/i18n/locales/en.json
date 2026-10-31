@@ -164,6 +164,12 @@
     "sendFailedMessage": "Could not send your message. Try again.",
     "offlineBanner": "No internet connection - messages will send once you're back online",
     "reply": "Reply",
+    "saveMessage": "Save",
+    "unsaveMessage": "Remove from saved",
+    "pinMessage": "Pin",
+    "unpinMessage": "Unpin",
+    "pinnedMessage": "Pinned message",
+    "pinFailedToast": "Couldn't update the pinned message. Try again.",
     "replyingTo": "Replying to {{name}}",
     "you": "You",
     "deletedMessage": "This message was deleted",
@@ -251,6 +257,14 @@
     "mute": "Mute"
   },
   "groupInfo": {
+    "inviteLabel": "Invite link",
+    "shareInvite": "Share invite link",
+    "resetInvite": "Reset link",
+    "resetInviteTitle": "Reset the invite link?",
+    "resetInviteMessage": "The current link will stop working. Anyone who already joined stays in the group.",
+    "resetInviteDoneToast": "Invite link reset",
+    "inviteFailedToast": "Couldn't update the invite link. Try again.",
+    "inviteMessage": "Join {{name}} on Hearth: {{url}}",
     "title": "Group info",
     "nameLabel": "Group name",
     "namePlaceholder": "Group name",
@@ -351,8 +365,22 @@
   },
   "invite": {
     "action": "Invite a friend",
+    "joinTitle": "Join {{name}}?",
+    "join": "Join group",
+    "invalidToast": "This invite link is no longer valid",
+    "joinFailedToast": "Couldn't join the group. Try again.",
     "message": "Join me on Hearth: {{url}}",
     "messageWithUsername": "Join me on Hearth: {{url}} - I'm @{{username}} there."
+  },
+  "saved": {
+    "title": "Saved messages",
+    "emptyTitle": "Nothing saved yet",
+    "emptyHint": "Hold a message and choose Save to keep it here.",
+    "remove": "Remove from saved",
+    "savedToast": "Saved",
+    "removedToast": "Removed from saved",
+    "saveFailedToast": "Couldn't update saved messages. Try again.",
+    "loadFailedToast": "Couldn't load saved messages."
   },
   "errorBoundary": {
     "title": "Something went wrong",

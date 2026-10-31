@@ -17,7 +17,15 @@ import { useBubbleGradients } from '../theme/chatTheme';
 
 // Listed rather than taking any FontAwesome name: the full set includes
 // brand icons that don't exist in the solid style this menu renders.
-export type MessageMenuIcon = 'reply' | 'copy' | 'share' | 'pen' | 'trash' | 'flag';
+export type MessageMenuIcon =
+  | 'reply'
+  | 'copy'
+  | 'share'
+  | 'pen'
+  | 'trash'
+  | 'flag'
+  | 'bookmark'
+  | 'thumbtack';
 
 export interface MessageMenuAction {
   id: string;

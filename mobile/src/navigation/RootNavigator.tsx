@@ -14,6 +14,7 @@ import {
   attachNotificationListeners,
   requestPermissionAndRegisterToken,
 } from '../notifications';
+import { useInviteLinkHandler } from '../invites/useInviteLinkHandler';
 import { useUpdateGate } from '../updateGate/useUpdateGate';
 import { UpdateRequiredScreen } from '../screens/UpdateRequiredScreen';
 import { WelcomeScreen } from '../screens/WelcomeScreen';
@@ -32,6 +33,7 @@ export type AppStackParamList = {
   NewGroup: undefined;
   Profile: undefined;
   Calls: undefined;
+  SavedMessages: undefined;
   // highlightMessageId jumps straight to a message - used by global
   // search, which can land on a message far outside the newest page.
   Chat: { conversationId: string; title: string; highlightMessageId?: string };
@@ -113,6 +115,10 @@ function AppNavigator() {
       />
       <AppStack.Screen name="Chat" getComponent={() => require('../screens/ChatScreen').ChatScreen} />
       <AppStack.Screen
+        name="SavedMessages"
+        getComponent={() => require('../screens/SavedMessagesScreen').SavedMessagesScreen}
+      />
+      <AppStack.Screen
         name="MediaGallery"
         getComponent={() => require('../screens/MediaGalleryScreen').MediaGalleryScreen}
       />
@@ -132,6 +138,7 @@ export function RootNavigator() {
   const { session, userId, isLoading } = useAuth();
   const { colors, scheme } = useTheme();
   const { isChecking: isCheckingUpdate, updateRequired } = useUpdateGate();
+  useInviteLinkHandler();
 
   useEffect(() => attachNotificationListeners(), []);
 

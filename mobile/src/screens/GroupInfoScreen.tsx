@@ -21,7 +21,9 @@ import { Touchable } from '../components/Touchable';
 import { useToast } from '../components/Toast';
 import { useConfirm } from '../components/ConfirmSheet';
 import { Skeleton, SkeletonGroup } from '../components/Skeleton';
+import * as invitesData from '../data/invites';
 import { useContentWidth } from '../hooks/useContentWidth';
+import { shareGroupInvite } from '../invites/shareInvite';
 import { fonts, fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 import { ConversationParticipant, ProfileSearchResult } from '../types';
@@ -101,6 +103,32 @@ export function GroupInfoScreen({ route, navigation }: Props) {
         .catch(() => setResults([]))
         .finally(() => setIsSearching(false));
     }, SEARCH_DEBOUNCE_MS);
+  };
+
+  const inviteMessage = (url: string) => t('groupInfo.inviteMessage', { name: savedName, url });
+
+  const onShareInvite = async () => {
+    try {
+      await shareGroupInvite(await invitesData.getGroupInvite(conversationId), inviteMessage);
+    } catch {
+      showToast(t('groupInfo.inviteFailedToast'), 'error');
+    }
+  };
+
+  const onResetInvite = async () => {
+    const choice = await confirm({
+      title: t('groupInfo.resetInviteTitle'),
+      message: t('groupInfo.resetInviteMessage'),
+      cancelLabel: t('chat.cancel'),
+      options: [{ id: 'reset', label: t('groupInfo.resetInvite'), destructive: true }],
+    });
+    if (choice !== 'reset') return;
+    try {
+      await invitesData.resetGroupInvite(conversationId);
+      showToast(t('groupInfo.resetInviteDoneToast'));
+    } catch {
+      showToast(t('groupInfo.inviteFailedToast'), 'error');
+    }
   };
 
   const onSaveName = async () => {
@@ -283,6 +311,24 @@ export function GroupInfoScreen({ route, navigation }: Props) {
                         />
                       </Touchable>
                     ))}
+
+                    <Text style={styles.label}>{t('groupInfo.inviteLabel')}</Text>
+                    <Touchable
+                      style={styles.resultRow}
+                      onPress={() => void onShareInvite()}
+                      accessibilityRole="button"
+                    >
+                      <Icon name="link" size={16} color={colors.emberText} />
+                      <Text style={styles.resultName}>{t('groupInfo.shareInvite')}</Text>
+                    </Touchable>
+                    <Touchable
+                      style={styles.resultRow}
+                      onPress={() => void onResetInvite()}
+                      accessibilityRole="button"
+                    >
+                      <Icon name="xmark" size={16} color={colors.smoke} />
+                      <Text style={styles.resultName}>{t('groupInfo.resetInvite')}</Text>
+                    </Touchable>
                   </>
                 )}
 

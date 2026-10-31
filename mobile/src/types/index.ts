@@ -54,6 +54,8 @@ export interface Conversation {
   name: string | null;
   created_at: string;
   updated_at: string;
+  // Absent on rows from before pinning existed.
+  pinned_message_id?: string | null;
   conversation_participants: ConversationParticipant[];
   messages?: Message[];
 }
