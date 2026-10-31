@@ -17,6 +17,7 @@ import { OutboxProvider } from './src/offline/OutboxContext';
 import { TypingProvider } from './src/typing/TypingContext';
 import { CallProvider } from './src/calling/CallContext';
 import { CallOverlay } from './src/calling/CallOverlay';
+import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { ToastProvider } from './src/components/Toast';
 import { ConfirmSheetProvider } from './src/components/ConfirmSheet';
 import { RootNavigator } from './src/navigation/RootNavigator';
@@ -83,8 +84,9 @@ function AppContent() {
 
 function App() {
   return (
-    // Outermost: gestures (swipe-to-reply, the message menu) only work
-    // inside it, including in modals and sheets rendered from below.
+    <ErrorBoundary>
+    {/* Gestures (swipe-to-reply, the message menu) only work inside this,
+        including in modals and sheets rendered from below. */}
     <GestureHandlerRootView style={styles.root}>
       {/* Drives keyboard animations frame by frame on the UI thread. The
           translucent flags tell it the app already pads for the status and
@@ -100,6 +102,7 @@ function App() {
         </SafeAreaProvider>
       </KeyboardProvider>
     </GestureHandlerRootView>
+    </ErrorBoundary>
   );
 }
 

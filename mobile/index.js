@@ -9,6 +9,7 @@
 // doesn't exist", silently degrading those features. Must load before
 // anything that might receive a realtime message.
 import 'fast-text-encoding';
+import './src/monitoring/sentry';
 import { AppRegistry } from 'react-native';
 import messaging from '@react-native-firebase/messaging';
 import notifee, { EventType } from '@notifee/react-native';

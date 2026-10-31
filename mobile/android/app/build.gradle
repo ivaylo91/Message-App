@@ -2,6 +2,16 @@ apply plugin: "com.android.application"
 apply plugin: "org.jetbrains.kotlin.android"
 apply plugin: "com.facebook.react"
 
+// Uploads source maps to Sentry, so release crashes show real file names. Only
+// with a token: without one this would fail the build. Set SENTRY_AUTH_TOKEN,
+// SENTRY_ORG and SENTRY_PROJECT as EAS secrets to turn it on.
+if (System.getenv("SENTRY_AUTH_TOKEN")) {
+    apply from: new File(
+        ["node", "--print", "require.resolve('@sentry/react-native/package.json')"].execute().text.trim(),
+        "../sentry.gradle"
+    )
+}
+
 /**
  * This is the configuration block to customize your React Native Android app.
  * By default you don't need to apply any configuration, just uncomment the lines you need.

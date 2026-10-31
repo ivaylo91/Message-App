@@ -8,6 +8,10 @@ export const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_lact5tR5C9LzuR2y29Vc7g_k
 // resetPasswordForEmail's redirectTo below is silently ignored.
 export const RESET_PASSWORD_URL = 'https://ivaylo91.github.io/Message-App/reset-password.html';
 
+// Where crash reports go. Empty turns Sentry off. A DSN can only submit
+// events, not read them, so like the publishable key above it's safe to ship.
+export const SENTRY_DSN = '';
+
 export const ANDROID_STORE_URL =
   'https://play.google.com/store/apps/details?id=com.ivaylopenev.messageapp';
 // Placeholder - there's no App Store listing yet. Replace the numeric id

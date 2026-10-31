@@ -7,6 +7,7 @@ import {
 } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuth } from '../auth/AuthContext';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { useTheme } from '../theme/ThemeContext';
 import { navigationRef } from './navigationRef';
 import {
@@ -42,6 +43,13 @@ export type AppStackParamList = {
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 const AppStack = createNativeStackNavigator<AppStackParamList>();
 
+// Each screen gets its own boundary, so one that breaks takes nothing else
+// with it. A plain function rather than inline, so a navigator's re-render
+// doesn't remount every screen.
+const screenLayout = ({ children }: { children: React.ReactElement }) => (
+  <ErrorBoundary showBack>{children}</ErrorBoundary>
+);
+
 function AuthNavigator() {
   const { colors } = useTheme();
   // Each screen paints its own opaque background (with its own local
@@ -54,7 +62,7 @@ function AuthNavigator() {
   } as const;
 
   return (
-    <AuthStack.Navigator screenOptions={screenOptions}>
+    <AuthStack.Navigator screenOptions={screenOptions} screenLayout={screenLayout}>
       <AuthStack.Screen name="Welcome" component={WelcomeScreen} />
       <AuthStack.Screen name="Login" getComponent={() => require('../screens/LoginScreen').LoginScreen} />
       <AuthStack.Screen
@@ -77,7 +85,7 @@ function AppNavigator() {
   } as const;
 
   return (
-    <AppStack.Navigator screenOptions={screenOptions}>
+    <AppStack.Navigator screenOptions={screenOptions} screenLayout={screenLayout}>
       {/* Only the first screen a launch shows is imported up front. The
           rest load the first time they're opened, so launching doesn't pay
           to initialise screens it may never reach. */}

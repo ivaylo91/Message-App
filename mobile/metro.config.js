@@ -1,4 +1,5 @@
 const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
+const { withSentryConfig } = require('@sentry/react-native/metro');
 
 /**
  * Metro configuration
@@ -8,4 +9,6 @@ const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
  */
 const config = {};
 
-module.exports = mergeConfig(getDefaultConfig(__dirname), config);
+// withSentryConfig ties each bundle to its source map, so crash stack traces
+// can be read once maps are uploaded.
+module.exports = withSentryConfig(mergeConfig(getDefaultConfig(__dirname), config));

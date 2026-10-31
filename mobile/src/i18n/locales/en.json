@@ -344,6 +344,12 @@
   "common": {
     "language": "Language"
   },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "message": "This part of the app stopped working.",
+    "retry": "Try again",
+    "back": "Go back"
+  },
   "calls": {
     "title": "Calls",
     "missed": "Missed",
