@@ -15,7 +15,7 @@ export async function fetchSavedMessages(): Promise<SavedMessage[]> {
   const { data, error } = await supabase
     .from('saved_messages')
     .select(
-      'saved_at, messages(id, conversation_id, body, attachment_type, attachment_name, created_at, deleted_at, profiles(display_name))',
+      'saved_at, messages(id, conversation_id, body, attachment_type, attachment_name, created_at, deleted_at, profiles!messages_sender_id_fkey(display_name))',
     )
     .order('saved_at', { ascending: false });
   if (error) throw error;

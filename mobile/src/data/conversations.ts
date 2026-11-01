@@ -6,11 +6,20 @@ import { AttachmentType, CallStatus, Conversation, Message, Profile } from '../t
 
 const CONVERSATION_SELECT = `*, conversation_participants(*, profiles(${PROFILE_COLUMNS}))`;
 
+// Embeds between messages and profiles or conversations name their foreign key.
+// PostgREST rejects a bare embed with PGRST201 (HTTP 300) as soon as a second
+// route between the two tables exists, and these are easy to add by accident:
+// a table keyed on (message_id, user_id) counts as a many-to-many route, which
+// is how poll_votes took down every message load, and
+// conversations.pinned_message_id is a second route to conversations.
+const SENDER_PROFILE = 'profiles!messages_sender_id_fkey';
+const MESSAGE_CONVERSATION = 'conversations!messages_conversation_id_fkey';
+
 export async function fetchConversations(userId: string): Promise<Conversation[]> {
   const { data, error } = await supabase
     .from('conversations')
     .select(
-      `${CONVERSATION_SELECT}, mine:conversation_participants!inner(user_id), messages(id, body, media_path, attachment_type, attachment_name, attachment_mime_type, attachment_duration_ms, call_status, created_at, sender_id)`,
+      `${CONVERSATION_SELECT}, mine:conversation_participants!inner(user_id), messages!messages_conversation_id_fkey(id, body, media_path, attachment_type, attachment_name, attachment_mime_type, attachment_duration_ms, call_status, created_at, sender_id)`,
     )
     // `mine` is this user's own participant row, joined a second time just
     // to filter on: a conversation they've hidden drops out here, in the
@@ -120,7 +129,7 @@ export async function createConversation(
 }
 
 const MESSAGE_SELECT =
-  `*, reply_to:reply_to_message_id(id, body, media_path, attachment_type, attachment_name, sender_id, deleted_at, profiles(${PROFILE_COLUMNS}))`;
+  `*, reply_to:reply_to_message_id(id, body, media_path, attachment_type, attachment_name, sender_id, deleted_at, ${SENDER_PROFILE}(${PROFILE_COLUMNS}))`;
 
 // ChatScreen's page size for both the initial load and each older page it
 // fetches as the user scrolls up - see loadMoreMessages there.
@@ -228,7 +237,7 @@ export async function searchAllMessages(
   const { data, error } = await supabase
     .from('messages')
     .select(
-      `id, sender_id, body, created_at, conversation_id, conversations!inner(id, is_group, name, conversation_participants(user_id, profiles(${PROFILE_COLUMNS})))`,
+      `id, sender_id, body, created_at, conversation_id, ${MESSAGE_CONVERSATION}!inner(id, is_group, name, conversation_participants(user_id, profiles(${PROFILE_COLUMNS})))`,
     )
     .is('deleted_at', null)
     .not('body', 'is', null)
@@ -585,7 +594,7 @@ export async function fetchCallLog(): Promise<CallLogEntry[]> {
   const { data, error } = await supabase
     .from('messages')
     .select(
-      `id, conversation_id, sender_id, call_status, attachment_duration_ms, attachment_mime_type, created_at, conversations!inner(id, is_group, name, conversation_participants(user_id, profiles(${PROFILE_COLUMNS})))`,
+      `id, conversation_id, sender_id, call_status, attachment_duration_ms, attachment_mime_type, created_at, ${MESSAGE_CONVERSATION}!inner(id, is_group, name, conversation_participants(user_id, profiles(${PROFILE_COLUMNS})))`,
     )
     .not('call_status', 'is', null)
     .is('deleted_at', null)
