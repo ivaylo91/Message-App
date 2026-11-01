@@ -7,7 +7,7 @@ import type { AuthStackParamList } from '../navigation/RootNavigator';
 import { Icon } from '../components/Icon';
 import { Touchable } from '../components/Touchable';
 import { useContentWidth } from '../hooks/useContentWidth';
-import { fonts, fontSizes, spacing, ThemeColors } from '../theme/tokens';
+import { AVATAR_PALETTE, fonts, fontSizes, spacing, ThemeColors } from '../theme/tokens';
 import { useTheme } from '../theme/ThemeContext';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Welcome'>;
@@ -19,10 +19,10 @@ const BOARD_HEIGHT = 330;
 
 // People around the flame - initials only, in the avatar palette.
 const PEOPLE = [
-  { left: 30, top: 60, size: 64, color: '#B4532F' },
-  { left: 262, top: 40, size: 56, color: '#2D7A73' },
-  { left: 270, top: 210, size: 68, color: '#56677F' },
-  { left: 40, top: 232, size: 52, color: '#8A3F7A' },
+  { left: 30, top: 60, size: 64, color: AVATAR_PALETTE[2] },
+  { left: 262, top: 40, size: 56, color: AVATAR_PALETTE[3] },
+  { left: 270, top: 210, size: 68, color: AVATAR_PALETTE[1] },
+  { left: 40, top: 232, size: 52, color: AVATAR_PALETTE[5] },
 ] as const;
 
 export function WelcomeScreen({ navigation }: Props) {
@@ -130,7 +130,7 @@ const makeStyles = (colors: ThemeColors) =>
       paddingHorizontal: spacing.xl,
       overflow: 'hidden',
     },
-    // A wash of violet behind the illustration, bleeding off the top.
+    // A wash of warm light behind the illustration, bleeding off the top.
     glow: {
       position: 'absolute',
       width: 560,
@@ -172,7 +172,7 @@ const makeStyles = (colors: ThemeColors) =>
       position: 'absolute',
       paddingVertical: 10,
       paddingHorizontal: 14,
-      shadowColor: '#1C1613',
+      shadowColor: '#5A2410',
       shadowOpacity: 0.08,
       shadowRadius: 10,
       shadowOffset: { width: 0, height: 6 },

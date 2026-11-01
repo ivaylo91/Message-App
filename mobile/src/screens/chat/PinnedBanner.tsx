@@ -35,7 +35,7 @@ export function PinnedBanner({
         accessibilityRole="button"
         accessibilityLabel={`${t('chat.pinnedMessage')}: ${text}`}
       >
-        <Icon name="thumbtack" size={15} color={colors.emberText} />
+        <Icon name="thumbtack" size={15} color={colors.amberText} />
         <Text style={styles.text} numberOfLines={1}>
           {text}
         </Text>
@@ -60,9 +60,9 @@ const makeStyles = (colors: ThemeColors) =>
     bar: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: colors.paper2,
+      backgroundColor: colors.amberTint,
       borderBottomWidth: 1,
-      borderBottomColor: colors.fill,
+      borderBottomColor: colors.line,
     },
     main: {
       flex: 1,

@@ -1,7 +1,12 @@
-// Design tokens for Hearth, from the 2026 redesign
-// (https://claude.ai/artifact/KvP8ArBKPM69nnjRPVbZuN): warm paper, one
-// solid violet, white cards, Onest throughout. It replaced the ember
-// palette of the earlier design review.
+// Design tokens for Hearth. The layout and type come from the 2026 redesign
+// (https://claude.ai/artifact/KvP8ArBKPM69nnjRPVbZuN): white cards, Onest
+// throughout. The colour moved on from that redesign's solid violet to match
+// the name and the flame: peach paper, one vermilion primary, and four
+// supporting tones (amber, rose, teal, plum) that label and tell apart but
+// never act - the only thing that says "tap me" is vermilion.
+//
+// Every foreground/background pair and bubble preset is held to WCAG AA by
+// __tests__/themeContrast.test.ts, so a new colour goes in that list too.
 //
 // Colors come in light/dark pairs (see ThemeContext.tsx for how the active
 // one is picked from the system setting) - every other token here
@@ -22,7 +27,7 @@ export interface ThemeColors {
   white: string;
   danger: string;
   // Role tokens, where one colour couldn't serve both jobs. In the dark
-  // theme a violet light enough to read *as text* on the dark page is too
+  // theme a vermilion light enough to read *as text* on the dark page is too
   // light to carry white text *on top of it*, and the same goes for
   // danger and the muted grey - no single value passes WCAG AA both ways.
   // So `ember`, `danger` and `smoke` stay the colours of text and icons,
@@ -33,9 +38,9 @@ export interface ThemeColors {
   // The redesign's additions. `fill` is the sunken surface (search field,
   // date pills, segmented controls); `emberTint` sits behind emberText
   // (count badges, the video-call button); `online` is the presence dot.
-  // The tab bar is an inverse pill - violet on the light theme, light on
+  // The tab bar is an inverse pill - vermilion on the light theme, light on
   // the dark one - so it carries its own colours, including the unread
-  // badge, which can't be violet where the bar itself is.
+  // badge, which can't be vermilion where the bar itself is.
   fill: string;
   emberTint: string;
   online: string;
@@ -46,70 +51,107 @@ export interface ThemeColors {
   navText: string;
   navBadge: string;
   navBadgeText: string;
+  // Fills behind white text, for the same reason as the role tokens above:
+  // `sage` is light enough to read as text on the dark page, so it can't
+  // also carry white. The call screen is dark in both themes.
+  successFill: string;
+  callSurface: string;
+  // Supporting tones, always in pairs: *Tint is the surface, *Text the icon
+  // or text on it. They identify things (a settings row, a pinned message).
+  // Actions stay vermilion, so these must not appear on buttons.
+  amberTint: string;
+  amberText: string;
+  roseTint: string;
+  roseText: string;
+  tealTint: string;
+  tealText: string;
+  plumTint: string;
+  plumText: string;
 }
 
 export const lightColors: ThemeColors = {
-  ink: '#1C1613',
-  paper: '#FAF5EF',
+  ink: '#2B140B',
+  paper: '#FFF3E6',
   paper2: '#FFFFFF',
-  ember: '#6D35E8',
-  emberGlow: '#A78BFA',
-  smoke: '#6B5F57',
-  char: '#3B302A',
-  line: '#E6DCD1',
+  ember: '#C8401E',
+  emberGlow: '#FF9A6B',
+  smoke: '#74503F',
+  char: '#4C2A1C',
+  line: '#F6DFCB',
   // Green text ('online'); the dot itself is `online`.
-  sage: '#2A7D45',
+  sage: '#1C7040',
   clay: '#B5654A',
   dusk: '#6E7B94',
   white: '#FFF8F2',
-  // Was #FF3B30 - the iOS system red, which was the one colour in here
-  // that looked borrowed rather than chosen: a cool red dropped into a
-  // warm ember/clay palette. This sits with clay (#B5654A) and also
-  // reads better, clearing 4.5:1 against paper where the old value did
-  // not manage 3.5:1.
-  danger: '#C2332B',
-  emberText: '#5B25D6',
-  dangerFill: '#C2332B',
-  mutedFill: '#6B5F57',
-  fill: '#F0E8DE',
-  emberTint: '#EEE7FD',
+  // Was #FF3B30 - the iOS system red, and then a warm brick. With a
+  // vermilion primary a warm red reads as just another button, so danger
+  // leans the other way, to crimson: it must look like a different kind of
+  // thing from the primary, and not only to people who see the two hues
+  // apart, which is why every destructive control also has an icon or label.
+  danger: '#AD1457',
+  emberText: '#A8310F',
+  dangerFill: '#AD1457',
+  mutedFill: '#7A5546',
+  fill: '#FFE7D4',
+  emberTint: '#FFE3D3',
   online: '#2F8F4E',
-  dangerTint: '#FDF1EF',
-  navBar: '#6D35E8',
-  navActive: '#FAF5EF',
-  navActiveText: '#5B25D6',
-  navText: '#E4DAFC',
+  dangerTint: '#FDE6EE',
+  // A step darker than `ember`: small tab labels on it need 4.5:1.
+  navBar: '#BC3A1A',
+  navActive: '#FFF3E6',
+  navActiveText: '#A8310F',
+  navText: '#FFF3E6',
   navBadge: '#FFFFFF',
-  navBadgeText: '#5B25D6',
+  navBadgeText: '#A8310F',
+  successFill: '#1C7040',
+  callSurface: '#33160B',
+  amberTint: '#FFEBC2',
+  amberText: '#7F4A00',
+  roseTint: '#FFE3EC',
+  roseText: '#A3234F',
+  tealTint: '#D5F3EE',
+  tealText: '#0B6560',
+  plumTint: '#F2E3FC',
+  plumText: '#6F2FA0',
 };
 
 export const darkColors: ThemeColors = {
-  ink: '#F3ECE4',
-  paper: '#15100D',
-  paper2: '#231C18',
-  ember: '#6D35E8',
-  emberGlow: '#C4B5FD',
-  smoke: '#A79A91',
-  char: '#EDE4DC',
-  line: 'rgba(255, 255, 255, 0.12)',
-  sage: '#6CC08A',
+  ink: '#FBEFE6',
+  paper: '#1C100B',
+  paper2: '#2C1A12',
+  ember: '#C8401E',
+  emberGlow: '#FFB08A',
+  smoke: '#CBAE9D',
+  char: '#F5E4D8',
+  line: 'rgba(255, 220, 195, 0.14)',
+  sage: '#7BD09A',
   clay: '#C97A5E',
   dusk: '#7C8CAD',
   white: '#FFF8F2',
-  danger: '#F0685A',
-  emberText: '#A78BFA',
-  dangerFill: '#C2332B',
-  mutedFill: '#6B5E57',
-  fill: '#2A221E',
-  emberTint: '#2E2342',
+  danger: '#FF8AA9',
+  emberText: '#FFA27D',
+  dangerFill: '#CC2A66',
+  mutedFill: '#7A5546',
+  fill: '#3A241A',
+  emberTint: '#4C2213',
   online: '#3FA463',
-  dangerTint: '#3A1F1C',
-  navBar: '#F3ECE4',
-  navActive: '#15100D',
-  navActiveText: '#F3ECE4',
-  navText: '#5A4E47',
-  navBadge: '#6D35E8',
+  dangerTint: '#47192B',
+  navBar: '#FFE4D2',
+  navActive: '#1C100B',
+  navActiveText: '#FFE4D2',
+  navText: '#6E3A26',
+  navBadge: '#C8401E',
   navBadgeText: '#FFFFFF',
+  successFill: '#1C7040',
+  callSurface: '#33160B',
+  amberTint: '#43300F',
+  amberText: '#FFC766',
+  roseTint: '#4A1D2F',
+  roseText: '#FF9DBA',
+  tealTint: '#123F3B',
+  tealText: '#6FE0D2',
+  plumTint: '#3B2353',
+  plumText: '#D9B3FF',
 };
 
 // 'system' defers to the OS setting, which is what this app did
@@ -136,46 +178,54 @@ export interface BubbleGradientPreset {
 // muted tint in dark mode (so it still needs light ink text; see
 // bubbleTextTheirs in ChatScreen, which just uses colors.ink and gets
 // the right contrast in both cases for free). "mine" has to stay dark/
-// saturated enough for the fixed white bubbleTextMine to read on it.
-// The first entry ("hearth", the redesign's solid violet) is the default -
-// see ThemeContext for how the user's chosen preset is applied.
+// saturated enough for the fixed white bubbleTextMine to read on it - at
+// *both* stops, in both themes, which is why the dark forms reuse the light
+// "mine" rather than brightening it: several presets used to, and their
+// sent messages were white on sky blue.
+// The first entry ("hearth", vermilion) is the default - see ThemeContext
+// for how the user's chosen preset is applied.
 export const BUBBLE_GRADIENT_PRESETS: BubbleGradientPreset[] = [
-  // The redesign's default: solid violet for mine, a plain card for
-  // theirs. Both stops equal, so it draws through the same gradient path.
+  // The default: a low vermilion gradient for mine, a plain card for theirs.
   {
     id: 'hearth',
-    light: { mine: ['#6D35E8', '#6D35E8'], theirs: ['#FFFFFF', '#FFFFFF'] },
-    dark: { mine: ['#6D35E8', '#6D35E8'], theirs: ['#2A221E', '#2A221E'] },
+    light: { mine: ['#CC4520', '#B8341C'], theirs: ['#FFFFFF', '#FFFFFF'] },
+    dark: { mine: ['#CC4520', '#B8341C'], theirs: ['#3A241A', '#3A241A'] },
   },
   {
     id: 'ember',
-    light: { mine: ['#FB4B84', '#7C3AED'], theirs: ['#FCE0EC', '#E4DCFB'] },
-    dark: { mine: ['#FF6F9C', '#9D6FFF'], theirs: ['#4A2338', '#382558'] },
+    light: { mine: ['#C92A63', '#7C3AED'], theirs: ['#FCE0EC', '#E4DCFB'] },
+    dark: { mine: ['#C92A63', '#7C3AED'], theirs: ['#4A2338', '#382558'] },
   },
   {
     id: 'ocean',
-    light: { mine: ['#38B6E8', '#1E5FBF'], theirs: ['#DDF1FC', '#DCE7FB'] },
-    dark: { mine: ['#5FCBEF', '#4A7FE0'], theirs: ['#1E3A4A', '#22345C'] },
+    light: { mine: ['#1C74A8', '#1E5FBF'], theirs: ['#DDF1FC', '#DCE7FB'] },
+    dark: { mine: ['#1C74A8', '#1E5FBF'], theirs: ['#1E3A4A', '#22345C'] },
   },
   {
     id: 'sunset',
-    light: { mine: ['#FF9142', '#F0447D'], theirs: ['#FFEBDD', '#FCE0EC'] },
-    dark: { mine: ['#FFAA5C', '#FF6F9C'], theirs: ['#4A2E1E', '#4A2338'] },
+    light: { mine: ['#B8500F', '#CC2C66'], theirs: ['#FFEBDD', '#FCE0EC'] },
+    dark: { mine: ['#B8500F', '#CC2C66'], theirs: ['#4A2E1E', '#4A2338'] },
   },
   {
     id: 'forest',
-    light: { mine: ['#4FB878', '#1F7A52'], theirs: ['#E1F5E9', '#DCEFE2'] },
-    dark: { mine: ['#6ED89A', '#3FA372'], theirs: ['#1E3B2B', '#1C3324'] },
+    light: { mine: ['#2B8552', '#1F7A52'], theirs: ['#E1F5E9', '#DCEFE2'] },
+    dark: { mine: ['#2B8552', '#1F7A52'], theirs: ['#1E3B2B', '#1C3324'] },
   },
   {
     id: 'berry',
-    light: { mine: ['#D6409F', '#7C2D9E'], theirs: ['#FBE1F1', '#F0DCF7'] },
-    dark: { mine: ['#F06BC4', '#A34FD1'], theirs: ['#442038', '#3A2350'] },
+    light: { mine: ['#C2338F', '#7C2D9E'], theirs: ['#FBE1F1', '#F0DCF7'] },
+    dark: { mine: ['#C2338F', '#7C2D9E'], theirs: ['#442038', '#3A2350'] },
   },
   {
     id: 'midnight',
-    light: { mine: ['#6E7B94', '#2C3550'], theirs: ['#E5E8EF', '#DEE1EB'] },
-    dark: { mine: ['#8C9AC0', '#4A5578'], theirs: ['#262B3A', '#20263A'] },
+    light: { mine: ['#5F6C85', '#2C3550'], theirs: ['#E5E8EF', '#DEE1EB'] },
+    dark: { mine: ['#5F6C85', '#2C3550'], theirs: ['#262B3A', '#20263A'] },
+  },
+  // The solid violet of the 2026 redesign, kept for anyone who liked it.
+  {
+    id: 'violet',
+    light: { mine: ['#6D35E8', '#6D35E8'], theirs: ['#FFFFFF', '#FFFFFF'] },
+    dark: { mine: ['#6D35E8', '#6D35E8'], theirs: ['#3A241A', '#3A241A'] },
   },
 ];
 
@@ -183,10 +233,18 @@ export const DEFAULT_BUBBLE_GRADIENT_ID = BUBBLE_GRADIENT_PRESETS[0].id;
 
 // Initials avatars. Fixed rather than themed: each carries white initials
 // and clears 4.5:1 under them on either theme.
-const AVATAR_PALETTE = ['#B4532F', '#2D7A73', '#56677F', '#8A3F7A', '#7A5A2E', '#6B7A2E'];
+export const AVATAR_PALETTE = [
+  '#C2410C',
+  '#BE3A6B',
+  '#A85F0C',
+  '#0F7C78',
+  '#3F6FB5',
+  '#8E44AD',
+  '#567A1A',
+] as const;
 
 export function avatarColorFor(seed: string, _colors?: ThemeColors): string {
-  const avatarPalette = AVATAR_PALETTE;
+  const avatarPalette: readonly string[] = AVATAR_PALETTE;
   let hash = 0;
   for (let i = 0; i < seed.length; i++) {
     hash = (hash * 31 + seed.charCodeAt(i)) >>> 0;
@@ -246,23 +304,28 @@ export const spacing = {
 // `elevation` needs one to cast a shadow at all. The chat header and
 // composer deliberately keep their hairlines instead, because they are
 // translucent over the chat wallpaper by design.
+//
+// Tinted a deep umber rather than black: a neutral shadow on peach paper
+// reads as a grey smudge.
+const SHADOW_COLOR = '#5A2410';
+
 export const elevation = {
   sm: {
-    shadowColor: '#000',
+    shadowColor: SHADOW_COLOR,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06,
     shadowRadius: 3,
     elevation: 2,
   },
   md: {
-    shadowColor: '#000',
+    shadowColor: SHADOW_COLOR,
     shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 5,
   },
   lg: {
-    shadowColor: '#000',
+    shadowColor: SHADOW_COLOR,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.18,
     shadowRadius: 24,

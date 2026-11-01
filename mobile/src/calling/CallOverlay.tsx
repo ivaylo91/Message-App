@@ -160,7 +160,7 @@ export function CallOverlay() {
 
 const makeStyles = (colors: ThemeColors) =>
   StyleSheet.create({
-    container: { flex: 1, backgroundColor: colors.char },
+    container: { flex: 1, backgroundColor: colors.callSurface },
     topBar: {
       alignItems: 'center',
       gap: 6,
@@ -174,7 +174,7 @@ const makeStyles = (colors: ThemeColors) =>
       height: 150,
       borderRadius: radii.md,
       overflow: 'hidden',
-      backgroundColor: colors.ink,
+      backgroundColor: colors.callSurface,
     },
     controls: {
       position: 'absolute',
@@ -194,6 +194,6 @@ const makeStyles = (colors: ThemeColors) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
-    acceptButton: { backgroundColor: colors.sage },
+    acceptButton: { backgroundColor: colors.successFill },
     declineButton: { backgroundColor: colors.dangerFill },
   });

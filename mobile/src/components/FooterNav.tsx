@@ -78,7 +78,7 @@ export function FooterNav({ active }: FooterNavProps) {
   ];
 
   return (
-    // An inverse capsule floating above the screen's bottom edge - violet on
+    // An inverse capsule floating above the screen's bottom edge - vermilion on
     // the light theme, light on the dark one - with the current tab lifted
     // out in the page colour. It stays in the layout rather than
     // overlapping the content, so no list has to pad itself to keep its

@@ -2,7 +2,7 @@ import { StyleSheet } from 'react-native';
 import { fonts, fontSizes, spacing, ThemeColors } from '../theme/tokens';
 
 // Shared by Login, Register and Forgot password: a back button, a big
-// title, labelled fields as white 54px boxes, one full-width violet
+// title, labelled fields as white 54px boxes, one full-width vermilion
 // button, and the switch-screen line at the bottom.
 export const makeAuthStyles = (colors: ThemeColors) =>
   StyleSheet.create({

@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import LinearGradient from 'react-native-linear-gradient';
-import { Icon } from '../components/Icon';
+import { Icon, type IconName } from '../components/Icon';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { usePreventRemove } from '@react-navigation/native';
 import { useTranslation } from 'react-i18next';
@@ -58,10 +58,33 @@ const THEME_PREFERENCES: ThemePreference[] = ['system', 'light', 'dark'];
 // The colours each theme card draws itself with - fixed, so the Dark
 // card looks dark while the app is light and the other way round.
 const THEME_PREVIEWS: Record<ThemePreference, { bg: string; line: string }> = {
-  system: { bg: '#E9E1D7', line: '#B9AEA5' },
-  light: { bg: '#FAF5EF', line: '#D9CEC4' },
-  dark: { bg: '#1C1613', line: '#4A3F38' },
+  system: { bg: '#F3D9C2', line: '#C9A488' },
+  light: { bg: '#FFF3E6', line: '#E8CDB6' },
+  dark: { bg: '#1C100B', line: '#4F3527' },
 };
+
+// A tile's hue names the kind of setting, the same way on every row:
+// amber for what reaches you or is kept for you, teal for what others can
+// see of you, rose for how the app looks, plum for security. It helps a long
+// list scan, and the icon and title still say what the row is.
+type SettingTone = 'amber' | 'teal' | 'rose' | 'plum';
+
+function SettingIcon({ name, tone }: { name: IconName; tone: SettingTone }) {
+  const { colors } = useTheme();
+  return (
+    <View style={[settingIconStyle, { backgroundColor: colors[`${tone}Tint` as const] }]}>
+      <Icon name={name} size={18} color={colors[`${tone}Text` as const]} />
+    </View>
+  );
+}
+
+const settingIconStyle = {
+  width: 36,
+  height: 36,
+  borderRadius: 11,
+  alignItems: 'center',
+  justifyContent: 'center',
+} as const;
 
 const THEME_PREFERENCE_LABEL_KEYS: Record<ThemePreference, string> = {
   system: 'profile.themeSystem',
@@ -458,9 +481,7 @@ export function ProfileScreen({ navigation }: Props) {
                 of ours - so this row reports it, and offers the way to
                 turn it on when it's off. */}
             <View style={styles.settingRow}>
-              <View style={styles.settingIcon}>
-                <Icon name="bell" size={18} color={colors.char} />
-              </View>
+              <SettingIcon name="bell" tone="amber" />
               <View style={styles.settingText}>
                 <Text style={styles.settingTitle}>{t('profile.notifications')}</Text>
                 <Text style={styles.settingHint}>
@@ -487,9 +508,7 @@ export function ProfileScreen({ navigation }: Props) {
               ] as const
             ).map(([key, icon, labelKey, hintKey]) => (
               <View key={key} style={[styles.settingRow, styles.settingRowDivided]}>
-                <View style={styles.settingIcon}>
-                  <Icon name={icon} size={18} color={colors.char} />
-                </View>
+                <SettingIcon name={icon} tone="teal" />
                 <View style={styles.settingText}>
                   <Text style={styles.settingTitle}>{t(labelKey)}</Text>
                   <Text style={styles.settingHint}>{t(hintKey)}</Text>
@@ -564,9 +583,7 @@ export function ProfileScreen({ navigation }: Props) {
               </View>
             </View>
             <View style={[styles.settingRow, styles.settingRowDivided]}>
-              <View style={styles.settingIcon}>
-                <Icon name="images" size={18} color={colors.char} />
-              </View>
+              <SettingIcon name="images" tone="rose" />
               <View style={styles.settingText}>
                 <Text style={styles.settingTitle}>{t('profile.chatWallpaper')}</Text>
                 <Text style={styles.settingHint}>{t('profile.chatWallpaperHint')}</Text>
@@ -610,9 +627,7 @@ export function ProfileScreen({ navigation }: Props) {
         <View style={styles.section}>
           <View style={styles.card}>
             <View style={styles.settingRow}>
-              <View style={styles.settingIcon}>
-                <Icon name="lock" size={18} color={colors.char} />
-              </View>
+              <SettingIcon name="lock" tone="plum" />
               <View style={styles.settingText}>
                 <Text style={styles.settingTitle}>{t('appLock.title')}</Text>
                 <Text style={styles.settingHint}>{t('appLock.hint')}</Text>
@@ -636,9 +651,7 @@ export function ProfileScreen({ navigation }: Props) {
               onPress={() => navigation.navigate('SavedMessages')}
               accessibilityRole="button"
             >
-              <View style={styles.settingIcon}>
-                <Icon name="bookmark" size={18} color={colors.char} />
-              </View>
+              <SettingIcon name="bookmark" tone="amber" />
               <Text style={[styles.settingTitle, styles.settingText]}>{t('saved.title')}</Text>
               <Icon name="chevron-right" size={18} color={colors.smoke} />
             </Touchable>
@@ -652,9 +665,7 @@ export function ProfileScreen({ navigation }: Props) {
               onPress={() => void Linking.openURL(PRIVACY_POLICY_URL)}
               accessibilityRole="link"
             >
-              <View style={styles.settingIcon}>
-                <Icon name="shield-halved" size={18} color={colors.char} />
-              </View>
+              <SettingIcon name="shield-halved" tone="plum" />
               <Text style={[styles.settingTitle, styles.settingText]}>{t('profile.privacyPolicy')}</Text>
               <Icon name="arrow-up-right-from-square" size={16} color={colors.smoke} />
             </Touchable>
@@ -842,14 +853,6 @@ const makeStyles = (colors: ThemeColors) =>
     paddingVertical: 14,
   },
   settingRowDivided: { borderTopWidth: 1, borderTopColor: colors.fill },
-  settingIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 11,
-    backgroundColor: colors.fill,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   settingText: { flex: 1, minWidth: 0, gap: 2 },
   settingTitle: { fontFamily: fonts.family, fontSize: 16, fontWeight: '500', color: colors.ink },
   settingHint: { fontFamily: fonts.family, fontSize: fontSizes.footnote, lineHeight: 18, color: colors.smoke },
@@ -874,7 +877,7 @@ const makeStyles = (colors: ThemeColors) =>
   themeCardSelected: { borderColor: colors.ember },
   themePreview: { height: 56, borderRadius: 10, justifyContent: 'center', gap: 5, paddingHorizontal: 9 },
   themeLine: { height: 7, width: '60%', borderRadius: 4 },
-  themeLineMine: { width: '40%', alignSelf: 'flex-end', backgroundColor: '#6D35E8' },
+  themeLineMine: { width: '40%', alignSelf: 'flex-end', backgroundColor: colors.ember },
   themeLabel: { fontFamily: fonts.family, fontSize: 14, fontWeight: '600', color: colors.ink, paddingLeft: 2 },
   choiceRow: { flexDirection: 'row', gap: spacing.sm },
   choiceChip: {

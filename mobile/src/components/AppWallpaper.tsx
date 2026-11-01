@@ -27,10 +27,10 @@ const ICON_NAMES = [
 
 const CELL_SIZE = 76;
 const ICON_SIZE = 20;
-const ICON_OPACITY = 0.08;
-// Every 4th icon picks up a touch of brand color instead of plain ink,
-// so the pattern isn't perfectly monochrome.
-const ACCENT_EVERY = 4;
+const ICON_OPACITY = 0.1;
+// Every 2nd icon takes one of the palette's warm tones in turn instead of
+// plain ink, so the pattern reads as colour rather than a grey texture.
+const ACCENT_EVERY = 2;
 
 interface WallpaperIcon {
   key: string;
@@ -53,6 +53,7 @@ function AppWallpaperComponent() {
     const columns = Math.ceil(width / CELL_SIZE) + 1;
     const rows = Math.ceil(height / CELL_SIZE) + 1;
 
+    const accents = [colors.ember, colors.amberText, colors.roseText, colors.tealText];
     const items: WallpaperIcon[] = [];
     let index = 0;
     for (let row = 0; row < rows; row++) {
@@ -63,7 +64,10 @@ function AppWallpaperComponent() {
           name: ICON_NAMES[index % ICON_NAMES.length],
           top: row * CELL_SIZE,
           left: col * CELL_SIZE + rowOffset,
-          color: index % ACCENT_EVERY === 0 ? colors.ember : colors.ink,
+          color:
+            index % ACCENT_EVERY === 0
+              ? accents[(index / ACCENT_EVERY) % accents.length]
+              : colors.ink,
         });
         index++;
       }

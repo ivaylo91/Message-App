@@ -24,7 +24,7 @@ const SMALL_ICON = 'ic_notification';
 // Tints that silhouette and the app name in the shade. Matches colors.ember
 // in theme/tokens.ts - notifications are outside the theme context, so it
 // cannot be read from there.
-const NOTIFICATION_COLOR = '#7C3AED';
+const NOTIFICATION_COLOR = '#C8401E';
 
 const REPLY_ACTION_TITLE = 'Reply';
 const REPLY_PLACEHOLDER = 'Message';

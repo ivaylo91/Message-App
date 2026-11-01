@@ -1,6 +1,11 @@
 import { StyleSheet } from 'react-native';
 import { elevation, fonts, fontSizes, radii, spacing, ThemeColors } from '../../theme/tokens';
 
+// Panels inside a sent bubble (a quoted reply, a link card, a speed chip).
+// They darken the bubble rather than lighten it: white text on a white-tinted
+// vermilion falls under 4.5:1, and darker only ever adds contrast.
+const MINE_INSET = 'rgba(0,0,0,0.16)';
+
 // One sheet for the chat screen and the components split out of it
 // (MessageBubble, ChatDecorations) - they share most of their look, and
 // splitting the sheet itself would mean guessing which rules each needs.
@@ -178,7 +183,7 @@ export const makeStyles = (colors: ThemeColors) =>
     borderRadius: radii.sm,
     marginBottom: spacing.xs,
   },
-  linkCardMine: { borderLeftColor: colors.white, backgroundColor: 'rgba(255,255,255,0.14)' },
+  linkCardMine: { borderLeftColor: colors.white, backgroundColor: MINE_INSET },
   linkCardTheirs: { borderLeftColor: colors.ember, backgroundColor: colors.line },
   linkCardSiteMine: { fontFamily: fonts.family, fontSize: fontSizes.caption, fontWeight: '700', color: colors.white, opacity: 0.85 },
   linkCardSiteTheirs: { fontFamily: fonts.family, fontSize: fontSizes.caption, fontWeight: '700', color: colors.emberText },
@@ -193,7 +198,7 @@ export const makeStyles = (colors: ThemeColors) =>
     borderRadius: radii.pill,
     alignItems: 'center',
   },
-  speedChipMine: { backgroundColor: 'rgba(255,255,255,0.22)' },
+  speedChipMine: { backgroundColor: MINE_INSET },
   speedChipTheirs: { backgroundColor: colors.line },
   speedChipTextMine: { fontFamily: fonts.family, fontSize: fontSizes.caption, fontWeight: '700', color: colors.white },
   speedChipTextTheirs: { fontFamily: fonts.family, fontSize: fontSizes.caption, fontWeight: '700', color: colors.ink },
@@ -318,8 +323,9 @@ export const makeStyles = (colors: ThemeColors) =>
     borderRadius: radii.pill,
     backgroundColor: 'rgba(0,0,0,0.5)',
   },
-  // 4.6:1 on the violet - the time is small, so it needs the contrast.
-  metaTextMine: { fontFamily: fonts.family, fontSize: 11, color: 'rgba(255,255,255,0.82)' },
+  // Solid white: the time is small, so it needs the contrast, and a warm
+  // bubble has none to spare for a translucent white.
+  metaTextMine: { fontFamily: fonts.family, fontSize: 11, color: '#FFFFFF' },
   metaTextTheirs: { fontFamily: fonts.family, fontSize: 11, color: colors.smoke },
   metaTextPhoto: { fontFamily: fonts.family, fontSize: 11, color: '#FFFFFF' },
   // Tabular only where the digits tick, so the row doesn't jitter.
@@ -359,7 +365,7 @@ export const makeStyles = (colors: ThemeColors) =>
     borderRadius: 8,
     overflow: 'hidden',
   },
-  replyQuoteMine: { backgroundColor: 'rgba(255, 255, 255, 0.16)' },
+  replyQuoteMine: { backgroundColor: MINE_INSET },
   replyQuoteTheirs: { backgroundColor: colors.line },
   replyQuoteBar: { width: 3, borderRadius: 2 },
   replyQuoteBarMine: { backgroundColor: 'rgba(255, 255, 255, 0.7)' },
@@ -374,7 +380,7 @@ export const makeStyles = (colors: ThemeColors) =>
   replyQuoteContent: {},
   replyQuoteSenderMine: { fontFamily: fonts.family, fontSize: fontSizes.caption, fontWeight: '700', color: colors.white },
   replyQuoteSenderTheirs: { fontFamily: fonts.family, fontSize: fontSizes.caption, fontWeight: '700', color: colors.emberText },
-  replyQuoteTextMine: { fontFamily: fonts.family, fontSize: fontSizes.caption, color: 'rgba(255, 255, 255, 0.85)' },
+  replyQuoteTextMine: { fontFamily: fonts.family, fontSize: fontSizes.caption, color: '#FFFFFF' },
   replyQuoteTextTheirs: { fontFamily: fonts.family, fontSize: fontSizes.caption, color: colors.smoke },
   reactionRow: {
     flexDirection: 'row',

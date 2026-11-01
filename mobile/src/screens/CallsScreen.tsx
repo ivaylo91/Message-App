@@ -254,7 +254,7 @@ export function CallsScreen({ navigation }: Props) {
             ListEmptyComponent={
               <View style={styles.empty}>
                 <View style={styles.emptyIcon}>
-                  <Icon name="video" size={24} color={colors.smoke} />
+                  <Icon name="video" size={24} color={colors.emberText} />
                 </View>
                 <Text style={styles.emptyTitle}>
                   {filter === 'missed' ? t('calls.emptyMissedTitle') : t('calls.emptyTitle')}
@@ -373,7 +373,7 @@ const makeStyles = (colors: ThemeColors) =>
       width: 60,
       height: 60,
       borderRadius: 30,
-      backgroundColor: colors.paper2,
+      backgroundColor: colors.emberTint,
       alignItems: 'center',
       justifyContent: 'center',
       marginBottom: spacing.xs,

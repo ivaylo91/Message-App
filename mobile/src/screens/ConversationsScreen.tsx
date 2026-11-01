@@ -995,7 +995,7 @@ export function ConversationsScreen({ navigation }: Props) {
           ) : (
           <View style={styles.empty}>
             <View style={styles.emptyIcon}>
-              <Icon name="comments" size={26} color={colors.smoke} />
+              <Icon name="comments" size={26} color={colors.emberText} />
             </View>
             <Text style={styles.emptyTitle}>{t('conversations.noConversationsYet')}</Text>
             <Text style={styles.emptyHint}>{t('conversations.startConversationHint')}</Text>
@@ -1058,7 +1058,7 @@ const makeStyles = (colors: ThemeColors) =>
     marginHorizontal: spacing.lg + 4,
     marginBottom: spacing.sm,
   },
-  // Selected is the violet pill - the strongest thing in the header after
+  // Selected is the vermilion pill - the strongest thing in the header after
   // the title, so the current filter is never in doubt.
   filterChip: {
     flexDirection: 'row',
@@ -1085,7 +1085,7 @@ const makeStyles = (colors: ThemeColors) =>
   },
   filterCountSelected: { backgroundColor: '#FFFFFF' },
   filterCountText: { fontFamily: fonts.family, fontSize: fontSizes.caption, fontWeight: '700', color: colors.emberText },
-  filterCountTextSelected: { color: '#5B25D6' },
+  filterCountTextSelected: { color: colors.ember },
   onlineSection: { paddingTop: spacing.md, paddingBottom: 6 },
   onlineHeading: {
     fontFamily: fonts.family,
@@ -1207,9 +1207,7 @@ const makeStyles = (colors: ThemeColors) =>
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: colors.paper2,
-    borderWidth: 1,
-    borderColor: colors.line,
+    backgroundColor: colors.emberTint,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: spacing.md,

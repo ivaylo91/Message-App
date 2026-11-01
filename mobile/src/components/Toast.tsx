@@ -112,7 +112,7 @@ const makeStyles = (colors: ThemeColors) =>
       elevation: 6,
       zIndex: 999,
     },
-    success: { backgroundColor: colors.sage },
+    success: { backgroundColor: colors.successFill },
     error: { backgroundColor: colors.dangerFill },
     text: { fontFamily: fonts.family, color: colors.white, fontWeight: '700', fontSize: fontSizes.body },
   });
