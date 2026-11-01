@@ -34,6 +34,7 @@ import * as conversationsData from '../data/conversations';
 import * as reactionsData from '../data/reactions';
 import * as savedMessagesData from '../data/savedMessages';
 import { getCachedChat, setCachedChat } from '../data/chatCache';
+import { usePollVotes } from '../polls/usePollVotes';
 import { mergeReactions } from '../utils/reactions';
 import * as mediaData from '../data/media';
 import * as moderationData from '../data/moderation';
@@ -93,7 +94,13 @@ import {
 
 import { makeStyles } from './chat/chatStyles';
 import { LocalMessage, PLAYBACK_SPEEDS, type PlaybackSpeed } from './chat/types';
-import { MessageBubble, NO_REACTIONS, NO_SEEN_BY, replySenderLabel } from './chat/MessageBubble';
+import {
+  MessageBubble,
+  NO_POLL_VOTES,
+  NO_REACTIONS,
+  NO_SEEN_BY,
+  replySenderLabel,
+} from './chat/MessageBubble';
 import { ChatHistorySkeleton, TypingBubble } from './chat/ChatDecorations';
 import { PinnedBanner } from './chat/PinnedBanner';
 import { KeyboardAvoidingView, KeyboardGestureArea } from 'react-native-keyboard-controller';
@@ -822,10 +829,12 @@ export function ChatScreen({ route, navigation }: Props) {
       options: [
         { id: 'photo', label: t('chat.a11yAttachPhoto') },
         { id: 'file', label: t('chat.a11yAttachFile') },
+        { id: 'poll', label: t('polls.attach') },
       ],
     }).then((choice) => {
       if (choice === 'photo') void onPickImage();
       else if (choice === 'file') void onPickFile();
+      else if (choice === 'poll') navigation.navigate('NewPoll', { conversationId });
     });
   };
 
@@ -1389,6 +1398,12 @@ export function ChatScreen({ route, navigation }: Props) {
     [onReportUser],
   );
 
+  const { votesByMessageId: pollVotesByMessageId, onVote } = usePollVotes(
+    conversationId,
+    messages,
+    userId,
+  );
+
   const onToggleReactionForMessage = useCallback(
     (messageId: string, emoji: string) => void onToggleReaction(messageId, emoji),
     [onToggleReaction],
@@ -1806,7 +1821,8 @@ export function ChatScreen({ route, navigation }: Props) {
         });
       }
     }
-    if (isMine && message.body) {
+    // Not a poll: votes already cast would then count towards a new question.
+    if (isMine && message.body && !message.poll_options) {
       actions.push({
         id: 'edit',
         label: t('chat.edit'),
@@ -1904,6 +1920,7 @@ export function ChatScreen({ route, navigation }: Props) {
             : null
         }
         reactions={reactionsByMessageId.get(item.id) ?? NO_REACTIONS}
+        pollVotes={pollVotesByMessageId.get(item.id) ?? NO_POLL_VOTES}
         userId={userId}
         isHighlighted={item.id === highlightedMessageId}
         unreadDivider={item.id === unreadDividerId}
@@ -1930,6 +1947,7 @@ export function ChatScreen({ route, navigation }: Props) {
         dayLabel={dayLabelsByMessageId.get(item.id) ?? null}
         onLongPress={onOpenMenu}
         onToggleReaction={onToggleReactionForMessage}
+        onVote={onVote}
         onTogglePlay={onTogglePlay}
         onOpenImage={onOpenImage}
         onReply={onReplyToMessage}
@@ -1942,6 +1960,7 @@ export function ChatScreen({ route, navigation }: Props) {
       isGroup,
       senderNames,
       reactionsByMessageId,
+      pollVotesByMessageId,
       highlightedMessageId,
       photoAlbums,
       unreadDividerId,
@@ -1957,6 +1976,7 @@ export function ChatScreen({ route, navigation }: Props) {
       dayLabelsByMessageId,
       onOpenMenu,
       onToggleReactionForMessage,
+      onVote,
       onTogglePlay,
       onOpenImage,
       onReplyToMessage,

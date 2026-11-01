@@ -9,6 +9,7 @@ import { ActivityIndicator, StatusBar, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
+import { AppLockProvider } from './src/appLock/AppLockContext';
 import { AuthProvider } from './src/auth/AuthContext';
 import { PresenceProvider } from './src/presence/PresenceContext';
 import { MessageStreamProvider } from './src/messages/MessageStreamContext';
@@ -55,7 +56,9 @@ function AppContent() {
                   <OutboxProvider>
                     <TypingProvider>
                       <CallProvider>
-                        <RootNavigator />
+                        <AppLockProvider>
+                          <RootNavigator />
+                        </AppLockProvider>
                         <CallOverlay />
                       </CallProvider>
                     </TypingProvider>

@@ -33,13 +33,14 @@ import { showsSenderName, type RunPosition } from '../../utils/messageGrouping';
 import { MAX_FONT_SCALE_TIGHT } from '../../theme/tokens';
 import { useTheme } from '../../theme/ThemeContext';
 import { useBubbleGradients } from '../../theme/chatTheme';
-import { MessageReaction, ReplyPreview } from '../../types';
+import { MessageReaction, PollVote, ReplyPreview } from '../../types';
 import {
   fetchLinkPreview,
   linkPreviewImageSource,
   type LinkPreview,
 } from '../../data/linkPreviews';
 import { makeStyles } from './chatStyles';
+import { PollCard } from './PollCard';
 import { LocalMessage, MessageStatus, STATUS_ICONS, type PlaybackSpeed } from './types';
 
 interface ReactionSummary {
@@ -508,6 +509,7 @@ export type SeenBy = { name: string; avatarPath: string | null }[];
 // gets the *same* array every render - `?? []` would mint a new one each
 // time and defeat the memo comparison below.
 export const NO_REACTIONS: MessageReaction[] = [];
+export const NO_POLL_VOTES: PollVote[] = [];
 export const NO_SEEN_BY: SeenBy = [];
 
 // Every handler takes the message (or its id) rather than being a closure
@@ -519,6 +521,7 @@ interface MessageBubbleProps {
   isMine: boolean;
   senderName: string | null;
   reactions: MessageReaction[];
+  pollVotes: PollVote[];
   userId: string | null;
   isHighlighted: boolean;
   // Set on the photo an album is anchored to: every photo in the album,
@@ -543,6 +546,7 @@ interface MessageBubbleProps {
   // place - see MessageMenu.
   onLongPress: (message: LocalMessage, anchor: { y: number; height: number }) => void;
   onToggleReaction: (messageId: string, emoji: string) => void;
+  onVote: (messageId: string, optionIndex: number) => void;
   onTogglePlay: (message: LocalMessage) => void;
   onSeekAudio: (message: LocalMessage, fraction: number) => void;
   onCyclePlaybackSpeed: () => void;
@@ -557,6 +561,7 @@ function MessageBubbleComponent({
   isMine,
   senderName,
   reactions,
+  pollVotes,
   userId,
   isHighlighted,
   album,
@@ -571,6 +576,7 @@ function MessageBubbleComponent({
   dayLabel,
   onLongPress,
   onToggleReaction,
+  onVote,
   onTogglePlay,
   onSeekAudio,
   onCyclePlaybackSpeed,
@@ -603,7 +609,7 @@ function MessageBubbleComponent({
   const metaPlacement: 'photo' | 'inline' | 'block' =
     isPhoto && !message.body
       ? 'photo'
-      : message.body && !previewUrl
+      : message.body && !previewUrl && !message.poll_options
         ? 'inline'
         : 'block';
   const timeText = formatMessageTime(message.created_at, i18n.language);
@@ -618,7 +624,11 @@ function MessageBubbleComponent({
   // A plain text message is one thing to a screen reader, read in one go. A
   // bubble with a photo or voice message stays open, so the controls inside
   // it can be reached: the bubble itself would otherwise swallow them.
-  const isPlainText = Boolean(message.body) && !message.attachment_type && !message.call_status;
+  const isPlainText =
+    Boolean(message.body) &&
+    !message.attachment_type &&
+    !message.call_status &&
+    !message.poll_options;
   const bubbleLabel = isPlainText
     ? [
         isMine ? t('chat.you') : senderName,
@@ -830,6 +840,17 @@ function MessageBubbleComponent({
               )}
               {metaPlacement === 'inline' && metaSpacer(`${editedText} ${timeText}`, Boolean(status))}
             </Text>
+          )}
+          {message.poll_options && (
+            <PollCard
+              options={message.poll_options}
+              votes={pollVotes}
+              userId={userId}
+              isMine={isMine}
+              disabled={Boolean(message._pending)}
+              onVote={(optionIndex) => onVote(message.id, optionIndex)}
+              onLongPress={openMenu}
+            />
           )}
           {previewUrl && !message._pending && (
             <LinkPreviewCard url={previewUrl} isMine={isMine} onLongPress={openMenu} />

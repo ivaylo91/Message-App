@@ -382,6 +382,29 @@
     "saveFailedToast": "Couldn't update saved messages. Try again.",
     "loadFailedToast": "Couldn't load saved messages."
   },
+  "polls": {
+    "attach": "Poll",
+    "title": "New poll",
+    "questionLabel": "Question",
+    "questionPlaceholder": "Ask something",
+    "optionsLabel": "Options",
+    "optionPlaceholder": "Option {{n}}",
+    "addOption": "Add an option",
+    "removeOption": "Remove option {{n}}",
+    "send": "Send poll",
+    "sendFailedToast": "Couldn't send the poll. Try again.",
+    "voteFailedToast": "Couldn't save your vote. Try again.",
+    "votes_one": "1 vote",
+    "votes_other": "{{count}} votes"
+  },
+  "appLock": {
+    "title": "App lock",
+    "hint": "Ask for your fingerprint, face or screen lock to open Hearth",
+    "lockedTitle": "Hearth is locked",
+    "unlock": "Unlock",
+    "promptTitle": "Unlock Hearth",
+    "enableFailedToast": "Couldn't turn on App lock. Check that your phone has a screen lock."
+  },
   "errorBoundary": {
     "title": "Something went wrong",
     "message": "This part of the app stopped working.",

@@ -360,6 +360,27 @@ export async function sendMessage(
   return data as unknown as Message;
 }
 
+export async function sendPollMessage(
+  conversationId: string,
+  senderId: string,
+  question: string,
+  options: string[],
+): Promise<Message> {
+  const { data, error } = await supabase
+    .from('messages')
+    .insert({
+      conversation_id: conversationId,
+      sender_id: senderId,
+      body: question,
+      poll_options: options,
+    })
+    .select(MESSAGE_SELECT)
+    .single();
+
+  if (error) throw error;
+  return data as unknown as Message;
+}
+
 interface AttachmentInput {
   path: string;
   type: AttachmentType;

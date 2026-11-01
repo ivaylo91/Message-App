@@ -34,6 +34,7 @@ export type AppStackParamList = {
   Profile: undefined;
   Calls: undefined;
   SavedMessages: undefined;
+  NewPoll: { conversationId: string };
   // highlightMessageId jumps straight to a message - used by global
   // search, which can land on a message far outside the newest page.
   Chat: { conversationId: string; title: string; highlightMessageId?: string };
@@ -114,6 +115,10 @@ function AppNavigator() {
         options={{ animation: 'none' }}
       />
       <AppStack.Screen name="Chat" getComponent={() => require('../screens/ChatScreen').ChatScreen} />
+      <AppStack.Screen
+        name="NewPoll"
+        getComponent={() => require('../screens/NewPollScreen').NewPollScreen}
+      />
       <AppStack.Screen
         name="SavedMessages"
         getComponent={() => require('../screens/SavedMessagesScreen').SavedMessagesScreen}

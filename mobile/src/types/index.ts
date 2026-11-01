@@ -95,6 +95,17 @@ export interface Message {
   // absent on rows from before the column existed and on local pending
   // copies built without it.
   mentions?: string[];
+  // Set on a poll, whose question is the body. See 20261101_add_polls.sql.
+  // Optional for the same reason as mentions.
+  poll_options?: string[] | null;
+}
+
+export interface PollVote {
+  message_id: string;
+  user_id: string;
+  conversation_id: string;
+  // Null once the vote has been withdrawn.
+  option_index: number | null;
 }
 
 export interface MessageReaction {

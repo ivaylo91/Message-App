@@ -62,6 +62,7 @@ const GLYPHS = {
   plus: 'plus',
   reply: 'reply',
   link: 'link',
+  lock: 'lock',
   'right-from-bracket': 'log-out',
   'right-to-bracket': 'log-in',
   share: 'forward',

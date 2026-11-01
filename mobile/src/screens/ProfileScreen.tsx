@@ -20,6 +20,7 @@ import { useTranslation } from 'react-i18next';
 import { setLanguage, SUPPORTED_LANGUAGES, SupportedLanguage } from '../i18n';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AppStackParamList } from '../navigation/RootNavigator';
+import { useAppLock } from '../appLock/AppLockContext';
 import { useAuth } from '../auth/AuthContext';
 import { supabase } from '../lib/supabase';
 import * as profilesData from '../data/profiles';
@@ -86,6 +87,7 @@ export function ProfileScreen({ navigation }: Props) {
   const { userId, logout } = useAuth();
   const { confirm } = useConfirm();
   const { showToast } = useToast();
+  const { isEnabled: isAppLockOn, setEnabled: setAppLockEnabled } = useAppLock();
   const { setSharesLastSeen } = usePresence();
   const insets = useSafeAreaInsets();
   const { contentWidth } = useContentWidth();
@@ -175,6 +177,11 @@ export function ProfileScreen({ navigation }: Props) {
       options: [{ id: 'settings', label: t('profile.notificationsOpenSettings') }],
     });
     if (choice === 'settings') void openNotificationSettings().catch(() => {});
+  };
+
+  const onToggleAppLock = async (enabled: boolean) => {
+    const changed = await setAppLockEnabled(enabled);
+    if (!changed) showToast(t('appLock.enableFailedToast'), 'error');
   };
 
   const onChangePhoto = async () => {
@@ -596,6 +603,28 @@ export function ProfileScreen({ navigation }: Props) {
                   );
                 })}
               </View>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <View style={styles.card}>
+            <View style={styles.settingRow}>
+              <View style={styles.settingIcon}>
+                <Icon name="lock" size={18} color={colors.char} />
+              </View>
+              <View style={styles.settingText}>
+                <Text style={styles.settingTitle}>{t('appLock.title')}</Text>
+                <Text style={styles.settingHint}>{t('appLock.hint')}</Text>
+              </View>
+              <Switch
+                value={isAppLockOn}
+                onValueChange={(value) => void onToggleAppLock(value)}
+                trackColor={{ false: colors.line, true: colors.ember }}
+                thumbColor="#FFFFFF"
+                ios_backgroundColor={colors.line}
+                accessibilityLabel={t('appLock.title')}
+              />
             </View>
           </View>
         </View>

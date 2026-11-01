@@ -49,6 +49,8 @@
 	<string>Allow access to your photos to share images in chats.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Allow access to your microphone to record voice messages and for calls.</string>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Allow Face ID to unlock Hearth when App lock is on.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Allow access to your camera for video calls.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
