@@ -201,11 +201,16 @@ grant execute on function public.set_pinned_message(uuid, uuid) to authenticated
 -- The insert policy's subquery runs under the caller's own RLS on messages,
 -- so a message you can't read can't be saved, and leaving a group makes what
 -- you saved from it unreadable through the same rule.
+--
+-- A surrogate key, not (user_id, message_id): PostgREST reads a primary key made
+-- of two foreign keys as a many-to-many link, which would be a second route
+-- between messages and profiles. See 20261101_fix_poll_votes_embed.sql.
 create table public.saved_messages (
+  id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.profiles (id) on delete cascade,
   message_id uuid not null references public.messages (id) on delete cascade,
   saved_at timestamptz not null default now(),
-  primary key (user_id, message_id)
+  unique (user_id, message_id)
 );
 
 create index saved_messages_message_id_idx on public.saved_messages (message_id);
@@ -228,3 +233,5 @@ create policy "save messages you can read"
 create policy "remove own saved messages"
   on public.saved_messages for delete to authenticated
   using ((select auth.uid()) = user_id);
+
+notify pgrst, 'reload schema';
