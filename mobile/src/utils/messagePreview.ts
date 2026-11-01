@@ -1,5 +1,6 @@
 import type { TFunction } from 'i18next';
 import { isVoiceCallLog } from '../calling/callMedia';
+import { gifUrlOf } from './gif';
 import { AttachmentType, CallStatus } from '../types';
 
 // Shared between the chat's reply quote/bar, and the conversation
@@ -20,6 +21,13 @@ export function attachmentPreviewText(
     default:
       return null;
   }
+}
+
+// A message's text for a one-line summary. A GIF's body is its link, which
+// nobody should have to read.
+export function bodyPreviewText(body: string | null | undefined, t: TFunction): string | null {
+  if (gifUrlOf(body)) return t('conversations.gifPreview');
+  return body || null;
 }
 
 export type FileIconName =

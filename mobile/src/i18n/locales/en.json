@@ -59,6 +59,7 @@
     "searchPlaceholder": "Search conversations",
     "noMessagesYet": "No messages yet",
     "photoPreview": "Photo",
+    "gifPreview": "GIF",
     "audioPreview": "Voice message",
     "filePreview": "{{name}}",
     "groupChat": "Group chat",
@@ -382,6 +383,16 @@
     "removedToast": "Removed from saved",
     "saveFailedToast": "Couldn't update saved messages. Try again.",
     "loadFailedToast": "Couldn't load saved messages."
+  },
+  "gif": {
+    "attach": "GIF",
+    "searchPlaceholder": "Search GIFs",
+    "close": "Close",
+    "poweredBy": "Powered by GIPHY",
+    "loadFailed": "Couldn't load GIFs",
+    "retry": "Try again",
+    "empty": "No GIFs found",
+    "unavailable": "GIF unavailable"
   },
   "polls": {
     "attach": "Poll",

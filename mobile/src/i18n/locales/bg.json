@@ -59,6 +59,7 @@
     "searchPlaceholder": "Търсене на разговори",
     "noMessagesYet": "Все още няма съобщения",
     "photoPreview": "Снимка",
+    "gifPreview": "GIF",
     "audioPreview": "Гласово съобщение",
     "filePreview": "{{name}}",
     "groupChat": "Групов чат",
@@ -382,6 +383,16 @@
     "removedToast": "Премахнато от запазените",
     "saveFailedToast": "Запазените съобщения не можаха да се обновят. Опитайте отново.",
     "loadFailedToast": "Запазените съобщения не можаха да се заредят."
+  },
+  "gif": {
+    "attach": "GIF",
+    "searchPlaceholder": "Търсене на GIF",
+    "close": "Затвори",
+    "poweredBy": "Powered by GIPHY",
+    "loadFailed": "GIF-овете не се заредиха",
+    "retry": "Опитай пак",
+    "empty": "Няма намерени GIF-ове",
+    "unavailable": "GIF-ът не е наличен"
   },
   "polls": {
     "attach": "Анкета",

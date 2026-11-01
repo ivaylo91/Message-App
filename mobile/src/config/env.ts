@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 export const SUPABASE_URL = 'https://ejtskxnoyuvmzhpwkvsu.supabase.co';
 export const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_lact5tR5C9LzuR2y29Vc7g_k42J9BOH';
 
@@ -11,6 +13,11 @@ export const RESET_PASSWORD_URL = 'https://ivaylo91.github.io/Message-App/reset-
 // Where crash reports go. Empty turns Sentry off. A DSN can only submit
 // events, not read them, so like the publishable key above it's safe to ship.
 export const SENTRY_DSN = '';
+
+// GIPHY search keys. Empty hides the GIF option. GIPHY requires a separate key
+// per platform, and requires calls to come from the phone rather than a server
+// (see data/giphy.ts), so unlike a service secret these ship in the app.
+export const GIPHY_API_KEY = Platform.select({ android: '', ios: '', default: '' });
 
 // Hosted from docs/join.html. Hands a group invite over to the app.
 export const INVITE_PAGE_URL = 'https://ivaylo91.github.io/Message-App/join.html';

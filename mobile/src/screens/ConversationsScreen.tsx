@@ -47,6 +47,7 @@ import { useTyping } from '../typing/TypingContext';
 import { useMessageStream } from '../messages/MessageStreamContext';
 import {
   attachmentPreviewText,
+  bodyPreviewText,
   callStatusPreviewText,
   formatListTimestamp,
   previewIconName,
@@ -408,7 +409,7 @@ export function ConversationsScreen({ navigation }: Props) {
         isVoiceCallLog(message),
       ) ||
       attachmentPreviewText(message.attachment_type, message.attachment_name, t) ||
-      message.body ||
+      bodyPreviewText(message.body, t) ||
       // A cached row has a last message whose text isn't known yet, which
       // isn't the same as having none. A blank holds the row's height.
       (isShowingCache ? '\u00A0' : t('conversations.noMessagesYet'))

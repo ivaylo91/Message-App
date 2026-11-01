@@ -20,6 +20,7 @@ import { Touchable } from '../../components/Touchable';
 import { SkeletonGroup } from '../../components/Skeleton';
 import {
   attachmentPreviewText,
+  bodyPreviewText,
   callStatusPreviewText,
   fileIconName,
   formatDuration,
@@ -28,6 +29,7 @@ import {
 import { SwipeToReply } from '../../components/SwipeToReply';
 import { isVoiceCallLog } from '../../calling/callMedia';
 import { splitMentions } from '../../utils/mentions';
+import { gifUrlOf } from '../../utils/gif';
 import { hasLink, linkifyText } from '../../utils/linkify';
 import { showsSenderName, type RunPosition } from '../../utils/messageGrouping';
 import { MAX_FONT_SCALE_TIGHT } from '../../theme/tokens';
@@ -139,7 +141,9 @@ function ReplyQuote({
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const snippet = reply.deleted_at
     ? t('chat.deletedMessage')
-    : reply.body || attachmentPreviewText(reply.attachment_type, reply.attachment_name, t) || '';
+    : bodyPreviewText(reply.body, t) ||
+      attachmentPreviewText(reply.attachment_type, reply.attachment_name, t) ||
+      '';
 
   return (
     <Touchable
@@ -204,6 +208,48 @@ function MediaImage({ path, style }: { path: string; style?: MediaSize }) {
       source={{ uri: url }}
       style={[styles.media, style]}
       resizeMode={FastImage.resizeMode.cover}
+    />
+  );
+}
+
+// GIFs come in every shape, so it takes its real one once it has loaded,
+// within limits that keep a very tall or wide one from dominating the thread.
+const GIF_WIDTH = 220;
+const GIF_MIN_HEIGHT = 110;
+const GIF_MAX_HEIGHT = 300;
+
+function GifImage({ url }: { url: string }) {
+  const { t } = useTranslation();
+  const { colors } = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+  const [height, setHeight] = useState(GIF_WIDTH);
+  const [didFail, setDidFail] = useState(false);
+
+  // GIPHY can take a GIF down after it was sent.
+  if (didFail) {
+    return (
+      <View style={[styles.media, styles.mediaLoading]}>
+        <Text style={styles.metaTextTheirs}>{t('gif.unavailable')}</Text>
+      </View>
+    );
+  }
+
+  return (
+    <FastImage
+      source={{ uri: url }}
+      style={[styles.media, { height }]}
+      resizeMode={FastImage.resizeMode.cover}
+      accessible
+      accessibilityRole="image"
+      accessibilityLabel={t('conversations.gifPreview')}
+      onLoad={(event) => {
+        const { width: natural, height: naturalHeight } = event.nativeEvent;
+        if (natural > 0) {
+          const scaled = (GIF_WIDTH * naturalHeight) / natural;
+          setHeight(Math.min(GIF_MAX_HEIGHT, Math.max(GIF_MIN_HEIGHT, scaled)));
+        }
+      }}
+      onError={() => setDidFail(true)}
     />
   );
 }
@@ -594,22 +640,26 @@ function MessageBubbleComponent({
     [reactions, userId],
   );
 
+  // A GIF's body is its link, not something to read or preview.
+  const gifUrl = gifUrlOf(message.body);
+  const textBody = gifUrl ? null : message.body;
+
   // The first link in the body, if any - the one a preview is shown for.
   const previewUrl = useMemo(
     () =>
-      message.body && hasLink(message.body)
-        ? linkifyText(message.body).find((segment) => segment.url)?.url ?? null
+      textBody && hasLink(textBody)
+        ? linkifyText(textBody).find((segment) => segment.url)?.url ?? null
         : null,
-    [message.body],
+    [textBody],
   );
 
   // Where the time goes: on the photo, inside the last line of the text,
   // or on its own row under anything that fills the bubble's width.
-  const isPhoto = message.attachment_type === 'image';
+  const isPhoto = message.attachment_type === 'image' || Boolean(gifUrl);
   const metaPlacement: 'photo' | 'inline' | 'block' =
-    isPhoto && !message.body
+    isPhoto && !textBody
       ? 'photo'
-      : message.body && !previewUrl && !message.poll_options
+      : textBody && !previewUrl && !message.poll_options
         ? 'inline'
         : 'block';
   const timeText = formatMessageTime(message.created_at, i18n.language);
@@ -625,14 +675,14 @@ function MessageBubbleComponent({
   // bubble with a photo or voice message stays open, so the controls inside
   // it can be reached: the bubble itself would otherwise swallow them.
   const isPlainText =
-    Boolean(message.body) &&
+    Boolean(textBody) &&
     !message.attachment_type &&
     !message.call_status &&
     !message.poll_options;
   const bubbleLabel = isPlainText
     ? [
         isMine ? t('chat.you') : senderName,
-        message.body,
+        textBody,
         editedText,
         timeText,
         status && t(`chat.status.${status}`),
@@ -789,6 +839,7 @@ function MessageBubbleComponent({
               <MediaImage path={message.media_path} />
             </Touchable>
           )}
+          {gifUrl && <GifImage url={gifUrl} />}
           {message.attachment_type === 'audio' && (
             <AudioMessageBubble
               message={message}
@@ -805,14 +856,14 @@ function MessageBubbleComponent({
           {message.attachment_type === 'file' && (
             <FileMessageBubble message={message} isMine={isMine} />
           )}
-          {message.body && (
+          {textBody && (
             <Text
               style={[
                 isMine ? styles.bubbleTextMine : styles.bubbleTextTheirs,
                 isPhoto && styles.mediaCaption,
               ]}
             >
-              {splitMentions(message.body, mentionNames).map((part, i) =>
+              {splitMentions(textBody, mentionNames).map((part, i) =>
                 part.isMention ? (
                   <Text key={i} style={isMine ? styles.mentionMine : styles.mentionTheirs}>
                     {part.text}

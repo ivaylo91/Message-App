@@ -44,6 +44,7 @@ import { OfflineBanner } from '../components/OfflineBanner';
 import { Touchable } from '../components/Touchable';
 import { AppWallpaper } from '../components/AppWallpaper';
 import { MediaViewer } from '../components/MediaViewer';
+import { GIPHY_API_KEY } from '../config/env';
 import { useToast } from '../components/Toast';
 import { useConfirm } from '../components/ConfirmSheet';
 import { isVoiceCallLog } from '../calling/callMedia';
@@ -57,6 +58,7 @@ import { useTyping } from '../typing/TypingContext';
 import { OutboxEntry } from '../offline/outboxStorage';
 import {
   attachmentPreviewText,
+  bodyPreviewText,
   callStatusPreviewText,
   formatDuration,
   formatLastSeen,
@@ -65,6 +67,8 @@ import {
   typingLabel,
 } from '../utils/messagePreview';
 import { announce } from '../utils/announce';
+import type { GifResult } from '../data/giphy';
+import { gifUrlOf } from '../utils/gif';
 import { haptic } from '../utils/haptics';
 import { unreadDividerMessageId } from '../utils/unreadDivider';
 import { groupPhotoAlbums } from '../utils/photoAlbums';
@@ -102,6 +106,7 @@ import {
   replySenderLabel,
 } from './chat/MessageBubble';
 import { ChatHistorySkeleton, TypingBubble } from './chat/ChatDecorations';
+import { GifPicker } from './chat/GifPicker';
 import { PinnedBanner } from './chat/PinnedBanner';
 import { KeyboardAvoidingView, KeyboardGestureArea } from 'react-native-keyboard-controller';
 
@@ -271,6 +276,7 @@ export function ChatScreen({ route, navigation }: Props) {
   );
   const [replyingTo, setReplyingTo] = useState<ReplyPreview | null>(null);
   const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
+  const [isGifPickerOpen, setIsGifPickerOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [playingMessageId, setPlayingMessageId] = useState<string | null>(null);
@@ -410,7 +416,7 @@ export function ChatScreen({ route, navigation }: Props) {
         announce(
           [
             sender?.profiles.display_name,
-            incoming.body ||
+            bodyPreviewText(incoming.body, t) ||
               attachmentPreviewText(incoming.attachment_type, incoming.attachment_name, t),
           ]
             .filter(Boolean)
@@ -822,6 +828,23 @@ export function ChatScreen({ route, navigation }: Props) {
     markRead();
   };
 
+  // Through the outbox like any send, so it shows at once and survives being
+  // offline. The body is the GIF's link: see utils/gif.ts.
+  const onSendGif = (gif: GifResult) => {
+    setIsGifPickerOpen(false);
+    const replyToPreview = replyingTo;
+    setReplyingTo(null);
+    haptic('tap');
+    outbox.queueMessage({
+      conversationId,
+      tempId: `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      body: gif.sendUrl,
+      replyToMessageId: replyToPreview?.id ?? null,
+      replyToPreview,
+    });
+    markRead();
+  };
+
   const onOpenAttachMenu = () => {
     void confirm({
       title: t('chat.a11yAttach'),
@@ -829,11 +852,13 @@ export function ChatScreen({ route, navigation }: Props) {
       options: [
         { id: 'photo', label: t('chat.a11yAttachPhoto') },
         { id: 'file', label: t('chat.a11yAttachFile') },
+        ...(GIPHY_API_KEY ? [{ id: 'gif', label: t('gif.attach') }] : []),
         { id: 'poll', label: t('polls.attach') },
       ],
     }).then((choice) => {
       if (choice === 'photo') void onPickImage();
       else if (choice === 'file') void onPickFile();
+      else if (choice === 'gif') setIsGifPickerOpen(true);
       else if (choice === 'poll') navigation.navigate('NewPoll', { conversationId });
     });
   };
@@ -1822,7 +1847,7 @@ export function ChatScreen({ route, navigation }: Props) {
       }
     }
     // Not a poll: votes already cast would then count towards a new question.
-    if (isMine && message.body && !message.poll_options) {
+    if (isMine && message.body && !message.poll_options && !gifUrlOf(message.body)) {
       actions.push({
         id: 'edit',
         label: t('chat.edit'),
@@ -1854,7 +1879,7 @@ export function ChatScreen({ route, navigation }: Props) {
         .map((r) => r.emoji),
     );
     const previewText =
-      message.body ||
+      bodyPreviewText(message.body, t) ||
       attachmentPreviewText(message.attachment_type, message.attachment_name, t) ||
       callStatusPreviewText(
         message.call_status,
@@ -2262,7 +2287,7 @@ export function ChatScreen({ route, navigation }: Props) {
             <Text style={styles.replyBarSnippet} numberOfLines={1}>
               {replyingTo.deleted_at
                 ? t('chat.deletedMessage')
-                : replyingTo.body ||
+                : bodyPreviewText(replyingTo.body, t) ||
                   attachmentPreviewText(replyingTo.attachment_type, replyingTo.attachment_name, t) ||
                   ''}
             </Text>
@@ -2401,6 +2426,10 @@ export function ChatScreen({ route, navigation }: Props) {
           </>
         )}
       </View>
+
+      {isGifPickerOpen && (
+        <GifPicker onClose={() => setIsGifPickerOpen(false)} onPick={onSendGif} />
+      )}
 
       <MediaViewer
         paths={imagePaths}

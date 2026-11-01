@@ -5,7 +5,7 @@ import { Icon } from '../../components/Icon';
 import { Touchable } from '../../components/Touchable';
 import { useTheme } from '../../theme/ThemeContext';
 import { fonts, fontSizes, spacing, ThemeColors } from '../../theme/tokens';
-import { attachmentPreviewText } from '../../utils/messagePreview';
+import { attachmentPreviewText, bodyPreviewText } from '../../utils/messagePreview';
 import { Message } from '../../types';
 
 // The pinned message, under the chat header. Tapping jumps to it in the thread.
@@ -23,7 +23,7 @@ export function PinnedBanner({
   const { colors } = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const text =
-    message.body ||
+    bodyPreviewText(message.body, t) ||
     attachmentPreviewText(message.attachment_type, message.attachment_name, t) ||
     '';
 

@@ -14,7 +14,7 @@ import * as savedMessagesData from '../data/savedMessages';
 import { useContentWidth } from '../hooks/useContentWidth';
 import { useTheme } from '../theme/ThemeContext';
 import { fonts, fontSizes, radii, spacing, ThemeColors } from '../theme/tokens';
-import { attachmentPreviewText, formatMessageDay } from '../utils/messagePreview';
+import { attachmentPreviewText, bodyPreviewText, formatMessageDay } from '../utils/messagePreview';
 
 type Props = NativeStackScreenProps<AppStackParamList, 'SavedMessages'>;
 
@@ -54,7 +54,9 @@ export function SavedMessagesScreen({ navigation }: Props) {
 
   const renderItem = ({ item }: { item: savedMessagesData.SavedMessage }) => {
     const text =
-      item.body || attachmentPreviewText(item.attachment_type, item.attachment_name, t) || '';
+      bodyPreviewText(item.body, t) ||
+      attachmentPreviewText(item.attachment_type, item.attachment_name, t) ||
+      '';
     return (
       <View style={styles.row}>
         <Touchable
