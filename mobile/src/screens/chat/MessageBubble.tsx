@@ -217,6 +217,7 @@ function MediaImage({ path, style }: { path: string; style?: MediaSize }) {
 const GIF_WIDTH = 220;
 const GIF_MIN_HEIGHT = 110;
 const GIF_MAX_HEIGHT = 300;
+const NO_BUBBLE = ['transparent', 'transparent'];
 
 function GifImage({ url }: { url: string }) {
   const { t } = useTranslation();
@@ -643,6 +644,9 @@ function MessageBubbleComponent({
   // A GIF's body is its link, not something to read or preview.
   const gifUrl = gifUrlOf(message.body);
   const textBody = gifUrl ? null : message.body;
+  // A GIF stands on its own, with no bubble framing it. One that replies to
+  // something keeps the bubble, because the quote needs a surface to sit on.
+  const isBareGif = Boolean(gifUrl) && !message.reply_to;
 
   // The first link in the body, if any - the one a preview is shown for.
   const previewUrl = useMemo(
@@ -780,14 +784,14 @@ function MessageBubbleComponent({
         }}
       >
         <LinearGradient
-          colors={isMine ? [...gradients.mine] : [...gradients.theirs]}
+          colors={isBareGif ? NO_BUBBLE : isMine ? [...gradients.mine] : [...gradients.theirs]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={[
-            isPhoto ? styles.mediaBubble : styles.bubble,
+            isBareGif ? styles.gifBubble : isPhoto ? styles.mediaBubble : styles.bubble,
             { maxWidth: bubbleMaxWidth },
             runShape,
-            !isMine && styles.bubbleTheirs,
+            !isMine && !isBareGif && styles.bubbleTheirs,
             message._pending && styles.bubblePending,
             isHighlighted && styles.bubbleHighlighted,
           ]}

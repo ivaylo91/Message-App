@@ -148,6 +148,7 @@ export const makeStyles = (colors: ThemeColors) =>
     padding: 4,
     borderRadius: 18,
   },
+  gifBubble: { padding: 0, borderRadius: 14 },
   media: {
     width: 220,
     height: 220,
