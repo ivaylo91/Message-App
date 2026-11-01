@@ -17,7 +17,7 @@ export const SENTRY_DSN = '';
 // GIPHY search keys. Empty hides the GIF option. GIPHY requires a separate key
 // per platform, and requires calls to come from the phone rather than a server
 // (see data/giphy.ts), so unlike a service secret these ship in the app.
-export const GIPHY_API_KEY = Platform.select({ android: '', ios: '', default: '' });
+export const GIPHY_API_KEY = Platform.select({ android: '9iQG5MLQ3mMvGx32j4mXATEOXD6MrIHX', ios: '9iQG5MLQ3mMvGx32j4mXATEOXD6MrIHX', default: '9iQG5MLQ3mMvGx32j4mXATEOXD6MrIHX' });
 
 // Hosted from docs/join.html. Hands a group invite over to the app.
 export const INVITE_PAGE_URL = 'https://ivaylo91.github.io/Message-App/join.html';
