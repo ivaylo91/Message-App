@@ -2392,6 +2392,9 @@ export function ChatScreen({ route, navigation }: Props) {
               // newline, so sending is the button's job - which is why
               // onSubmitEditing is gone rather than merely inert.
               multiline
+              // The server rejects longer bodies (see
+              // messages_body_length_check), and the outbox would drop them.
+              maxLength={conversationsData.MAX_MESSAGE_LENGTH}
               textAlignVertical="center"
             />
             </View>

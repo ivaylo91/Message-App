@@ -16,13 +16,18 @@ import { ReplyPreview } from '../types';
 // Row-level security rejections come back from PostgREST as code 42501
 // (insufficient_privilege) - distinguishing these from ordinary network
 // errors (which have no such code) is what lets flush() give up on a
-// single un-sendable message instead of retrying it forever.
+// single un-sendable message instead of retrying it forever. 23514
+// (check_violation) is the same: e.g. a body over messages_body_length_check
+// will fail identically on every retry. PT429 (the send rate limit) is
+// deliberately not here - that message should stay queued and go later.
+const PERMANENT_SEND_ERROR_CODES = new Set(['42501', '23514']);
+
 function isPermanentSendError(err: unknown): boolean {
   return (
     typeof err === 'object' &&
     err !== null &&
     'code' in err &&
-    (err as { code?: string }).code === '42501'
+    PERMANENT_SEND_ERROR_CODES.has((err as { code?: string }).code ?? '')
   );
 }
 

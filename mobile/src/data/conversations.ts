@@ -135,6 +135,9 @@ const MESSAGE_SELECT =
 // fetches as the user scrolls up - see loadMoreMessages there.
 export const MESSAGE_PAGE_SIZE = 50;
 
+// Must match messages_body_length_check (char_length(body) <= 4096).
+export const MAX_MESSAGE_LENGTH = 4096;
+
 // `before` pages in older history: pass the created_at of the oldest
 // message currently loaded to get the next 50 before it. Cursor-based
 // (like fetchMediaMessages) rather than offset-based, so it stays correct
